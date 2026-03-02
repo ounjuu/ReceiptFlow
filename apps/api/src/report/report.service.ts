@@ -1,0 +1,150 @@
+import { Injectable } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+
+export interface TrialBalanceRow {
+  accountId: string;
+  code: string;
+  name: string;
+  type: string;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
+@Injectable()
+export class ReportService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  // 시산표: 계정별 차변/대변 합계
+  async trialBalance(tenantId: string): Promise<{
+    rows: TrialBalanceRow[];
+    totalDebit: number;
+    totalCredit: number;
+  }> {
+    const accounts = await this.prisma.account.findMany({
+      where: { tenantId },
+      include: {
+        journalLines: {
+          where: { journalEntry: { status: "POSTED", tenantId } },
+        },
+      },
+      orderBy: { code: "asc" },
+    });
+
+    const rows: TrialBalanceRow[] = accounts.map((account) => {
+      const debit = account.journalLines.reduce(
+        (sum, l) => sum + Number(l.debit),
+        0,
+      );
+      const credit = account.journalLines.reduce(
+        (sum, l) => sum + Number(l.credit),
+        0,
+      );
+      return {
+        accountId: account.id,
+        code: account.code,
+        name: account.name,
+        type: account.type,
+        debit,
+        credit,
+        balance: debit - credit,
+      };
+    });
+
+    // 잔액이 0인 계정 제외
+    const filtered = rows.filter((r) => r.debit !== 0 || r.credit !== 0);
+
+    return {
+      rows: filtered,
+      totalDebit: filtered.reduce((sum, r) => sum + r.debit, 0),
+      totalCredit: filtered.reduce((sum, r) => sum + r.credit, 0),
+    };
+  }
+
+  // 손익계산서: 수익 - 비용 = 당기순이익
+  async incomeStatement(tenantId: string) {
+    const { rows } = await this.trialBalance(tenantId);
+
+    const revenue = rows
+      .filter((r) => r.type === "REVENUE")
+      .map((r) => ({ ...r, amount: r.credit - r.debit }));
+
+    const expense = rows
+      .filter((r) => r.type === "EXPENSE")
+      .map((r) => ({ ...r, amount: r.debit - r.credit }));
+
+    const totalRevenue = revenue.reduce((sum, r) => sum + r.amount, 0);
+    const totalExpense = expense.reduce((sum, r) => sum + r.amount, 0);
+
+    return {
+      revenue,
+      totalRevenue,
+      expense,
+      totalExpense,
+      netIncome: totalRevenue - totalExpense,
+    };
+  }
+
+  // 재무상태표: 자산 = 부채 + 자본 (유동/비유동 소분류 포함)
+  async balanceSheet(tenantId: string) {
+    const { rows } = await this.trialBalance(tenantId);
+    const income = await this.incomeStatement(tenantId);
+
+    const toAmount = (r: TrialBalanceRow, isDebit: boolean) => ({
+      ...r,
+      amount: isDebit ? r.debit - r.credit : r.credit - r.debit,
+    });
+
+    // 자산: 유동(코드 < 13000) / 비유동(코드 >= 13000)
+    const allAssets = rows.filter((r) => r.type === "ASSET");
+    const currentAssets = allAssets
+      .filter((r) => Number(r.code) < 13000)
+      .map((r) => toAmount(r, true));
+    const nonCurrentAssets = allAssets
+      .filter((r) => Number(r.code) >= 13000)
+      .map((r) => toAmount(r, true));
+    const totalCurrentAssets = currentAssets.reduce((s, r) => s + r.amount, 0);
+    const totalNonCurrentAssets = nonCurrentAssets.reduce((s, r) => s + r.amount, 0);
+    const totalAssets = totalCurrentAssets + totalNonCurrentAssets;
+
+    // 부채: 유동(코드 < 23000) / 비유동(코드 >= 23000)
+    const allLiabilities = rows.filter((r) => r.type === "LIABILITY");
+    const currentLiabilities = allLiabilities
+      .filter((r) => Number(r.code) < 23000)
+      .map((r) => toAmount(r, false));
+    const nonCurrentLiabilities = allLiabilities
+      .filter((r) => Number(r.code) >= 23000)
+      .map((r) => toAmount(r, false));
+    const totalCurrentLiabilities = currentLiabilities.reduce((s, r) => s + r.amount, 0);
+    const totalNonCurrentLiabilities = nonCurrentLiabilities.reduce((s, r) => s + r.amount, 0);
+    const totalLiabilities = totalCurrentLiabilities + totalNonCurrentLiabilities;
+
+    // 자본
+    const equity = rows
+      .filter((r) => r.type === "EQUITY")
+      .map((r) => toAmount(r, false));
+    const totalEquity = equity.reduce((s, r) => s + r.amount, 0);
+
+    return {
+      currentAssets,
+      totalCurrentAssets,
+      nonCurrentAssets,
+      totalNonCurrentAssets,
+      totalAssets,
+      currentLiabilities,
+      totalCurrentLiabilities,
+      nonCurrentLiabilities,
+      totalNonCurrentLiabilities,
+      totalLiabilities,
+      equity,
+      totalEquity,
+      retainedEarnings: income.netIncome,
+      totalLiabilitiesAndEquity:
+        totalLiabilities + totalEquity + income.netIncome,
+      isBalanced:
+        Math.abs(
+          totalAssets - (totalLiabilities + totalEquity + income.netIncome),
+        ) < 0.01,
+    };
+  }
+}

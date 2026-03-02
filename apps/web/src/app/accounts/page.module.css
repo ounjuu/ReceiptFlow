@@ -1,0 +1,45 @@
+.title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.tableSection {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.type {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.typeAsset {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.typeLiability {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.typeEquity {
+  background: #ede8f5;
+  color: #5b3e9e;
+}
+
+.typeRevenue {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.typeExpense {
+  background: #fee2e2;
+  color: #991b1b;
+}

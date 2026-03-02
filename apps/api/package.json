@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.0",
+    "@types/multer": "^2.0.0",
     "@types/node": "^22.10.0",
     "prisma": "^6.1.0",
     "typescript": "^5.7.0"

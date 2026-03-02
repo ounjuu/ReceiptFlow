@@ -1,0 +1,55 @@
+.title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.uploadSection {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.uploadBtn {
+  background: var(--primary);
+  color: #fff;
+}
+
+.uploadBtn:disabled {
+  opacity: 0.6;
+}
+
+.tableSection {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.statusPending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.statusOcr {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.statusJournal {
+  background: #dcfce7;
+  color: #166534;
+}

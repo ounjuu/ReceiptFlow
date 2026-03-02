@@ -1,0 +1,145 @@
+.title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+}
+
+/* 탭 */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+
+.tab {
+  padding: 8px 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.tab:first-child {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.tab:last-child {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.tabActive {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+/* 공통 섹션 (대시보드 스타일) */
+.section {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.downloadBtn {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+}
+
+.downloadBtn:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* 테이블 총합 행 */
+.totalRow {
+  font-weight: 700;
+  background: var(--primary-light);
+}
+
+/* 재무상태표 2컬럼 */
+.bsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* 그룹 헤더 (유동자산, 비유동자산 등) */
+.groupHeader td {
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-light);
+  font-size: 0.85rem;
+}
+
+/* 소계 행 */
+.subtotalRow {
+  font-weight: 600;
+  background: #faf8fd;
+}
+
+/* 총계 행 */
+.grandTotalRow {
+  font-weight: 700;
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.grandTotalRow td {
+  border-top: 2px solid var(--border);
+}
+
+/* 요약 바 */
+.summaryBar {
+  display: flex;
+  gap: 40px;
+  padding: 16px 20px;
+  background: var(--primary-light);
+  border-radius: var(--radius);
+  margin-top: 16px;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.summaryLabel {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.summaryValue {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.positive {
+  color: var(--success);
+}
+
+.negative {
+  color: var(--danger);
+}

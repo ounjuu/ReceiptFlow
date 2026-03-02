@@ -25,5 +25,8 @@ __pycache__/
 # OS
 .DS_Store
 
+# Uploads
+uploads/
+
 # Prisma
 prisma/*.db

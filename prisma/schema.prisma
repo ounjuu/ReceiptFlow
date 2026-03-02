@@ -7,24 +7,145 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 멀티 테넌트 기본 모델
+// ──────────────────────────────────
+// 멀티 테넌트
+// ──────────────────────────────────
+
 model Tenant {
   id        String   @id @default(uuid())
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  users     User[]
+
+  memberships  Membership[]
+  accounts     Account[]
+  documents    Document[]
+  journalEntries JournalEntry[]
+  vendors      Vendor[]
 }
 
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
   name      String
-  role      String   @default("USER")
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  memberships Membership[]
+}
+
+// 멀티 테넌트 소속 관계
+model Membership {
+  id       String @id @default(uuid())
+  role     String @default("USER")
+  userId   String
+  tenantId String
+  user     User   @relation(fields: [userId], references: [id])
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, tenantId])
   @@index([tenantId])
+}
+
+// ──────────────────────────────────
+// 마스터
+// ──────────────────────────────────
+
+// 계정과목
+model Account {
+  id            String @id @default(uuid())
+  code          String
+  name          String
+  type          String // ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
+  normalBalance String // DEBIT, CREDIT
+  tenantId      String
+  tenant        Tenant @relation(fields: [tenantId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  journalLines JournalLine[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+// 거래처
+model Vendor {
+  id        String @id @default(uuid())
+  name      String
+  bizNo     String? // 사업자등록번호
+  tenantId  String
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents Document[]
+
+  @@index([tenantId])
+}
+
+// ──────────────────────────────────
+// 증빙
+// ──────────────────────────────────
+
+// 영수증
+model Document {
+  id            String   @id @default(uuid())
+  vendorName    String?
+  transactionAt DateTime?
+  totalAmount   Decimal? @db.Decimal(18, 2)
+  status        String   @default("PENDING") // PENDING, OCR_DONE, JOURNAL_CREATED
+  ocrRaw        Json?
+  imageUrl      String?
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  vendorId      String?
+  vendor        Vendor?  @relation(fields: [vendorId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  journalEntry JournalEntry?
+
+  @@index([tenantId])
+  @@index([status])
+}
+
+// ──────────────────────────────────
+// 회계
+// ──────────────────────────────────
+
+// 전표 헤더
+model JournalEntry {
+  id          String   @id @default(uuid())
+  date        DateTime
+  description String?
+  status      String   @default("DRAFT") // DRAFT, APPROVED, POSTED
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  documentId  String?  @unique
+  document    Document? @relation(fields: [documentId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lines JournalLine[]
+
+  @@index([tenantId])
+  @@index([date])
+}
+
+// 전표 라인 (차변/대변)
+model JournalLine {
+  id             String       @id @default(uuid())
+  debit          Decimal      @default(0) @db.Decimal(18, 2)
+  credit         Decimal      @default(0) @db.Decimal(18, 2)
+  journalEntryId String
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        Account      @relation(fields: [accountId], references: [id])
+  createdAt      DateTime     @default(now())
+
+  @@index([journalEntryId])
+  @@index([accountId])
 }
