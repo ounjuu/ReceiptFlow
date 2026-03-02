@@ -58,7 +58,7 @@ interface BalanceSheet {
   isBalanced: boolean;
 }
 
-const fmt = (n: number) => `₩${n.toLocaleString()}`;
+const fmt = (n: number) => n.toLocaleString();
 
 const tabs: { key: Tab; label: string }[] = [
   { key: "trial-balance", label: "시산표" },
@@ -108,7 +108,10 @@ function TrialBalanceView() {
 
   return (
     <div className={styles.section}>
-      <h2 className={styles.sectionTitle}>시산표</h2>
+      <div className={styles.sectionHeader}>
+        <h2 className={styles.sectionTitle}>시산표</h2>
+        <span className={styles.unit}>(단위: 원)</span>
+      </div>
       <table>
         <thead>
           <tr>
@@ -159,7 +162,10 @@ function IncomeStatementView() {
   return (
     <>
       <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>손익계산서</h2>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>손익계산서</h2>
+          <span className={styles.unit}>(단위: 원)</span>
+        </div>
         <table>
           <thead>
             <tr>
@@ -293,9 +299,12 @@ function BalanceSheetView() {
     <>
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>재무상태표</h2>
-        <button className={styles.downloadBtn} onClick={downloadCsv}>
-          다운로드
-        </button>
+        <div className={styles.sectionHeaderRight}>
+          <span className={styles.unit}>(단위: 원)</span>
+          <button className={styles.downloadBtn} onClick={downloadCsv}>
+            다운로드
+          </button>
+        </div>
       </div>
 
       <div className={styles.bsGrid}>

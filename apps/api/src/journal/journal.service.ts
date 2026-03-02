@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateJournalDto } from "./dto/create-journal.dto";
+import { UpdateJournalDto } from "./dto/update-journal.dto";
 
 @Injectable()
 export class JournalService {
@@ -73,6 +74,96 @@ export class JournalService {
     }
 
     return entry;
+  }
+
+  // 전표 수정
+  async update(id: string, dto: UpdateJournalDto) {
+    const entry = await this.prisma.journalEntry.findUnique({
+      where: { id },
+      include: { lines: true },
+    });
+
+    if (!entry) {
+      throw new NotFoundException(`JournalEntry ${id} not found`);
+    }
+
+    // 상태 전이 검증 (DRAFT → APPROVED → POSTED)
+    if (dto.status) {
+      const validTransitions: Record<string, string[]> = {
+        DRAFT: ["APPROVED"],
+        APPROVED: ["POSTED", "DRAFT"],
+        POSTED: [],
+      };
+      const allowed = validTransitions[entry.status] || [];
+      if (!allowed.includes(dto.status)) {
+        throw new BadRequestException(
+          `상태를 ${entry.status}에서 ${dto.status}(으)로 변경할 수 없습니다`,
+        );
+      }
+    }
+
+    // 라인이 제공되면 차대변 균형 검증
+    if (dto.lines && dto.lines.length > 0) {
+      const totalDebit = dto.lines.reduce((sum, l) => sum + l.debit, 0);
+      const totalCredit = dto.lines.reduce((sum, l) => sum + l.credit, 0);
+      if (Math.abs(totalDebit - totalCredit) > 0.001) {
+        throw new BadRequestException(
+          `차변(${totalDebit})과 대변(${totalCredit})의 합계가 일치하지 않습니다`,
+        );
+      }
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 라인이 제공되면 기존 라인 삭제 후 새로 생성
+      if (dto.lines && dto.lines.length > 0) {
+        await tx.journalLine.deleteMany({ where: { journalEntryId: id } });
+      }
+
+      return tx.journalEntry.update({
+        where: { id },
+        data: {
+          ...(dto.date !== undefined && { date: new Date(dto.date) }),
+          ...(dto.description !== undefined && { description: dto.description }),
+          ...(dto.status !== undefined && { status: dto.status }),
+          ...(dto.lines &&
+            dto.lines.length > 0 && {
+              lines: {
+                create: dto.lines.map((line) => ({
+                  accountId: line.accountId,
+                  debit: line.debit,
+                  credit: line.credit,
+                })),
+              },
+            }),
+        },
+        include: { lines: { include: { account: true } } },
+      });
+    });
+  }
+
+  // 전표 삭제
+  async remove(id: string) {
+    const entry = await this.prisma.journalEntry.findUnique({
+      where: { id },
+      include: { document: true },
+    });
+
+    if (!entry) {
+      throw new NotFoundException(`JournalEntry ${id} not found`);
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 연결된 Document가 있으면 상태를 PENDING으로 복원
+      if (entry.documentId) {
+        await tx.document.update({
+          where: { id: entry.documentId },
+          data: { status: "PENDING" },
+        });
+      }
+
+      // JournalLine은 cascade로 자동 삭제
+      return tx.journalEntry.delete({ where: { id } });
+    });
   }
 
   // 영수증 → 전표 자동 생성

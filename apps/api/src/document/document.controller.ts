@@ -2,6 +2,8 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
+  Delete,
   Param,
   Query,
   UploadedFile,
@@ -13,6 +15,8 @@ import { diskStorage } from "multer";
 import { extname } from "path";
 import { DocumentService } from "./document.service";
 import { UploadDocumentDto } from "./dto/upload-document.dto";
+import { CreateDocumentDto } from "./dto/create-document.dto";
+import { UpdateDocumentDto } from "./dto/update-document.dto";
 
 @Controller("documents")
 export class DocumentController {
@@ -37,6 +41,11 @@ export class DocumentController {
     return this.documentService.create(dto, file);
   }
 
+  @Post()
+  async createWithAutoJournal(@Body() dto: CreateDocumentDto) {
+    return this.documentService.createWithAutoJournal(dto);
+  }
+
   @Get()
   async findAll(@Query("tenantId") tenantId: string) {
     return this.documentService.findAll(tenantId);
@@ -45,5 +54,15 @@ export class DocumentController {
   @Get(":id")
   async findOne(@Param("id") id: string) {
     return this.documentService.findOne(id);
+  }
+
+  @Patch(":id")
+  async update(@Param("id") id: string, @Body() dto: UpdateDocumentDto) {
+    return this.documentService.update(id, dto);
+  }
+
+  @Delete(":id")
+  async remove(@Param("id") id: string) {
+    return this.documentService.remove(id);
   }
 }

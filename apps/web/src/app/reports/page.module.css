@@ -60,6 +60,17 @@
   font-weight: 600;
 }
 
+.sectionHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.unit {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 .downloadBtn {
   background: var(--primary-light);
   color: var(--primary);

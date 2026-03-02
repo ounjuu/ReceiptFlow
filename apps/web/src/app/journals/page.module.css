@@ -1,9 +1,185 @@
 .title {
   font-size: 1.4rem;
   font-weight: 700;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
 }
 
+.addBtn {
+  background: var(--primary);
+  color: #fff;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+}
+
+/* 폼 섹션 */
+.formSection {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.formTop {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.input {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  background: #fff;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  background: #fff;
+  flex: 1;
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+/* 라인 헤더 */
+.linesHeader {
+  display: grid;
+  grid-template-columns: 1fr 120px 120px 36px;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.lineRow {
+  display: grid;
+  grid-template-columns: 1fr 120px 120px 36px;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.removeBtn {
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.removeBtn:disabled {
+  opacity: 0.3;
+}
+
+.removeBtn:not(:disabled):hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* 라인 하단 */
+.lineFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 12px 0;
+}
+
+.addLineBtn {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+}
+
+.totals {
+  display: flex;
+  gap: 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.balanced {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.unbalanced {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+/* 폼 하단 버튼 */
+.formActions {
+  display: flex;
+  gap: 8px;
+}
+
+.submitBtn {
+  background: var(--primary);
+  color: #fff;
+  padding: 8px 24px;
+}
+
+.submitBtn:disabled {
+  opacity: 0.6;
+}
+
+.cancelFormBtn {
+  background: #fff;
+  color: var(--text-muted);
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+}
+
+/* 테이블 */
 .tableSection {
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -32,4 +208,55 @@
 .statusPosted {
   background: #dcfce7;
   color: #166534;
+}
+
+/* 액션 버튼 */
+.actions {
+  display: flex;
+  gap: 4px;
+}
+
+.statusBtn,
+.editBtn,
+.deleteBtn {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.statusBtn {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+
+.statusBtn:hover {
+  background: #166534;
+  color: #fff;
+}
+
+.statusBtn:disabled {
+  opacity: 0.6;
+}
+
+.editBtn {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.editBtn:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.deleteBtn {
+  background: #fff;
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.deleteBtn:hover {
+  background: var(--danger);
+  color: #fff;
 }

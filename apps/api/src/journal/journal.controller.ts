@@ -2,12 +2,15 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
+  Delete,
   Param,
   Query,
   Body,
 } from "@nestjs/common";
 import { JournalService } from "./journal.service";
 import { CreateJournalDto } from "./dto/create-journal.dto";
+import { UpdateJournalDto } from "./dto/update-journal.dto";
 
 @Controller("journals")
 export class JournalController {
@@ -35,5 +38,15 @@ export class JournalController {
   @Get(":id")
   async findOne(@Param("id") id: string) {
     return this.journalService.findOne(id);
+  }
+
+  @Patch(":id")
+  async update(@Param("id") id: string, @Body() dto: UpdateJournalDto) {
+    return this.journalService.update(id, dto);
+  }
+
+  @Delete(":id")
+  async remove(@Param("id") id: string) {
+    return this.journalService.remove(id);
   }
 }

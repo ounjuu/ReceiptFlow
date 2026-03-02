@@ -1,9 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef } from "react";
-import { apiGet, apiUpload, TENANT_ID } from "@/lib/api";
+import { apiGet, apiPost, apiPatch, apiDelete, TENANT_ID } from "@/lib/api";
 import styles from "./page.module.css";
+
+interface JournalLine {
+  debit: string;
+  credit: string;
+  account: { code: string; name: string };
+}
+
+interface JournalEntry {
+  id: string;
+  lines: JournalLine[];
+}
 
 interface Document {
   id: string;
@@ -13,6 +24,17 @@ interface Document {
   status: string;
   imageUrl: string | null;
   createdAt: string;
+  journalEntry: JournalEntry | null;
+}
+
+interface CreateResult {
+  document: Document;
+  journalEntry: JournalEntry;
+  classification: {
+    accountCode: string;
+    accountName: string;
+    confidence: number;
+  };
 }
 
 function statusLabel(status: string) {
@@ -26,47 +48,175 @@ function statusLabel(status: string) {
 
 export default function DocumentsPage() {
   const queryClient = useQueryClient();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [vendorName, setVendorName] = useState("");
+  const [totalAmount, setTotalAmount] = useState("");
+  const [transactionAt, setTransactionAt] = useState(
+    new Date().toISOString().slice(0, 10),
+  );
+  const [result, setResult] = useState<CreateResult | null>(null);
+
+  // 수정 모드
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editVendor, setEditVendor] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editDate, setEditDate] = useState("");
 
   const { data: documents = [] } = useQuery({
     queryKey: ["documents"],
     queryFn: () => apiGet<Document[]>(`/documents?tenantId=${TENANT_ID}`),
   });
 
-  const upload = useMutation({
-    mutationFn: async (file: File) => {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("tenantId", TENANT_ID);
-      return apiUpload<Document>("/documents/upload", fd);
-    },
-    onSuccess: () => {
+  const createMutation = useMutation({
+    mutationFn: (body: {
+      tenantId: string;
+      vendorName: string;
+      totalAmount: number;
+      transactionAt: string;
+    }) => apiPost<CreateResult>("/documents", body),
+    onSuccess: (data) => {
+      setResult(data);
+      setVendorName("");
+      setTotalAmount("");
       queryClient.invalidateQueries({ queryKey: ["documents"] });
-      if (fileRef.current) fileRef.current.value = "";
+      queryClient.invalidateQueries({ queryKey: ["journals"] });
     },
   });
 
-  const handleUpload = () => {
-    const file = fileRef.current?.files?.[0];
-    if (file) upload.mutate(file);
+  const updateMutation = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      apiPatch<Document>(`/documents/${id}`, body),
+    onSuccess: () => {
+      setEditingId(null);
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiDelete(`/documents/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+      queryClient.invalidateQueries({ queryKey: ["journals"] });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vendorName || !totalAmount) return;
+    createMutation.mutate({
+      tenantId: TENANT_ID,
+      vendorName,
+      totalAmount: Number(totalAmount),
+      transactionAt,
+    });
+  };
+
+  const startEdit = (doc: Document) => {
+    setEditingId(doc.id);
+    setEditVendor(doc.vendorName || "");
+    setEditAmount(doc.totalAmount ? String(Number(doc.totalAmount)) : "");
+    setEditDate(
+      doc.transactionAt
+        ? new Date(doc.transactionAt).toISOString().slice(0, 10)
+        : "",
+    );
+  };
+
+  const handleUpdate = (id: string) => {
+    updateMutation.mutate({
+      id,
+      body: {
+        vendorName: editVendor,
+        totalAmount: Number(editAmount),
+        transactionAt: editDate,
+      },
+    });
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("이 영수증을 삭제하시겠습니까? 연결된 전표도 함께 삭제됩니다.")) {
+      deleteMutation.mutate(id);
+    }
   };
 
   return (
     <div>
       <h1 className={styles.title}>영수증 관리</h1>
 
-      <div className={styles.uploadSection}>
-        <input type="file" ref={fileRef} accept="image/*" />
-        <button
-          className={styles.uploadBtn}
-          onClick={handleUpload}
-          disabled={upload.isPending}
-        >
-          {upload.isPending ? "업로드 중..." : "업로드"}
-        </button>
+      <div className={styles.formSection}>
+        <h2 className={styles.sectionTitle}>영수증 등록</h2>
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.formRow}>
+            <label className={styles.label}>거래처명</label>
+            <input
+              className={styles.input}
+              type="text"
+              placeholder="예: 스타벅스 강남점"
+              value={vendorName}
+              onChange={(e) => setVendorName(e.target.value)}
+              required
+            />
+          </div>
+          <div className={styles.formRow}>
+            <label className={styles.label}>금액 (원)</label>
+            <input
+              className={styles.input}
+              type="number"
+              placeholder="예: 45000"
+              value={totalAmount}
+              onChange={(e) => setTotalAmount(e.target.value)}
+              required
+              min={1}
+            />
+          </div>
+          <div className={styles.formRow}>
+            <label className={styles.label}>거래일</label>
+            <input
+              className={styles.input}
+              type="date"
+              value={transactionAt}
+              onChange={(e) => setTransactionAt(e.target.value)}
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            className={styles.submitBtn}
+            disabled={createMutation.isPending}
+          >
+            {createMutation.isPending ? "처리 중..." : "등록"}
+          </button>
+        </form>
+
+        {result && (
+          <div className={styles.resultBox}>
+            <h3 className={styles.resultTitle}>AI 분류 결과</h3>
+            <div className={styles.resultGrid}>
+              <div>
+                <span className={styles.resultLabel}>추천 계정</span>
+                <span className={styles.resultValue}>
+                  {result.classification.accountCode}{" "}
+                  {result.classification.accountName}
+                </span>
+              </div>
+              <div>
+                <span className={styles.resultLabel}>신뢰도</span>
+                <span className={styles.resultValue}>
+                  {Math.round(result.classification.confidence * 100)}%
+                </span>
+              </div>
+              <div>
+                <span className={styles.resultLabel}>전표 상태</span>
+                <span className={`${styles.status} ${styles.statusJournal}`}>
+                  자동 생성 완료
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className={styles.tableSection}>
+        <h2 className={styles.sectionTitle}>영수증 목록</h2>
         <table>
           <thead>
             <tr>
@@ -75,11 +225,65 @@ export default function DocumentsPage() {
               <th>금액</th>
               <th>상태</th>
               <th>등록일</th>
+              <th>관리</th>
             </tr>
           </thead>
           <tbody>
             {documents.map((doc) => {
               const s = statusLabel(doc.status);
+              const isEditing = editingId === doc.id;
+
+              if (isEditing) {
+                return (
+                  <tr key={doc.id}>
+                    <td>
+                      <input
+                        className={styles.editInput}
+                        value={editVendor}
+                        onChange={(e) => setEditVendor(e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        className={styles.editInput}
+                        type="date"
+                        value={editDate}
+                        onChange={(e) => setEditDate(e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        className={styles.editInput}
+                        type="number"
+                        value={editAmount}
+                        onChange={(e) => setEditAmount(e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <span className={`${styles.status} ${s.cls}`}>{s.text}</span>
+                    </td>
+                    <td>{new Date(doc.createdAt).toLocaleDateString("ko-KR")}</td>
+                    <td>
+                      <div className={styles.actions}>
+                        <button
+                          className={styles.saveBtn}
+                          onClick={() => handleUpdate(doc.id)}
+                          disabled={updateMutation.isPending}
+                        >
+                          저장
+                        </button>
+                        <button
+                          className={styles.cancelBtn}
+                          onClick={() => setEditingId(null)}
+                        >
+                          취소
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }
+
               return (
                 <tr key={doc.id}>
                   <td>{doc.vendorName || "-"}</td>
@@ -97,12 +301,28 @@ export default function DocumentsPage() {
                     <span className={`${styles.status} ${s.cls}`}>{s.text}</span>
                   </td>
                   <td>{new Date(doc.createdAt).toLocaleDateString("ko-KR")}</td>
+                  <td>
+                    <div className={styles.actions}>
+                      <button
+                        className={styles.editBtn}
+                        onClick={() => startEdit(doc)}
+                      >
+                        수정
+                      </button>
+                      <button
+                        className={styles.deleteBtn}
+                        onClick={() => handleDelete(doc.id)}
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               );
             })}
             {documents.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ textAlign: "center", color: "var(--text-muted)" }}>
+                <td colSpan={6} style={{ textAlign: "center", color: "var(--text-muted)" }}>
                   영수증이 없습니다
                 </td>
               </tr>
