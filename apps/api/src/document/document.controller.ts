@@ -38,7 +38,7 @@ export class DocumentController {
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: UploadDocumentDto,
   ) {
-    return this.documentService.create(dto, file);
+    return this.documentService.uploadWithOcr(dto, file);
   }
 
   @Post()
