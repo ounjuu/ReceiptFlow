@@ -257,3 +257,66 @@
   background: #fff;
   color: var(--text-muted);
 }
+
+/* 영수증 썸네일 */
+.thumbnail {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.thumbnail:hover {
+  opacity: 0.7;
+}
+
+/* 이미지 미리보기 모달 */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  position: relative;
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.modalClose {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  cursor: pointer;
+}
+
+.modalImage {
+  max-width: 85vw;
+  max-height: 85vh;
+  border-radius: 4px;
+  display: block;
+}

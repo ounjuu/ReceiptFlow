@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, TENANT_ID } from "@/lib/api";
+import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, TENANT_ID, API_BASE } from "@/lib/api";
 import styles from "./page.module.css";
 
 type InputTab = "upload" | "manual";
@@ -70,6 +70,9 @@ export default function DocumentsPage() {
   );
 
   const [result, setResult] = useState<CreateResult | null>(null);
+
+  // 이미지 미리보기 모달
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // 수정 모드
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -390,6 +393,7 @@ export default function DocumentsPage() {
         <table>
           <thead>
             <tr>
+              <th>영수증</th>
               <th>거래처</th>
               <th>거래일</th>
               <th>금액</th>
@@ -406,6 +410,16 @@ export default function DocumentsPage() {
               if (isEditing) {
                 return (
                   <tr key={doc.id}>
+                    <td>
+                      {doc.imageUrl ? (
+                        <img
+                          src={`${API_BASE}${doc.imageUrl}`}
+                          alt="영수증"
+                          className={styles.thumbnail}
+                          onClick={() => setPreviewUrl(`${API_BASE}${doc.imageUrl}`)}
+                        />
+                      ) : "-"}
+                    </td>
                     <td>
                       <input
                         className={styles.editInput}
@@ -456,6 +470,16 @@ export default function DocumentsPage() {
 
               return (
                 <tr key={doc.id}>
+                  <td>
+                    {doc.imageUrl ? (
+                      <img
+                        src={`${API_BASE}${doc.imageUrl}`}
+                        alt="영수증"
+                        className={styles.thumbnail}
+                        onClick={() => setPreviewUrl(`${API_BASE}${doc.imageUrl}`)}
+                      />
+                    ) : "-"}
+                  </td>
                   <td>{doc.vendorName || "-"}</td>
                   <td>
                     {doc.transactionAt
@@ -492,7 +516,7 @@ export default function DocumentsPage() {
             })}
             {documents.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", color: "var(--text-muted)" }}>
+                <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)" }}>
                   영수증이 없습니다
                 </td>
               </tr>
@@ -500,6 +524,17 @@ export default function DocumentsPage() {
           </tbody>
         </table>
       </div>
+
+      {previewUrl && (
+        <div className={styles.modalOverlay} onClick={() => setPreviewUrl(null)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <button className={styles.modalClose} onClick={() => setPreviewUrl(null)}>
+              X
+            </button>
+            <img src={previewUrl} alt="영수증 원본" className={styles.modalImage} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

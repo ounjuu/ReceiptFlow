@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:3001";
+export const API_BASE = "http://localhost:3001";
 export const TENANT_ID = "seed-tenant-001";
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
