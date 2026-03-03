@@ -59,7 +59,7 @@ function statusLabel(status: string) {
 }
 
 export default function DocumentsPage() {
-  const { tenantId } = useAuth();
+  const { tenantId, canEdit, canDelete } = useAuth();
   const queryClient = useQueryClient();
   const [inputTab, setInputTab] = useState<InputTab>("upload");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -224,7 +224,7 @@ export default function DocumentsPage() {
     <div>
       <h1 className={styles.title}>영수증 관리</h1>
 
-      <div className={styles.formSection}>
+      {canEdit && <div className={styles.formSection}>
         <div className={styles.inputTabs}>
           <button
             className={`${styles.inputTab} ${inputTab === "upload" ? styles.inputTabActive : ""}`}
@@ -397,7 +397,7 @@ export default function DocumentsPage() {
             )}
           </div>
         )}
-      </div>
+      </div>}
 
       <div className={styles.tableSection}>
         <div className={styles.tableHeader}>
@@ -533,20 +533,26 @@ export default function DocumentsPage() {
                   </td>
                   <td>{new Date(doc.createdAt).toLocaleDateString("ko-KR")}</td>
                   <td>
-                    <div className={styles.actions}>
-                      <button
-                        className={styles.editBtn}
-                        onClick={() => startEdit(doc)}
-                      >
-                        수정
-                      </button>
-                      <button
-                        className={styles.deleteBtn}
-                        onClick={() => handleDelete(doc.id)}
-                      >
-                        삭제
-                      </button>
-                    </div>
+                    {(canEdit || canDelete) && (
+                      <div className={styles.actions}>
+                        {canEdit && (
+                          <button
+                            className={styles.editBtn}
+                            onClick={() => startEdit(doc)}
+                          >
+                            수정
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            className={styles.deleteBtn}
+                            onClick={() => handleDelete(doc.id)}
+                          >
+                            삭제
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               );

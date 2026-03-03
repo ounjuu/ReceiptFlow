@@ -13,19 +13,22 @@ import { JournalService } from "./journal.service";
 import { CreateJournalDto } from "./dto/create-journal.dto";
 import { UpdateJournalDto } from "./dto/update-journal.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { RolesGuard } from "../auth/roles.guard";
+import { Roles } from "../auth/roles.decorator";
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("journals")
 export class JournalController {
   constructor(private readonly journalService: JournalService) {}
 
   @Post()
+  @Roles("ADMIN", "ACCOUNTANT")
   async create(@Body() dto: CreateJournalDto) {
     return this.journalService.create(dto);
   }
 
-  // 영수증 → 전표 자동 생성
   @Post("from-document/:documentId")
+  @Roles("ADMIN", "ACCOUNTANT")
   async createFromDocument(
     @Param("documentId") documentId: string,
     @Query("accountId") accountId: string,
@@ -48,11 +51,13 @@ export class JournalController {
   }
 
   @Patch(":id")
+  @Roles("ADMIN", "ACCOUNTANT")
   async update(@Param("id") id: string, @Body() dto: UpdateJournalDto) {
     return this.journalService.update(id, dto);
   }
 
   @Delete(":id")
+  @Roles("ADMIN")
   async remove(@Param("id") id: string) {
     return this.journalService.remove(id);
   }

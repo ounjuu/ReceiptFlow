@@ -14,8 +14,14 @@ const navItems = [
   { href: "/accounts", label: "계정과목" },
 ];
 
+const ROLE_LABEL: Record<string, string> = {
+  ADMIN: "관리자",
+  ACCOUNTANT: "회계담당",
+  VIEWER: "열람자",
+};
+
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, isAdmin, role } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -57,12 +63,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {item.label}
             </Link>
           ))}
+          {isAdmin && (
+            <Link href="/members" className={styles.navLink}>
+              멤버 관리
+            </Link>
+          )}
         </nav>
       </aside>
       <div className={styles.main}>
         <header className={styles.header}>
           <span>LedgerFlow ERP</span>
           <div className={styles.userArea}>
+            {role && (
+              <span className={styles.roleBadge}>
+                {ROLE_LABEL[role] || role}
+              </span>
+            )}
             <span className={styles.userName}>{user.name}</span>
             <button className={styles.logoutBtn} onClick={logout}>
               로그아웃

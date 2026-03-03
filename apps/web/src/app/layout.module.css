@@ -67,6 +67,15 @@
   gap: 12px;
 }
 
+.roleBadge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 600;
+}
+
 .userName {
   font-size: 0.85rem;
   color: var(--text-muted);

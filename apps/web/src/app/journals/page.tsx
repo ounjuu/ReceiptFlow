@@ -44,7 +44,7 @@ function statusLabel(status: string) {
 }
 
 export default function JournalsPage() {
-  const { tenantId } = useAuth();
+  const { tenantId, canEdit, canDelete } = useAuth();
   const queryClient = useQueryClient();
   const [formMode, setFormMode] = useState<"none" | "create" | "edit">("none");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -218,7 +218,7 @@ export default function JournalsPage() {
     <div>
       <div className={styles.header}>
         <h1 className={styles.title}>전표 관리</h1>
-        {formMode === "none" && (
+        {formMode === "none" && canEdit && (
           <button
             className={styles.addBtn}
             onClick={() => setFormMode("create")}
@@ -405,7 +405,7 @@ export default function JournalsPage() {
                   <td>{j.documentId ? "O" : "-"}</td>
                   <td>
                     <div className={styles.actions}>
-                      {nextStatus(j.status) && (
+                      {canEdit && nextStatus(j.status) && (
                         <button
                           className={styles.statusBtn}
                           onClick={() => {
@@ -417,21 +417,21 @@ export default function JournalsPage() {
                           {nextStatus(j.status)!.label}
                         </button>
                       )}
-                      {j.status !== "POSTED" && (
-                        <>
-                          <button
-                            className={styles.editBtn}
-                            onClick={() => startEdit(j)}
-                          >
-                            수정
-                          </button>
-                          <button
-                            className={styles.deleteBtn}
-                            onClick={() => handleDelete(j.id)}
-                          >
-                            삭제
-                          </button>
-                        </>
+                      {j.status !== "POSTED" && canEdit && (
+                        <button
+                          className={styles.editBtn}
+                          onClick={() => startEdit(j)}
+                        >
+                          수정
+                        </button>
+                      )}
+                      {j.status !== "POSTED" && canDelete && (
+                        <button
+                          className={styles.deleteBtn}
+                          onClick={() => handleDelete(j.id)}
+                        >
+                          삭제
+                        </button>
                       )}
                     </div>
                   </td>

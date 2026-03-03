@@ -27,6 +27,10 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   tenantId: string | null;
+  role: string | null;
+  canEdit: boolean;
+  canDelete: boolean;
+  isAdmin: boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
@@ -43,6 +47,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // 첫 번째 소속 테넌트
   const tenantId = user?.memberships?.[0]?.tenantId ?? null;
+  const role = user?.memberships?.[0]?.role ?? null;
+  const canEdit = role === "ADMIN" || role === "ACCOUNTANT";
+  const canDelete = role === "ADMIN";
+  const isAdmin = role === "ADMIN";
 
   // 토큰으로 유저 정보 조회
   const fetchMe = useCallback(async (t: string) => {
@@ -115,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, token, tenantId, loading, login, signup, logout }}
+      value={{ user, token, tenantId, role, canEdit, canDelete, isAdmin, loading, login, signup, logout }}
     >
       {children}
     </AuthContext.Provider>

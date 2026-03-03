@@ -1,0 +1,150 @@
+.title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+/* 초대 폼 */
+.inviteSection {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.inviteForm {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.input {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  background: #fff;
+  min-width: 220px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  background: #fff;
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.inviteBtn {
+  background: var(--primary);
+  color: #fff;
+  padding: 8px 20px;
+  height: fit-content;
+}
+
+.inviteBtn:disabled {
+  opacity: 0.6;
+}
+
+/* 테이블 */
+.tableSection {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+/* 역할 뱃지 */
+.role {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.roleAdmin {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.roleAccountant {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.roleViewer {
+  background: #f0edf5;
+  color: var(--text-muted);
+}
+
+/* 역할 변경 셀렉트 */
+.roleSelect {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  background: #fff;
+}
+
+/* 액션 */
+.actions {
+  display: flex;
+  gap: 4px;
+}
+
+.deleteBtn {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--danger);
+  background: #fff;
+  color: var(--danger);
+}
+
+.deleteBtn:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+
+.success {
+  color: var(--success);
+  font-size: 0.85rem;
+  margin-top: 8px;
+}

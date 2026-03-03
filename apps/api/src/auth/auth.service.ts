@@ -2,6 +2,8 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  NotFoundException,
+  BadRequestException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
@@ -133,6 +135,99 @@ export class AuthService {
         tenantName: m.tenant.name,
       })),
     };
+  }
+
+  // --- 멤버 관리 ---
+
+  async getMembers(tenantId: string) {
+    const memberships = await this.prisma.membership.findMany({
+      where: { tenantId },
+      include: { user: { select: { id: true, email: true, name: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return memberships.map((m) => ({
+      id: m.id,
+      role: m.role,
+      userId: m.user.id,
+      email: m.user.email,
+      name: m.user.name,
+    }));
+  }
+
+  async invite(email: string, role: string, tenantId: string) {
+    if (!["ADMIN", "ACCOUNTANT", "VIEWER"].includes(role)) {
+      throw new BadRequestException("유효하지 않은 역할입니다");
+    }
+
+    // 이미 해당 테넌트 멤버인지 확인
+    const existing = await this.prisma.membership.findFirst({
+      where: { tenantId, user: { email } },
+    });
+    if (existing) {
+      throw new ConflictException("이미 등록된 멤버입니다");
+    }
+
+    // 유저가 있으면 Membership만 추가, 없으면 임시 비밀번호로 생성
+    let user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      const tempPassword = await bcrypt.hash("temp1234", 10);
+      user = await this.prisma.user.create({
+        data: { email, password: tempPassword, name: email.split("@")[0] },
+      });
+    }
+
+    const membership = await this.prisma.membership.create({
+      data: { userId: user.id, tenantId, role },
+      include: { user: { select: { id: true, email: true, name: true } } },
+    });
+
+    return {
+      id: membership.id,
+      role: membership.role,
+      userId: membership.user.id,
+      email: membership.user.email,
+      name: membership.user.name,
+    };
+  }
+
+  async updateMemberRole(membershipId: string, role: string) {
+    if (!["ADMIN", "ACCOUNTANT", "VIEWER"].includes(role)) {
+      throw new BadRequestException("유효하지 않은 역할입니다");
+    }
+
+    const membership = await this.prisma.membership.findUnique({
+      where: { id: membershipId },
+    });
+    if (!membership) {
+      throw new NotFoundException("멤버를 찾을 수 없습니다");
+    }
+
+    const updated = await this.prisma.membership.update({
+      where: { id: membershipId },
+      data: { role },
+      include: { user: { select: { id: true, email: true, name: true } } },
+    });
+
+    return {
+      id: updated.id,
+      role: updated.role,
+      userId: updated.user.id,
+      email: updated.user.email,
+      name: updated.user.name,
+    };
+  }
+
+  async removeMember(membershipId: string) {
+    const membership = await this.prisma.membership.findUnique({
+      where: { id: membershipId },
+    });
+    if (!membership) {
+      throw new NotFoundException("멤버를 찾을 수 없습니다");
+    }
+
+    await this.prisma.membership.delete({ where: { id: membershipId } });
+    return { success: true };
   }
 
   private generateToken(user: { id: string; email: string; name: string; memberships: { tenantId: string; role: string; tenant: { name: string } }[] }) {
