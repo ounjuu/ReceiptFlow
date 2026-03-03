@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { apiGet, TENANT_ID } from "@/lib/api";
+import { apiGet } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import styles from "./page.module.css";
 
 interface Document {
@@ -19,14 +20,15 @@ interface JournalEntry {
 }
 
 export default function DashboardPage() {
+  const { tenantId } = useAuth();
   const { data: documents = [] } = useQuery({
     queryKey: ["documents"],
-    queryFn: () => apiGet<Document[]>(`/documents?tenantId=${TENANT_ID}`),
+    queryFn: () => apiGet<Document[]>(`/documents?tenantId=${tenantId}`),
   });
 
   const { data: journals = [] } = useQuery({
     queryKey: ["journals"],
-    queryFn: () => apiGet<JournalEntry[]>(`/journals?tenantId=${TENANT_ID}`),
+    queryFn: () => apiGet<JournalEntry[]>(`/journals?tenantId=${tenantId}`),
   });
 
   const totalSpent = documents.reduce(

@@ -7,11 +7,14 @@ import {
   Param,
   Query,
   Body,
+  UseGuards,
 } from "@nestjs/common";
 import { JournalService } from "./journal.service";
 import { CreateJournalDto } from "./dto/create-journal.dto";
 import { UpdateJournalDto } from "./dto/update-journal.dto";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 
+@UseGuards(JwtAuthGuard)
 @Controller("journals")
 export class JournalController {
   constructor(private readonly journalService: JournalService) {}

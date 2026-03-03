@@ -2,7 +2,8 @@
 
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, TENANT_ID, API_BASE } from "@/lib/api";
+import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, API_BASE } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import styles from "./page.module.css";
 
 type InputTab = "upload" | "manual";
@@ -58,6 +59,7 @@ function statusLabel(status: string) {
 }
 
 export default function DocumentsPage() {
+  const { tenantId } = useAuth();
   const queryClient = useQueryClient();
   const [inputTab, setInputTab] = useState<InputTab>("upload");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -91,7 +93,7 @@ export default function DocumentsPage() {
 
   const { data: documents = [] } = useQuery({
     queryKey: ["documents", filterStart, filterEnd],
-    queryFn: () => apiGet<Document[]>(`/documents?tenantId=${TENANT_ID}${dateParams ? `&${dateParams}` : ""}`),
+    queryFn: () => apiGet<Document[]>(`/documents?tenantId=${tenantId}${dateParams ? `&${dateParams}` : ""}`),
   });
 
   // 이미지 업로드 (OCR)
@@ -99,7 +101,7 @@ export default function DocumentsPage() {
     mutationFn: async (file: File) => {
       const fd = new FormData();
       fd.append("file", file);
-      fd.append("tenantId", TENANT_ID);
+      fd.append("tenantId", tenantId!);
       return apiUpload<CreateResult>("/documents/upload", fd);
     },
     onSuccess: (data) => {
@@ -153,7 +155,7 @@ export default function DocumentsPage() {
     e.preventDefault();
     if (!vendorName || !totalAmount) return;
     createMutation.mutate({
-      tenantId: TENANT_ID,
+      tenantId: tenantId!,
       vendorName,
       totalAmount: Number(totalAmount),
       transactionAt,
@@ -209,7 +211,7 @@ export default function DocumentsPage() {
   const handleOcrComplete = () => {
     if (!ocrVendorInput || !result?.ocr) return;
     completeOcrMutation.mutate({
-      tenantId: TENANT_ID,
+      tenantId: tenantId!,
       vendorName: ocrVendorInput,
       totalAmount: result.ocr.total_amount!,
       transactionAt: result.ocr.transaction_date || new Date().toISOString().slice(0, 10),

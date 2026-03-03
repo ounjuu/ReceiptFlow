@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPatch, apiDelete, TENANT_ID } from "@/lib/api";
+import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import styles from "./page.module.css";
 
 interface Account {
@@ -43,6 +44,7 @@ function statusLabel(status: string) {
 }
 
 export default function JournalsPage() {
+  const { tenantId } = useAuth();
   const queryClient = useQueryClient();
   const [formMode, setFormMode] = useState<"none" | "create" | "edit">("none");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -65,12 +67,12 @@ export default function JournalsPage() {
 
   const { data: journals = [] } = useQuery({
     queryKey: ["journals", filterStart, filterEnd],
-    queryFn: () => apiGet<JournalEntry[]>(`/journals?tenantId=${TENANT_ID}${dateParams ? `&${dateParams}` : ""}`),
+    queryFn: () => apiGet<JournalEntry[]>(`/journals?tenantId=${tenantId}${dateParams ? `&${dateParams}` : ""}`),
   });
 
   const { data: accounts = [] } = useQuery({
     queryKey: ["accounts"],
-    queryFn: () => apiGet<Account[]>(`/accounts?tenantId=${TENANT_ID}`),
+    queryFn: () => apiGet<Account[]>(`/accounts?tenantId=${tenantId}`),
     enabled: formMode !== "none",
   });
 
@@ -180,7 +182,7 @@ export default function JournalsPage() {
       });
     } else {
       createMutation.mutate({
-        tenantId: TENANT_ID,
+        tenantId: tenantId!,
         date,
         description,
         lines,

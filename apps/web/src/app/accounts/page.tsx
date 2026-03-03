@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { apiGet, TENANT_ID } from "@/lib/api";
+import { apiGet } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import styles from "./page.module.css";
 
 interface Account {
@@ -21,9 +22,10 @@ const typeMap: Record<string, { text: string; cls: string }> = {
 };
 
 export default function AccountsPage() {
+  const { tenantId } = useAuth();
   const { data: accounts = [] } = useQuery({
     queryKey: ["accounts"],
-    queryFn: () => apiGet<Account[]>(`/accounts?tenantId=${TENANT_ID}`),
+    queryFn: () => apiGet<Account[]>(`/accounts?tenantId=${tenantId}`),
   });
 
   return (

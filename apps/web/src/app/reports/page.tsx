@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { apiGet, TENANT_ID } from "@/lib/api";
+import { apiGet } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import styles from "./page.module.css";
 
 type Tab = "trial-balance" | "income-statement" | "balance-sheet";
@@ -69,6 +70,7 @@ const tabs: { key: Tab; label: string }[] = [
 // --- 메인 ---
 
 export default function ReportsPage() {
+  const { tenantId } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("balance-sheet");
   const [filterStart, setFilterStart] = useState("");
   const [filterEnd, setFilterEnd] = useState("");
@@ -120,20 +122,20 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      {activeTab === "trial-balance" && <TrialBalanceView dateParams={dateParams} />}
-      {activeTab === "income-statement" && <IncomeStatementView dateParams={dateParams} />}
-      {activeTab === "balance-sheet" && <BalanceSheetView dateParams={dateParams} />}
+      {activeTab === "trial-balance" && <TrialBalanceView dateParams={dateParams} tenantId={tenantId} />}
+      {activeTab === "income-statement" && <IncomeStatementView dateParams={dateParams} tenantId={tenantId} />}
+      {activeTab === "balance-sheet" && <BalanceSheetView dateParams={dateParams} tenantId={tenantId} />}
     </div>
   );
 }
 
 // --- 시산표 ---
 
-function TrialBalanceView({ dateParams }: { dateParams: string }) {
+function TrialBalanceView({ dateParams, tenantId }: { dateParams: string; tenantId: string | null }) {
   const { data } = useQuery({
     queryKey: ["reports", "trial-balance", dateParams],
     queryFn: () =>
-      apiGet<TrialBalance>(`/reports/trial-balance?tenantId=${TENANT_ID}${dateParams ? `&${dateParams}` : ""}`),
+      apiGet<TrialBalance>(`/reports/trial-balance?tenantId=${tenantId}${dateParams ? `&${dateParams}` : ""}`),
   });
 
   if (!data) return <p>불러오는 중...</p>;
@@ -180,12 +182,12 @@ function TrialBalanceView({ dateParams }: { dateParams: string }) {
 
 // --- 손익계산서 ---
 
-function IncomeStatementView({ dateParams }: { dateParams: string }) {
+function IncomeStatementView({ dateParams, tenantId }: { dateParams: string; tenantId: string | null }) {
   const { data } = useQuery({
     queryKey: ["reports", "income-statement", dateParams],
     queryFn: () =>
       apiGet<IncomeStatement>(
-        `/reports/income-statement?tenantId=${TENANT_ID}${dateParams ? `&${dateParams}` : ""}`,
+        `/reports/income-statement?tenantId=${tenantId}${dateParams ? `&${dateParams}` : ""}`,
       ),
   });
 
@@ -266,11 +268,11 @@ function IncomeStatementView({ dateParams }: { dateParams: string }) {
 
 // --- 재무상태표 ---
 
-function BalanceSheetView({ dateParams }: { dateParams: string }) {
+function BalanceSheetView({ dateParams, tenantId }: { dateParams: string; tenantId: string | null }) {
   const { data } = useQuery({
     queryKey: ["reports", "balance-sheet", dateParams],
     queryFn: () =>
-      apiGet<BalanceSheet>(`/reports/balance-sheet?tenantId=${TENANT_ID}${dateParams ? `&${dateParams}` : ""}`),
+      apiGet<BalanceSheet>(`/reports/balance-sheet?tenantId=${tenantId}${dateParams ? `&${dateParams}` : ""}`),
   });
 
   if (!data) return <p>불러오는 중...</p>;

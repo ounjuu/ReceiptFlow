@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import * as bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
@@ -14,12 +15,14 @@ async function main() {
   });
 
   // Admin 유저 생성
+  const hashedPassword = await bcrypt.hash("admin1234", 10);
   const user = await prisma.user.upsert({
     where: { email: "admin@ledgerflow.dev" },
-    update: {},
+    update: { password: hashedPassword },
     create: {
       id: "seed-user-001",
       email: "admin@ledgerflow.dev",
+      password: hashedPassword,
       name: "관리자",
     },
   });
