@@ -174,6 +174,63 @@
   padding: 20px;
 }
 
+.tableHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.tableHeader .sectionTitle {
+  margin-bottom: 0;
+}
+
+/* 기간 필터 */
+.filterRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterInput {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  background: #fff;
+}
+
+.filterInput:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.filterLabel {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.filterSep {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.filterClear {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.filterClear:hover {
+  background: var(--bg);
+}
+
 .status {
   display: inline-block;
   padding: 2px 8px;

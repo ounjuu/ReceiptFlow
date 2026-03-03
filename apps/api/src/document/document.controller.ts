@@ -47,8 +47,12 @@ export class DocumentController {
   }
 
   @Get()
-  async findAll(@Query("tenantId") tenantId: string) {
-    return this.documentService.findAll(tenantId);
+  async findAll(
+    @Query("tenantId") tenantId: string,
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string,
+  ) {
+    return this.documentService.findAll(tenantId, startDate, endDate);
   }
 
   @Get(":id")

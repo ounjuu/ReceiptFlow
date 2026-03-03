@@ -74,15 +74,24 @@ export default function DocumentsPage() {
   // 이미지 미리보기 모달
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  // 기간 필터
+  const [filterStart, setFilterStart] = useState("");
+  const [filterEnd, setFilterEnd] = useState("");
+
   // 수정 모드
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editVendor, setEditVendor] = useState("");
   const [editAmount, setEditAmount] = useState("");
   const [editDate, setEditDate] = useState("");
 
+  const dateParams = [
+    filterStart && `startDate=${filterStart}`,
+    filterEnd && `endDate=${filterEnd}`,
+  ].filter(Boolean).join("&");
+
   const { data: documents = [] } = useQuery({
-    queryKey: ["documents"],
-    queryFn: () => apiGet<Document[]>(`/documents?tenantId=${TENANT_ID}`),
+    queryKey: ["documents", filterStart, filterEnd],
+    queryFn: () => apiGet<Document[]>(`/documents?tenantId=${TENANT_ID}${dateParams ? `&${dateParams}` : ""}`),
   });
 
   // 이미지 업로드 (OCR)
@@ -389,7 +398,33 @@ export default function DocumentsPage() {
       </div>
 
       <div className={styles.tableSection}>
-        <h2 className={styles.sectionTitle}>영수증 목록</h2>
+        <div className={styles.tableHeader}>
+          <h2 className={styles.sectionTitle}>영수증 목록</h2>
+          <div className={styles.filterRow}>
+            <span className={styles.filterLabel}>거래일 기준</span>
+            <input
+              className={styles.filterInput}
+              type="date"
+              value={filterStart}
+              onChange={(e) => setFilterStart(e.target.value)}
+            />
+            <span className={styles.filterSep}>~</span>
+            <input
+              className={styles.filterInput}
+              type="date"
+              value={filterEnd}
+              onChange={(e) => setFilterEnd(e.target.value)}
+            />
+            {(filterStart || filterEnd) && (
+              <button
+                className={styles.filterClear}
+                onClick={() => { setFilterStart(""); setFilterEnd(""); }}
+              >
+                초기화
+              </button>
+            )}
+          </div>
+        </div>
         <table>
           <thead>
             <tr>

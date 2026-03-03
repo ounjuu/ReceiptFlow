@@ -70,11 +70,43 @@ const tabs: { key: Tab; label: string }[] = [
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("balance-sheet");
+  const [filterStart, setFilterStart] = useState("");
+  const [filterEnd, setFilterEnd] = useState("");
+
+  const dateParams = [
+    filterStart && `startDate=${filterStart}`,
+    filterEnd && `endDate=${filterEnd}`,
+  ].filter(Boolean).join("&");
 
   return (
     <div>
       <h1 className={styles.title}>재무제표</h1>
       <p className={styles.subtitle}>회사의 재무 상태를 확인하세요</p>
+
+      <div className={styles.filterRow}>
+        <span className={styles.filterLabel}>전표일 기준</span>
+        <input
+          className={styles.filterInput}
+          type="date"
+          value={filterStart}
+          onChange={(e) => setFilterStart(e.target.value)}
+        />
+        <span className={styles.filterSep}>~</span>
+        <input
+          className={styles.filterInput}
+          type="date"
+          value={filterEnd}
+          onChange={(e) => setFilterEnd(e.target.value)}
+        />
+        {(filterStart || filterEnd) && (
+          <button
+            className={styles.filterClear}
+            onClick={() => { setFilterStart(""); setFilterEnd(""); }}
+          >
+            초기화
+          </button>
+        )}
+      </div>
 
       <div className={styles.tabs}>
         {tabs.map((tab) => (
@@ -88,20 +120,20 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      {activeTab === "trial-balance" && <TrialBalanceView />}
-      {activeTab === "income-statement" && <IncomeStatementView />}
-      {activeTab === "balance-sheet" && <BalanceSheetView />}
+      {activeTab === "trial-balance" && <TrialBalanceView dateParams={dateParams} />}
+      {activeTab === "income-statement" && <IncomeStatementView dateParams={dateParams} />}
+      {activeTab === "balance-sheet" && <BalanceSheetView dateParams={dateParams} />}
     </div>
   );
 }
 
 // --- 시산표 ---
 
-function TrialBalanceView() {
+function TrialBalanceView({ dateParams }: { dateParams: string }) {
   const { data } = useQuery({
-    queryKey: ["reports", "trial-balance"],
+    queryKey: ["reports", "trial-balance", dateParams],
     queryFn: () =>
-      apiGet<TrialBalance>(`/reports/trial-balance?tenantId=${TENANT_ID}`),
+      apiGet<TrialBalance>(`/reports/trial-balance?tenantId=${TENANT_ID}${dateParams ? `&${dateParams}` : ""}`),
   });
 
   if (!data) return <p>불러오는 중...</p>;
@@ -148,12 +180,12 @@ function TrialBalanceView() {
 
 // --- 손익계산서 ---
 
-function IncomeStatementView() {
+function IncomeStatementView({ dateParams }: { dateParams: string }) {
   const { data } = useQuery({
-    queryKey: ["reports", "income-statement"],
+    queryKey: ["reports", "income-statement", dateParams],
     queryFn: () =>
       apiGet<IncomeStatement>(
-        `/reports/income-statement?tenantId=${TENANT_ID}`,
+        `/reports/income-statement?tenantId=${TENANT_ID}${dateParams ? `&${dateParams}` : ""}`,
       ),
   });
 
@@ -234,11 +266,11 @@ function IncomeStatementView() {
 
 // --- 재무상태표 ---
 
-function BalanceSheetView() {
+function BalanceSheetView({ dateParams }: { dateParams: string }) {
   const { data } = useQuery({
-    queryKey: ["reports", "balance-sheet"],
+    queryKey: ["reports", "balance-sheet", dateParams],
     queryFn: () =>
-      apiGet<BalanceSheet>(`/reports/balance-sheet?tenantId=${TENANT_ID}`),
+      apiGet<BalanceSheet>(`/reports/balance-sheet?tenantId=${TENANT_ID}${dateParams ? `&${dateParams}` : ""}`),
   });
 
   if (!data) return <p>불러오는 중...</p>;

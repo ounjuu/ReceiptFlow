@@ -53,10 +53,17 @@ export class JournalService {
     });
   }
 
-  // 테넌트별 전표 목록 조회
-  async findAll(tenantId: string) {
+  // 테넌트별 전표 목록 조회 (기간 필터)
+  async findAll(tenantId: string, startDate?: string, endDate?: string) {
+    const where: Record<string, unknown> = { tenantId };
+    if (startDate || endDate) {
+      where.date = {
+        ...(startDate && { gte: new Date(startDate) }),
+        ...(endDate && { lte: new Date(endDate + "T23:59:59") }),
+      };
+    }
     return this.prisma.journalEntry.findMany({
-      where: { tenantId },
+      where,
       include: { lines: { include: { account: true } }, document: true },
       orderBy: { date: "desc" },
     });

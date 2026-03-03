@@ -54,9 +54,18 @@ export default function JournalsPage() {
   ]);
   const [error, setError] = useState("");
 
+  // 기간 필터
+  const [filterStart, setFilterStart] = useState("");
+  const [filterEnd, setFilterEnd] = useState("");
+
+  const dateParams = [
+    filterStart && `startDate=${filterStart}`,
+    filterEnd && `endDate=${filterEnd}`,
+  ].filter(Boolean).join("&");
+
   const { data: journals = [] } = useQuery({
-    queryKey: ["journals"],
-    queryFn: () => apiGet<JournalEntry[]>(`/journals?tenantId=${TENANT_ID}`),
+    queryKey: ["journals", filterStart, filterEnd],
+    queryFn: () => apiGet<JournalEntry[]>(`/journals?tenantId=${TENANT_ID}${dateParams ? `&${dateParams}` : ""}`),
   });
 
   const { data: accounts = [] } = useQuery({
@@ -338,6 +347,33 @@ export default function JournalsPage() {
       )}
 
       <div className={styles.tableSection}>
+        <div className={styles.tableHeader}>
+          <h2 className={styles.sectionTitle}>전표 목록</h2>
+          <div className={styles.filterRow}>
+            <span className={styles.filterLabel}>전표일 기준</span>
+            <input
+              className={styles.filterInput}
+              type="date"
+              value={filterStart}
+              onChange={(e) => setFilterStart(e.target.value)}
+            />
+            <span className={styles.filterSep}>~</span>
+            <input
+              className={styles.filterInput}
+              type="date"
+              value={filterEnd}
+              onChange={(e) => setFilterEnd(e.target.value)}
+            />
+            {(filterStart || filterEnd) && (
+              <button
+                className={styles.filterClear}
+                onClick={() => { setFilterStart(""); setFilterEnd(""); }}
+              >
+                초기화
+              </button>
+            )}
+          </div>
+        </div>
         <table>
           <thead>
             <tr>

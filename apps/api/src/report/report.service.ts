@@ -15,17 +15,27 @@ export interface TrialBalanceRow {
 export class ReportService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // 시산표: 계정별 차변/대변 합계
-  async trialBalance(tenantId: string): Promise<{
+  // 시산표: 계정별 차변/대변 합계 (기간 필터)
+  async trialBalance(tenantId: string, startDate?: string, endDate?: string): Promise<{
     rows: TrialBalanceRow[];
     totalDebit: number;
     totalCredit: number;
   }> {
+    const dateFilter: Record<string, unknown> = {};
+    if (startDate) dateFilter.gte = new Date(startDate);
+    if (endDate) dateFilter.lte = new Date(endDate + "T23:59:59");
+
     const accounts = await this.prisma.account.findMany({
       where: { tenantId },
       include: {
         journalLines: {
-          where: { journalEntry: { status: "POSTED", tenantId } },
+          where: {
+            journalEntry: {
+              status: "POSTED",
+              tenantId,
+              ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
+            },
+          },
         },
       },
       orderBy: { code: "asc" },
@@ -62,8 +72,8 @@ export class ReportService {
   }
 
   // 손익계산서: 수익 - 비용 = 당기순이익
-  async incomeStatement(tenantId: string) {
-    const { rows } = await this.trialBalance(tenantId);
+  async incomeStatement(tenantId: string, startDate?: string, endDate?: string) {
+    const { rows } = await this.trialBalance(tenantId, startDate, endDate);
 
     const revenue = rows
       .filter((r) => r.type === "REVENUE")
@@ -86,9 +96,9 @@ export class ReportService {
   }
 
   // 재무상태표: 자산 = 부채 + 자본 (유동/비유동 소분류 포함)
-  async balanceSheet(tenantId: string) {
-    const { rows } = await this.trialBalance(tenantId);
-    const income = await this.incomeStatement(tenantId);
+  async balanceSheet(tenantId: string, startDate?: string, endDate?: string) {
+    const { rows } = await this.trialBalance(tenantId, startDate, endDate);
+    const income = await this.incomeStatement(tenantId, startDate, endDate);
 
     const toAmount = (r: TrialBalanceRow, isDebit: boolean) => ({
       ...r,

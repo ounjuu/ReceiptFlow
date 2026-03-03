@@ -31,8 +31,12 @@ export class JournalController {
   }
 
   @Get()
-  async findAll(@Query("tenantId") tenantId: string) {
-    return this.journalService.findAll(tenantId);
+  async findAll(
+    @Query("tenantId") tenantId: string,
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string,
+  ) {
+    return this.journalService.findAll(tenantId, startDate, endDate);
   }
 
   @Get(":id")
