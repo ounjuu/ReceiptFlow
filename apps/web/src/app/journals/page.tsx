@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -13,10 +13,17 @@ interface Account {
   type: string;
 }
 
+interface Vendor {
+  id: string;
+  name: string;
+  bizNo: string | null;
+}
+
 interface JournalLine {
   debit: string;
   credit: string;
   account: { id: string; code: string; name: string };
+  vendor: { id: string; name: string; bizNo: string | null } | null;
 }
 
 interface JournalEntry {
@@ -30,6 +37,9 @@ interface JournalEntry {
 
 interface LineInput {
   accountId: string;
+  vendorBizNo: string;
+  vendorName: string;
+  vendorId: string; // 기존 거래처 매칭 시
   debit: number;
   credit: number;
 }
@@ -43,6 +53,15 @@ function statusLabel(status: string) {
   }
 }
 
+const emptyLine = (): LineInput => ({
+  accountId: "",
+  vendorBizNo: "",
+  vendorName: "",
+  vendorId: "",
+  debit: 0,
+  credit: 0,
+});
+
 export default function JournalsPage() {
   const { tenantId, canEdit, canDelete } = useAuth();
   const queryClient = useQueryClient();
@@ -50,10 +69,7 @@ export default function JournalsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
-  const [lines, setLines] = useState<LineInput[]>([
-    { accountId: "", debit: 0, credit: 0 },
-    { accountId: "", debit: 0, credit: 0 },
-  ]);
+  const [lines, setLines] = useState<LineInput[]>([emptyLine(), emptyLine()]);
   const [error, setError] = useState("");
 
   // 기간 필터
@@ -76,15 +92,88 @@ export default function JournalsPage() {
     enabled: formMode !== "none",
   });
 
+  // 자동완성 상태
+  const [lineSuggestions, setLineSuggestions] = useState<Record<number, Vendor[]>>({});
+  const [showLineSuggestions, setShowLineSuggestions] = useState<Record<number, boolean>>({});
+  const linesSuggestRef = useRef<HTMLDivElement>(null);
+
+  // 바깥 클릭 시 드롭다운 닫기
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (linesSuggestRef.current && !linesSuggestRef.current.contains(e.target as Node)) {
+        setShowLineSuggestions({});
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // 부분검색 API
+  const searchAutocomplete = useCallback(async (query: string): Promise<Vendor[]> => {
+    if (!query.trim() || !tenantId) return [];
+    try {
+      return await apiGet<Vendor[]>(`/vendors/autocomplete?tenantId=${tenantId}&q=${encodeURIComponent(query.trim())}`);
+    } catch {
+      return [];
+    }
+  }, [tenantId]);
+
+  // 사업자번호 입력 시 자동완성
+  const handleBizNoInput = async (index: number, value: string) => {
+    updateLine(index, "vendorBizNo", value);
+    if (value.trim().length >= 1) {
+      const results = await searchAutocomplete(value);
+      setLineSuggestions((prev) => ({ ...prev, [index]: results }));
+      setShowLineSuggestions((prev) => ({ ...prev, [index]: results.length > 0 }));
+    } else {
+      setLineSuggestions((prev) => ({ ...prev, [index]: [] }));
+      setShowLineSuggestions((prev) => ({ ...prev, [index]: false }));
+    }
+  };
+
+  // 자동완성 선택
+  const selectLineVendor = (index: number, vendor: Vendor) => {
+    setLines((prev) =>
+      prev.map((l, i) =>
+        i === index
+          ? { ...l, vendorBizNo: vendor.bizNo || "", vendorName: vendor.name, vendorId: vendor.id }
+          : l,
+      ),
+    );
+    setShowLineSuggestions((prev) => ({ ...prev, [index]: false }));
+  };
+
+  // blur 시 정확 매칭 확인
+  const handleBizNoBlur = async (index: number) => {
+    setTimeout(async () => {
+      const bizNo = lines[index].vendorBizNo;
+      if (!bizNo.trim() || lines[index].vendorId) return;
+      try {
+        const vendor = await apiGet<Vendor | null>(`/vendors/search?tenantId=${tenantId}&bizNo=${encodeURIComponent(bizNo.trim())}`);
+        if (vendor) {
+          setLines((prev) =>
+            prev.map((l, i) =>
+              i === index
+                ? { ...l, vendorId: vendor.id, vendorName: vendor.name }
+                : l,
+            ),
+          );
+        }
+      } catch { /* ignore */ }
+      setShowLineSuggestions((prev) => ({ ...prev, [index]: false }));
+    }, 200);
+  };
+
   const createMutation = useMutation({
     mutationFn: (body: {
       tenantId: string;
       date: string;
       description: string;
-      lines: LineInput[];
+      lines: { accountId: string; vendorId?: string; vendorBizNo?: string; vendorName?: string; debit: number; credit: number }[];
     }) => apiPost<JournalEntry>("/journals", body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journals"] });
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
       resetForm();
     },
     onError: (err: Error) => setError(err.message),
@@ -95,6 +184,7 @@ export default function JournalsPage() {
       apiPatch<JournalEntry>(`/journals/${id}`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journals"] });
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
       resetForm();
     },
     onError: (err: Error) => setError(err.message),
@@ -113,10 +203,7 @@ export default function JournalsPage() {
     setEditingId(null);
     setDate(new Date().toISOString().slice(0, 10));
     setDescription("");
-    setLines([
-      { accountId: "", debit: 0, credit: 0 },
-      { accountId: "", debit: 0, credit: 0 },
-    ]);
+    setLines([emptyLine(), emptyLine()]);
     setError("");
   };
 
@@ -128,6 +215,9 @@ export default function JournalsPage() {
     setLines(
       j.lines.map((l) => ({
         accountId: l.account.id,
+        vendorBizNo: l.vendor?.bizNo || "",
+        vendorName: l.vendor?.name || "",
+        vendorId: l.vendor?.id || "",
         debit: Number(l.debit),
         credit: Number(l.credit),
       })),
@@ -137,16 +227,22 @@ export default function JournalsPage() {
 
   const updateLine = (index: number, field: keyof LineInput, value: string) => {
     setLines((prev) =>
-      prev.map((l, i) =>
-        i === index
-          ? { ...l, [field]: field === "accountId" ? value : Number(value) || 0 }
-          : l,
-      ),
+      prev.map((l, i) => {
+        if (i !== index) return l;
+        if (field === "debit" || field === "credit") {
+          return { ...l, [field]: Number(value) || 0 };
+        }
+        // 사업자번호 변경 시 기존 매칭 초기화
+        if (field === "vendorBizNo") {
+          return { ...l, vendorBizNo: value, vendorId: "", vendorName: "" };
+        }
+        return { ...l, [field]: value };
+      }),
     );
   };
 
   const addLine = () => {
-    setLines((prev) => [...prev, { accountId: "", debit: 0, credit: 0 }]);
+    setLines((prev) => [...prev, emptyLine()]);
   };
 
   const removeLine = (index: number) => {
@@ -166,6 +262,14 @@ export default function JournalsPage() {
       setError("모든 라인의 계정을 선택해주세요");
       return;
     }
+    if (lines.some((l) => !l.vendorBizNo)) {
+      setError("모든 라인의 사업자등록번호를 입력해주세요");
+      return;
+    }
+    if (lines.some((l) => !l.vendorName)) {
+      setError("모든 라인의 거래처명을 입력해주세요");
+      return;
+    }
     if (!isBalanced) {
       setError("차변과 대변의 합계가 일치하지 않습니다");
       return;
@@ -175,17 +279,27 @@ export default function JournalsPage() {
       return;
     }
 
+    // 기존 매칭된 거래처는 vendorId, 신규는 bizNo+name
+    const submitLines = lines.map((l) => ({
+      accountId: l.accountId,
+      ...(l.vendorId
+        ? { vendorId: l.vendorId }
+        : { vendorBizNo: l.vendorBizNo, vendorName: l.vendorName }),
+      debit: l.debit,
+      credit: l.credit,
+    }));
+
     if (formMode === "edit" && editingId) {
       updateMutation.mutate({
         id: editingId,
-        body: { date, description, lines },
+        body: { date, description, lines: submitLines },
       });
     } else {
       createMutation.mutate({
         tenantId: tenantId!,
         date,
         description,
-        lines,
+        lines: submitLines,
       });
     }
   };
@@ -258,14 +372,51 @@ export default function JournalsPage() {
             </div>
 
             <div className={styles.linesHeader}>
+              <span>사업자번호</span>
+              <span>거래처명</span>
               <span>계정과목</span>
               <span>차변</span>
               <span>대변</span>
               <span></span>
             </div>
 
+            <div ref={linesSuggestRef}>
             {lines.map((line, i) => (
               <div key={i} className={styles.lineRow}>
+                <div style={{ position: "relative" }}>
+                  <input
+                    className={`${styles.input} ${line.vendorId ? styles.inputMatched : ""}`}
+                    type="text"
+                    value={line.vendorBizNo}
+                    onChange={(e) => handleBizNoInput(i, e.target.value)}
+                    onBlur={() => handleBizNoBlur(i)}
+                    onFocus={() => { if (lineSuggestions[i]?.length > 0) setShowLineSuggestions((prev) => ({ ...prev, [i]: true })); }}
+                    placeholder="000-00-00000"
+                    autoComplete="off"
+                  />
+                  {showLineSuggestions[i] && lineSuggestions[i]?.length > 0 && (
+                    <ul className={styles.autocomplete}>
+                      {lineSuggestions[i].map((v) => (
+                        <li
+                          key={v.id}
+                          className={styles.autocompleteItem}
+                          onMouseDown={() => selectLineVendor(i, v)}
+                        >
+                          <span className={styles.autocompleteNo}>{v.bizNo}</span>
+                          <span className={styles.autocompleteName}>{v.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <input
+                  className={styles.input}
+                  type="text"
+                  value={line.vendorName}
+                  onChange={(e) => updateLine(i, "vendorName", e.target.value)}
+                  placeholder="상호명"
+                  readOnly={!!line.vendorId}
+                />
                 <select
                   className={styles.select}
                   value={line.accountId}
@@ -304,6 +455,7 @@ export default function JournalsPage() {
                 </button>
               </div>
             ))}
+            </div>
 
             <div className={styles.lineFooter}>
               <button
@@ -380,6 +532,7 @@ export default function JournalsPage() {
           <thead>
             <tr>
               <th>날짜</th>
+              <th>거래처</th>
               <th>설명</th>
               <th>상태</th>
               <th>차변 합계</th>
@@ -396,6 +549,9 @@ export default function JournalsPage() {
               return (
                 <tr key={j.id}>
                   <td>{new Date(j.date).toLocaleDateString("ko-KR")}</td>
+                  <td>
+                    {[...new Set(j.lines.map((l) => l.vendor?.name).filter(Boolean))].join(", ") || "-"}
+                  </td>
                   <td>{j.description || "-"}</td>
                   <td>
                     <span className={`${styles.status} ${s.cls}`}>{s.text}</span>
@@ -440,7 +596,7 @@ export default function JournalsPage() {
             })}
             {journals.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)" }}>
+                <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)" }}>
                   전표가 없습니다
                 </td>
               </tr>

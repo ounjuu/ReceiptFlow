@@ -82,7 +82,7 @@
 /* 라인 헤더 */
 .linesHeader {
   display: grid;
-  grid-template-columns: 1fr 120px 120px 36px;
+  grid-template-columns: 140px 1fr 1fr 110px 110px 36px;
   gap: 8px;
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -93,10 +93,56 @@
 
 .lineRow {
   display: grid;
-  grid-template-columns: 1fr 120px 120px 36px;
+  grid-template-columns: 140px 1fr 1fr 110px 110px 36px;
   gap: 8px;
   margin-bottom: 8px;
   align-items: center;
+}
+
+/* 사업자번호 매칭 성공 */
+.inputMatched {
+  border-color: var(--primary) !important;
+  background: var(--primary-light) !important;
+}
+
+/* 자동완성 드롭다운 */
+.autocomplete {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.autocompleteItem {
+  padding: 8px 12px;
+  display: flex;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.autocompleteItem:hover {
+  background: var(--primary-light);
+}
+
+.autocompleteNo {
+  color: var(--primary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.autocompleteName {
+  color: var(--text-muted);
 }
 
 .removeBtn {

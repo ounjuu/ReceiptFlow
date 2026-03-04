@@ -82,8 +82,10 @@ model Vendor {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  documents Document[]
+  documents    Document[]
+  journalLines JournalLine[]
 
+  @@unique([tenantId, bizNo])
   @@index([tenantId])
 }
 
@@ -145,8 +147,11 @@ model JournalLine {
   journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
   accountId      String
   account        Account      @relation(fields: [accountId], references: [id])
+  vendorId       String?
+  vendor         Vendor?      @relation(fields: [vendorId], references: [id])
   createdAt      DateTime     @default(now())
 
   @@index([journalEntryId])
   @@index([accountId])
+  @@index([vendorId])
 }

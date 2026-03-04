@@ -5,9 +5,10 @@ import { DocumentModule } from "./document/document.module";
 import { JournalModule } from "./journal/journal.module";
 import { ReportModule } from "./report/report.module";
 import { AccountModule } from "./account/account.module";
+import { VendorModule } from "./vendor/vendor.module";
 
 @Module({
-  imports: [PrismaModule, AuthModule, DocumentModule, JournalModule, ReportModule, AccountModule],
+  imports: [PrismaModule, AuthModule, DocumentModule, JournalModule, ReportModule, AccountModule, VendorModule],
   controllers: [],
   providers: [],
 })

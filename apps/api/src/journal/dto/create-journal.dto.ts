@@ -1,5 +1,8 @@
 export class JournalLineDto {
   accountId!: string;
+  vendorId?: string;
+  vendorBizNo?: string;
+  vendorName?: string;
   debit!: number;
   credit!: number;
 }

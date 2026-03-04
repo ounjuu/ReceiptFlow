@@ -1,11 +1,35 @@
 import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { CreateJournalDto } from "./dto/create-journal.dto";
+import { CreateJournalDto, JournalLineDto } from "./dto/create-journal.dto";
 import { UpdateJournalDto } from "./dto/update-journal.dto";
 
 @Injectable()
 export class JournalService {
   constructor(private readonly prisma: PrismaService) {}
+
+  // 라인의 vendorId를 확정 (bizNo로 조회/생성)
+  private async resolveVendorId(
+    tenantId: string,
+    line: JournalLineDto,
+  ): Promise<string> {
+    if (line.vendorId) return line.vendorId;
+
+    if (!line.vendorBizNo || !line.vendorName) {
+      throw new BadRequestException(
+        "거래처 정보가 필요합니다 (vendorId 또는 vendorBizNo+vendorName)",
+      );
+    }
+
+    const existing = await this.prisma.vendor.findFirst({
+      where: { tenantId, bizNo: line.vendorBizNo },
+    });
+    if (existing) return existing.id;
+
+    const created = await this.prisma.vendor.create({
+      data: { tenantId, bizNo: line.vendorBizNo, name: line.vendorName },
+    });
+    return created.id;
+  }
 
   // 전표 생성 (차대변 균형 검증 포함)
   async create(dto: CreateJournalDto) {
@@ -23,6 +47,16 @@ export class JournalService {
       );
     }
 
+    // 모든 라인의 vendorId를 미리 확정
+    const resolvedLines = await Promise.all(
+      dto.lines.map(async (line) => ({
+        accountId: line.accountId,
+        vendorId: await this.resolveVendorId(dto.tenantId, line),
+        debit: line.debit,
+        credit: line.credit,
+      })),
+    );
+
     return this.prisma.$transaction(async (tx) => {
       const entry = await tx.journalEntry.create({
         data: {
@@ -31,14 +65,10 @@ export class JournalService {
           description: dto.description,
           documentId: dto.documentId,
           lines: {
-            create: dto.lines.map((line) => ({
-              accountId: line.accountId,
-              debit: line.debit,
-              credit: line.credit,
-            })),
+            create: resolvedLines,
           },
         },
-        include: { lines: { include: { account: true } } },
+        include: { lines: { include: { account: true, vendor: true } } },
       });
 
       // Document 연결 시 상태 업데이트
@@ -64,7 +94,7 @@ export class JournalService {
     }
     return this.prisma.journalEntry.findMany({
       where,
-      include: { lines: { include: { account: true } }, document: true },
+      include: { lines: { include: { account: true, vendor: true } }, document: true },
       orderBy: { date: "desc" },
     });
   }
@@ -73,7 +103,7 @@ export class JournalService {
   async findOne(id: string) {
     const entry = await this.prisma.journalEntry.findUnique({
       where: { id },
-      include: { lines: { include: { account: true } }, document: true },
+      include: { lines: { include: { account: true, vendor: true } }, document: true },
     });
 
     if (!entry) {
@@ -120,9 +150,22 @@ export class JournalService {
       }
     }
 
+    // 라인이 제공되면 vendorId 확정
+    let resolvedLines: { accountId: string; vendorId: string; debit: number; credit: number }[] | undefined;
+    if (dto.lines && dto.lines.length > 0) {
+      resolvedLines = await Promise.all(
+        dto.lines.map(async (line) => ({
+          accountId: line.accountId,
+          vendorId: await this.resolveVendorId(entry.tenantId, line),
+          debit: line.debit,
+          credit: line.credit,
+        })),
+      );
+    }
+
     return this.prisma.$transaction(async (tx) => {
       // 라인이 제공되면 기존 라인 삭제 후 새로 생성
-      if (dto.lines && dto.lines.length > 0) {
+      if (resolvedLines) {
         await tx.journalLine.deleteMany({ where: { journalEntryId: id } });
       }
 
@@ -132,18 +175,13 @@ export class JournalService {
           ...(dto.date !== undefined && { date: new Date(dto.date) }),
           ...(dto.description !== undefined && { description: dto.description }),
           ...(dto.status !== undefined && { status: dto.status }),
-          ...(dto.lines &&
-            dto.lines.length > 0 && {
+          ...(resolvedLines && {
               lines: {
-                create: dto.lines.map((line) => ({
-                  accountId: line.accountId,
-                  debit: line.debit,
-                  credit: line.credit,
-                })),
+                create: resolvedLines,
               },
             }),
         },
-        include: { lines: { include: { account: true } } },
+        include: { lines: { include: { account: true, vendor: true } } },
       });
     });
   }
@@ -177,6 +215,7 @@ export class JournalService {
   async createFromDocument(documentId: string, accountId: string) {
     const document = await this.prisma.document.findUnique({
       where: { id: documentId },
+      include: { vendor: true },
     });
 
     if (!document) {
@@ -185,6 +224,26 @@ export class JournalService {
 
     if (!document.totalAmount) {
       throw new BadRequestException("영수증에 금액 정보가 없습니다");
+    }
+
+    // 거래처 확인: document에 연결된 vendor 또는 vendorName으로 조회/생성
+    let vendorId = document.vendorId;
+    if (!vendorId && document.vendorName) {
+      const vendor = await this.prisma.vendor.findFirst({
+        where: { tenantId: document.tenantId, name: document.vendorName },
+      });
+      if (vendor) {
+        vendorId = vendor.id;
+      } else {
+        const newVendor = await this.prisma.vendor.create({
+          data: { tenantId: document.tenantId, name: document.vendorName },
+        });
+        vendorId = newVendor.id;
+      }
+    }
+
+    if (!vendorId) {
+      throw new BadRequestException("거래처 정보가 없습니다");
     }
 
     const amount = Number(document.totalAmount);
@@ -197,8 +256,8 @@ export class JournalService {
         : "영수증 자동 전표",
       documentId: document.id,
       lines: [
-        { accountId, debit: amount, credit: 0 }, // 비용 계정
-        { accountId: await this.getCashAccountId(document.tenantId), debit: 0, credit: amount }, // 현금
+        { accountId, vendorId, debit: amount, credit: 0 },
+        { accountId: await this.getCashAccountId(document.tenantId), vendorId, debit: 0, credit: amount },
       ],
     });
   }

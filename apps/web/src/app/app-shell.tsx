@@ -12,6 +12,7 @@ const navItems = [
   { href: "/journals", label: "전표 관리" },
   { href: "/reports", label: "재무제표" },
   { href: "/accounts", label: "계정과목" },
+  { href: "/vendors", label: "거래처" },
 ];
 
 const ROLE_LABEL: Record<string, string> = {

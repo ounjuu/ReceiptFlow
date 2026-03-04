@@ -1,0 +1,139 @@
+.title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.formSection {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.input {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  background: #fff;
+  min-width: 180px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.submitBtn {
+  background: var(--primary);
+  color: #fff;
+  padding: 8px 20px;
+  height: fit-content;
+}
+
+.submitBtn:disabled {
+  opacity: 0.6;
+}
+
+/* 테이블 */
+.tableSection {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+/* 인라인 수정 */
+.editInput {
+  padding: 4px 8px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 액션 버튼 */
+.actions {
+  display: flex;
+  gap: 4px;
+}
+
+.editBtn,
+.deleteBtn,
+.saveBtn,
+.cancelBtn {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.editBtn {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.editBtn:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.deleteBtn {
+  background: #fff;
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.deleteBtn:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.saveBtn {
+  background: var(--primary);
+  color: #fff;
+}
+
+.saveBtn:disabled {
+  opacity: 0.6;
+}
+
+.cancelBtn {
+  background: #fff;
+  color: var(--text-muted);
+}
+
+.error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
