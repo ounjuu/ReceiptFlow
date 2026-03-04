@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { exportToXlsx } from "@/lib/export-xlsx";
 import styles from "./page.module.css";
 
 interface Vendor {
@@ -589,6 +590,31 @@ export default function DocumentsPage() {
       <div className={styles.tableSection}>
         <div className={styles.tableHeader}>
           <h2 className={styles.sectionTitle}>영수증 목록</h2>
+          <div className={styles.filterRow}>
+            <button
+              className={styles.downloadBtn}
+              onClick={() => {
+                const statusText = (s: string) => {
+                  switch (s) {
+                    case "PENDING": return "대기";
+                    case "OCR_DONE": return "OCR 완료";
+                    case "JOURNAL_CREATED": return "전표 생성";
+                    default: return s;
+                  }
+                };
+                exportToXlsx("영수증목록", "영수증", ["거래처", "거래일", "금액", "상태", "등록일"], documents.map((d) => [
+                  d.vendorName || "",
+                  d.transactionAt ? new Date(d.transactionAt).toLocaleDateString("ko-KR") : "",
+                  d.totalAmount ? Number(d.totalAmount) : 0,
+                  statusText(d.status),
+                  new Date(d.createdAt).toLocaleDateString("ko-KR"),
+                ]));
+              }}
+              disabled={documents.length === 0}
+            >
+              엑셀 다운로드
+            </button>
+          </div>
           <div className={styles.filterRow}>
             <span className={styles.filterLabel}>거래일 기준</span>
             <input

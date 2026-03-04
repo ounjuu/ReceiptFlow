@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { exportToXlsx } from "@/lib/export-xlsx";
 import styles from "./page.module.css";
 
 interface Vendor {
@@ -132,7 +133,22 @@ export default function VendorsPage() {
       )}
 
       <div className={styles.tableSection}>
-        <h2 className={styles.sectionTitle}>거래처 목록</h2>
+        <div className={styles.tableHeader}>
+          <h2 className={styles.sectionTitle}>거래처 목록</h2>
+          <button
+            className={styles.downloadBtn}
+            onClick={() => {
+              exportToXlsx("거래처목록", "거래처", ["거래처명", "사업자등록번호", "등록일"], vendors.map((v) => [
+                v.name,
+                v.bizNo || "",
+                new Date(v.createdAt).toLocaleDateString("ko-KR"),
+              ]));
+            }}
+            disabled={vendors.length === 0}
+          >
+            엑셀 다운로드
+          </button>
+        </div>
         <table>
           <thead>
             <tr>

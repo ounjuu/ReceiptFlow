@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { exportToXlsx } from "@/lib/export-xlsx";
 import styles from "./page.module.css";
 
 type Tab = "trial-balance" | "income-statement" | "balance-sheet";
@@ -144,7 +145,19 @@ function TrialBalanceView({ dateParams, tenantId }: { dateParams: string; tenant
     <div className={styles.section}>
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>시산표</h2>
-        <span className={styles.unit}>(단위: 원)</span>
+        <div className={styles.sectionHeaderRight}>
+          <span className={styles.unit}>(단위: 원)</span>
+          <button
+            className={styles.downloadBtn}
+            onClick={() => {
+              const rows = data.rows.map((r) => [r.code, r.name, r.type, r.debit, r.credit, r.balance]);
+              rows.push(["합계", "", "", data.totalDebit, data.totalCredit, ""]);
+              exportToXlsx("시산표", "시산표", ["코드", "계정명", "유형", "차변", "대변", "잔액"], rows as (string | number | null)[][]);
+            }}
+          >
+            엑셀 다운로드
+          </button>
+        </div>
       </div>
       <table>
         <thead>
@@ -198,7 +211,29 @@ function IncomeStatementView({ dateParams, tenantId }: { dateParams: string; ten
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>손익계산서</h2>
-          <span className={styles.unit}>(단위: 원)</span>
+          <div className={styles.sectionHeaderRight}>
+            <span className={styles.unit}>(단위: 원)</span>
+            <button
+              className={styles.downloadBtn}
+              onClick={() => {
+                const rows: (string | number)[][] = [];
+                if (data.revenue.length > 0) {
+                  rows.push(["수익", "", ""]);
+                  data.revenue.forEach((r) => rows.push([r.code, r.name, r.amount]));
+                  rows.push(["수익 합계", "", data.totalRevenue]);
+                }
+                if (data.expense.length > 0) {
+                  rows.push(["비용", "", ""]);
+                  data.expense.forEach((r) => rows.push([r.code, r.name, r.amount]));
+                  rows.push(["비용 합계", "", data.totalExpense]);
+                }
+                rows.push(["당기순이익", "", data.netIncome]);
+                exportToXlsx("손익계산서", "손익계산서", ["코드", "계정명", "금액"], rows);
+              }}
+            >
+              엑셀 다운로드
+            </button>
+          </div>
         </div>
         <table>
           <thead>
@@ -277,34 +312,25 @@ function BalanceSheetView({ dateParams, tenantId }: { dateParams: string; tenant
 
   if (!data) return <p>불러오는 중...</p>;
 
-  const downloadCsv = () => {
-    const lines = ["구분,계정명,금액"];
-    const push = (category: string, rows: BalanceRow[]) => {
-      rows.forEach((r) => lines.push(`${category},${r.name},${r.amount}`));
+  const downloadXlsx = () => {
+    const rows: (string | number)[][] = [];
+    const push = (category: string, items: BalanceRow[]) => {
+      items.forEach((r) => rows.push([category, r.name, r.amount]));
     };
     push("유동자산", data.currentAssets);
-    lines.push(`유동자산 합계,,${data.totalCurrentAssets}`);
+    rows.push(["유동자산 합계", "", data.totalCurrentAssets]);
     push("비유동자산", data.nonCurrentAssets);
-    lines.push(`비유동자산 합계,,${data.totalNonCurrentAssets}`);
-    lines.push(`자산 총계,,${data.totalAssets}`);
+    rows.push(["비유동자산 합계", "", data.totalNonCurrentAssets]);
+    rows.push(["자산 총계", "", data.totalAssets]);
     push("유동부채", data.currentLiabilities);
-    lines.push(`유동부채 합계,,${data.totalCurrentLiabilities}`);
+    rows.push(["유동부채 합계", "", data.totalCurrentLiabilities]);
     push("비유동부채", data.nonCurrentLiabilities);
-    lines.push(`비유동부채 합계,,${data.totalNonCurrentLiabilities}`);
+    rows.push(["비유동부채 합계", "", data.totalNonCurrentLiabilities]);
     push("자본", data.equity);
     if (data.retainedEarnings !== 0)
-      lines.push(`자본,이익잉여금(당기),${data.retainedEarnings}`);
-    lines.push(`부채 및 자본 총계,,${data.totalLiabilitiesAndEquity}`);
-
-    const blob = new Blob(["\uFEFF" + lines.join("\n")], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "재무상태표.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+      rows.push(["자본", "이익잉여금(당기)", data.retainedEarnings]);
+    rows.push(["부채 및 자본 총계", "", data.totalLiabilitiesAndEquity]);
+    exportToXlsx("재무상태표", "재무상태표", ["구분", "계정명", "금액"], rows);
   };
 
   const renderGroup = (
@@ -335,8 +361,8 @@ function BalanceSheetView({ dateParams, tenantId }: { dateParams: string; tenant
         <h2 className={styles.sectionTitle}>재무상태표</h2>
         <div className={styles.sectionHeaderRight}>
           <span className={styles.unit}>(단위: 원)</span>
-          <button className={styles.downloadBtn} onClick={downloadCsv}>
-            다운로드
+          <button className={styles.downloadBtn} onClick={downloadXlsx}>
+            엑셀 다운로드
           </button>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { exportToXlsx } from "@/lib/export-xlsx";
 import styles from "./page.module.css";
 
 interface Account {
@@ -503,6 +504,32 @@ export default function JournalsPage() {
       <div className={styles.tableSection}>
         <div className={styles.tableHeader}>
           <h2 className={styles.sectionTitle}>전표 목록</h2>
+          <div className={styles.filterRow}>
+            <button
+              className={styles.downloadBtn}
+              onClick={() => {
+                const statusText = (s: string) => {
+                  switch (s) {
+                    case "DRAFT": return "임시";
+                    case "APPROVED": return "승인";
+                    case "POSTED": return "확정";
+                    default: return s;
+                  }
+                };
+                exportToXlsx("전표목록", "전표", ["날짜", "거래처", "설명", "상태", "차변합계", "대변합계"], journals.map((j) => [
+                  new Date(j.date).toLocaleDateString("ko-KR"),
+                  [...new Set(j.lines.map((l) => l.vendor?.name).filter(Boolean))].join(", ") || "",
+                  j.description || "",
+                  statusText(j.status),
+                  j.lines.reduce((s, l) => s + Number(l.debit), 0),
+                  j.lines.reduce((s, l) => s + Number(l.credit), 0),
+                ]));
+              }}
+              disabled={journals.length === 0}
+            >
+              엑셀 다운로드
+            </button>
+          </div>
           <div className={styles.filterRow}>
             <span className={styles.filterLabel}>전표일 기준</span>
             <input
