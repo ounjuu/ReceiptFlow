@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { UploadDocumentDto } from "./dto/upload-document.dto";
 import { CreateDocumentDto } from "./dto/create-document.dto";
@@ -32,100 +32,27 @@ export class DocumentService {
     // 1. AI OCR 호출
     const ocr = await this.ocrImage(file);
 
-    // OCR에서 거래처명 또는 금액 추출 실패 → Document만 생성 (OCR_DONE)
-    if (!ocr.total_amount || !ocr.vendor_name) {
-      const document = await this.prisma.document.create({
-        data: {
-          tenantId: dto.tenantId,
-          imageUrl,
-          vendorName: ocr.vendor_name,
-          transactionAt: ocr.transaction_date
-            ? new Date(ocr.transaction_date)
-            : null,
-          ocrRaw: ocr as any,
-          status: "OCR_DONE",
-        },
-        include: {
-          journalEntry: { include: { lines: { include: { account: true } } } },
-        },
-      });
-      return { document, journalEntry: null, classification: null, ocr };
-    }
-
-    // 2. AI 분류 (OCR 전체 텍스트도 함께 전달)
-    const vendorName = ocr.vendor_name || "알수없음";
-    const classification = await this.classifyVendor(vendorName, ocr.raw_text);
-
-    // 3. 계정 조회
-    const expenseAccount = await this.prisma.account.findUnique({
-      where: {
-        tenantId_code: {
-          tenantId: dto.tenantId,
-          code: classification.accountCode,
-        },
-      },
-    });
-
-    const finalAccount =
-      expenseAccount ??
-      (await this.prisma.account.findUnique({
-        where: {
-          tenantId_code: { tenantId: dto.tenantId, code: "51200" },
-        },
-      }));
-
-    const cashAccount = await this.prisma.account.findUnique({
-      where: {
-        tenantId_code: { tenantId: dto.tenantId, code: "10100" },
-      },
-    });
-
+    // OCR 결과로 Document만 생성 (사업자번호 없으므로 전표는 수기 입력 시 생성)
     const txDate = ocr.transaction_date
       ? new Date(ocr.transaction_date)
-      : new Date();
+      : null;
 
-    // 4. Document + JournalEntry 트랜잭션
-    const result = await this.prisma.$transaction(async (tx) => {
-      const document = await tx.document.create({
-        data: {
-          tenantId: dto.tenantId,
-          imageUrl,
-          vendorName,
-          totalAmount: ocr.total_amount!,
-          transactionAt: txDate,
-          ocrRaw: ocr as any,
-          status: "JOURNAL_CREATED",
-        },
-      });
-
-      const journalEntry = await tx.journalEntry.create({
-        data: {
-          tenantId: dto.tenantId,
-          date: txDate,
-          description: `${vendorName} 결제`,
-          documentId: document.id,
-          lines: {
-            create: [
-              {
-                accountId: finalAccount!.id,
-                debit: ocr.total_amount!,
-                credit: 0,
-              },
-              {
-                accountId: cashAccount!.id,
-                debit: 0,
-                credit: ocr.total_amount!,
-              },
-            ],
-          },
-        },
-        include: { lines: { include: { account: true } } },
-      });
-
-      return { document, journalEntry, classification, ocr };
+    const document = await this.prisma.document.create({
+      data: {
+        tenantId: dto.tenantId,
+        imageUrl,
+        vendorName: ocr.vendor_name,
+        totalAmount: ocr.total_amount,
+        transactionAt: txDate,
+        ocrRaw: ocr as any,
+        status: "OCR_DONE",
+      },
+      include: {
+        journalEntry: { include: { lines: { include: { account: true } } } },
+      },
     });
 
-    return result;
+    return { document, journalEntry: null, classification: null, ocr };
   }
 
   // AI OCR 호출
@@ -168,6 +95,10 @@ export class DocumentService {
 
   // 영수증 수기 입력 → AI 분류 → 자동 전표 생성
   async createWithAutoJournal(dto: CreateDocumentDto) {
+    if (!dto.vendorBizNo) {
+      throw new BadRequestException("사업자등록번호는 필수입니다");
+    }
+
     // 1. AI 서비스에 계정 분류 요청
     const classification = await this.classifyVendor(dto.vendorName);
 
@@ -199,10 +130,21 @@ export class DocumentService {
 
     // 3. Document + JournalEntry + JournalLine 트랜잭션으로 생성
     const result = await this.prisma.$transaction(async (tx) => {
+      // 사업자등록번호로 거래처 조회/생성
+      let vendor = await tx.vendor.findFirst({
+        where: { tenantId: dto.tenantId, bizNo: dto.vendorBizNo },
+      });
+      if (!vendor) {
+        vendor = await tx.vendor.create({
+          data: { tenantId: dto.tenantId, name: dto.vendorName, bizNo: dto.vendorBizNo },
+        });
+      }
+
       const document = await tx.document.create({
         data: {
           tenantId: dto.tenantId,
           vendorName: dto.vendorName,
+          vendorId: vendor.id,
           totalAmount: dto.totalAmount,
           transactionAt: new Date(dto.transactionAt),
           status: "JOURNAL_CREATED",
@@ -219,18 +161,20 @@ export class DocumentService {
             create: [
               {
                 accountId: finalAccount!.id,
+                vendorId: vendor.id,
                 debit: dto.totalAmount,
                 credit: 0,
               },
               {
                 accountId: cashAccount!.id,
+                vendorId: vendor.id,
                 debit: 0,
                 credit: dto.totalAmount,
               },
             ],
           },
         },
-        include: { lines: { include: { account: true } } },
+        include: { lines: { include: { account: true, vendor: true } } },
       });
 
       return { document, journalEntry, classification };

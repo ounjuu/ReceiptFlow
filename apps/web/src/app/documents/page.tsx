@@ -1,10 +1,16 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import styles from "./page.module.css";
+
+interface Vendor {
+  id: string;
+  name: string;
+  bizNo: string | null;
+}
 
 type InputTab = "upload" | "manual";
 
@@ -66,12 +72,87 @@ export default function DocumentsPage() {
 
   // 수동 입력
   const [vendorName, setVendorName] = useState("");
+  const [vendorBizNo, setVendorBizNo] = useState("");
+  const [vendorMatched, setVendorMatched] = useState(false);
   const [totalAmount, setTotalAmount] = useState("");
   const [transactionAt, setTransactionAt] = useState(
     new Date().toISOString().slice(0, 10),
   );
 
   const [result, setResult] = useState<CreateResult | null>(null);
+
+  // 자동완성 상태 (수기 입력)
+  const [suggestions, setSuggestions] = useState<Vendor[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestRef = useRef<HTMLDivElement>(null);
+
+  // 자동완성 상태 (OCR)
+  const [ocrSuggestions, setOcrSuggestions] = useState<Vendor[]>([]);
+  const [showOcrSuggestions, setShowOcrSuggestions] = useState(false);
+  const ocrSuggestRef = useRef<HTMLDivElement>(null);
+
+  // 바깥 클릭 시 드롭다운 닫기
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (suggestRef.current && !suggestRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+      if (ocrSuggestRef.current && !ocrSuggestRef.current.contains(e.target as Node)) {
+        setShowOcrSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // 부분검색 API
+  const searchAutocomplete = useCallback(async (query: string): Promise<Vendor[]> => {
+    if (!query.trim() || !tenantId) return [];
+    try {
+      return await apiGet<Vendor[]>(`/vendors/autocomplete?tenantId=${tenantId}&q=${encodeURIComponent(query.trim())}`);
+    } catch {
+      return [];
+    }
+  }, [tenantId]);
+
+  // 수기 입력 - bizNo 변경 시 자동완성
+  const handleBizNoChange = async (value: string) => {
+    setVendorBizNo(value);
+    setVendorMatched(false);
+    setVendorName("");
+    if (value.trim().length >= 1) {
+      const results = await searchAutocomplete(value);
+      setSuggestions(results);
+      setShowSuggestions(results.length > 0);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  // 자동완성에서 선택
+  const selectVendor = (vendor: Vendor) => {
+    setVendorBizNo(vendor.bizNo || "");
+    setVendorName(vendor.name);
+    setVendorMatched(true);
+    setShowSuggestions(false);
+  };
+
+  // blur 시 정확 매칭 확인
+  const handleBizNoBlur = async () => {
+    // 드롭다운 클릭을 위해 약간 딜레이
+    setTimeout(async () => {
+      if (!vendorBizNo.trim() || vendorMatched) return;
+      try {
+        const vendor = await apiGet<Vendor | null>(`/vendors/search?tenantId=${tenantId}&bizNo=${encodeURIComponent(vendorBizNo.trim())}`);
+        if (vendor) {
+          setVendorName(vendor.name);
+          setVendorMatched(true);
+        }
+      } catch { /* ignore */ }
+      setShowSuggestions(false);
+    }, 200);
+  };
 
   // 이미지 미리보기 모달
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -117,15 +198,19 @@ export default function DocumentsPage() {
     mutationFn: (body: {
       tenantId: string;
       vendorName: string;
+      vendorBizNo: string;
       totalAmount: number;
       transactionAt: string;
     }) => apiPost<CreateResult>("/documents", body),
     onSuccess: (data) => {
       setResult(data);
       setVendorName("");
+      setVendorBizNo("");
+      setVendorMatched(false);
       setTotalAmount("");
       queryClient.invalidateQueries({ queryKey: ["documents"] });
       queryClient.invalidateQueries({ queryKey: ["journals"] });
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
     },
   });
 
@@ -153,10 +238,11 @@ export default function DocumentsPage() {
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!vendorName || !totalAmount) return;
+    if (!vendorName || !vendorBizNo || !totalAmount) return;
     createMutation.mutate({
       tenantId: tenantId!,
       vendorName,
+      vendorBizNo,
       totalAmount: Number(totalAmount),
       transactionAt,
     });
@@ -190,29 +276,71 @@ export default function DocumentsPage() {
     }
   };
 
-  // OCR 후 거래처명 보완 입력
+  // OCR 후 보완 입력
   const [ocrVendorInput, setOcrVendorInput] = useState("");
+  const [ocrBizNoInput, setOcrBizNoInput] = useState("");
+  const [ocrVendorMatched, setOcrVendorMatched] = useState(false);
+
+  const handleOcrBizNoChange = async (value: string) => {
+    setOcrBizNoInput(value);
+    setOcrVendorMatched(false);
+    setOcrVendorInput("");
+    if (value.trim().length >= 1) {
+      const results = await searchAutocomplete(value);
+      setOcrSuggestions(results);
+      setShowOcrSuggestions(results.length > 0);
+    } else {
+      setOcrSuggestions([]);
+      setShowOcrSuggestions(false);
+    }
+  };
+
+  const selectOcrVendor = (vendor: Vendor) => {
+    setOcrBizNoInput(vendor.bizNo || "");
+    setOcrVendorInput(vendor.name);
+    setOcrVendorMatched(true);
+    setShowOcrSuggestions(false);
+  };
+
+  const handleOcrBizNoBlur = async () => {
+    setTimeout(async () => {
+      if (!ocrBizNoInput.trim() || ocrVendorMatched) return;
+      try {
+        const vendor = await apiGet<Vendor | null>(`/vendors/search?tenantId=${tenantId}&bizNo=${encodeURIComponent(ocrBizNoInput.trim())}`);
+        if (vendor) {
+          setOcrVendorInput(vendor.name);
+          setOcrVendorMatched(true);
+        }
+      } catch { /* ignore */ }
+      setShowOcrSuggestions(false);
+    }, 200);
+  };
 
   const completeOcrMutation = useMutation({
     mutationFn: (body: {
       tenantId: string;
       vendorName: string;
+      vendorBizNo: string;
       totalAmount: number;
       transactionAt: string;
     }) => apiPost<CreateResult>("/documents", body),
     onSuccess: (data) => {
       setResult(data);
       setOcrVendorInput("");
+      setOcrBizNoInput("");
+      setOcrVendorMatched(false);
       queryClient.invalidateQueries({ queryKey: ["documents"] });
       queryClient.invalidateQueries({ queryKey: ["journals"] });
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
     },
   });
 
   const handleOcrComplete = () => {
-    if (!ocrVendorInput || !result?.ocr) return;
+    if (!ocrBizNoInput || !ocrVendorInput || !result?.ocr) return;
     completeOcrMutation.mutate({
       tenantId: tenantId!,
       vendorName: ocrVendorInput,
+      vendorBizNo: ocrBizNoInput,
       totalAmount: result.ocr.total_amount!,
       transactionAt: result.ocr.transaction_date || new Date().toISOString().slice(0, 10),
     });
@@ -260,14 +388,46 @@ export default function DocumentsPage() {
 
         {inputTab === "manual" && (
           <form onSubmit={handleManualSubmit} className={styles.form}>
-            <div className={styles.formRow}>
-              <label className={styles.label}>거래처명</label>
+            <div className={styles.formRow} ref={suggestRef} style={{ position: "relative" }}>
+              <label className={styles.label}>사업자등록번호</label>
               <input
-                className={styles.input}
+                className={`${styles.input} ${vendorMatched ? styles.inputMatched : ""}`}
                 type="text"
-                placeholder="예: 스타벅스 강남점"
+                placeholder="000-00-00000"
+                value={vendorBizNo}
+                onChange={(e) => handleBizNoChange(e.target.value)}
+                onBlur={handleBizNoBlur}
+                onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+                required
+                autoComplete="off"
+              />
+              {showSuggestions && suggestions.length > 0 && (
+                <ul className={styles.autocomplete}>
+                  {suggestions.map((v) => (
+                    <li
+                      key={v.id}
+                      className={styles.autocompleteItem}
+                      onMouseDown={() => selectVendor(v)}
+                    >
+                      <span className={styles.autocompleteNo}>{v.bizNo}</span>
+                      <span className={styles.autocompleteName}>{v.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className={styles.formRow}>
+              <label className={styles.label}>
+                거래처명
+                {vendorMatched && <span className={styles.matchBadge}>기존 거래처</span>}
+              </label>
+              <input
+                className={`${styles.input} ${vendorMatched ? styles.inputMatched : ""}`}
+                type="text"
+                placeholder={vendorMatched ? "" : "새 거래처명 입력"}
                 value={vendorName}
                 onChange={(e) => setVendorName(e.target.value)}
+                readOnly={vendorMatched}
                 required
               />
             </div>
@@ -366,33 +526,60 @@ export default function DocumentsPage() {
             )}
             {!result.classification && result.ocr && (
               <div className={styles.ocrCompleteSection}>
-                {!result.ocr.vendor_name && result.ocr.total_amount ? (
+                {result.ocr.total_amount ? (
                   <>
                     <p className={styles.ocrWarning}>
-                      거래처명을 추출하지 못했습니다. 직접 입력해주세요.
+                      사업자등록번호와 거래처명을 입력하면 전표가 자동 생성됩니다.
                     </p>
                     <div className={styles.ocrCompleteForm}>
+                      <div ref={ocrSuggestRef} style={{ position: "relative" }}>
+                        <input
+                          className={`${styles.input} ${ocrVendorMatched ? styles.inputMatched : ""}`}
+                          type="text"
+                          placeholder="사업자등록번호"
+                          value={ocrBizNoInput}
+                          onChange={(e) => handleOcrBizNoChange(e.target.value)}
+                          onBlur={handleOcrBizNoBlur}
+                          onFocus={() => { if (ocrSuggestions.length > 0) setShowOcrSuggestions(true); }}
+                          autoComplete="off"
+                        />
+                        {showOcrSuggestions && ocrSuggestions.length > 0 && (
+                          <ul className={styles.autocomplete}>
+                            {ocrSuggestions.map((v) => (
+                              <li
+                                key={v.id}
+                                className={styles.autocompleteItem}
+                                onMouseDown={() => selectOcrVendor(v)}
+                              >
+                                <span className={styles.autocompleteNo}>{v.bizNo}</span>
+                                <span className={styles.autocompleteName}>{v.name}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                       <input
-                        className={styles.input}
+                        className={`${styles.input} ${ocrVendorMatched ? styles.inputMatched : ""}`}
                         type="text"
-                        placeholder="거래처명 입력"
+                        placeholder={ocrVendorMatched ? "" : "새 거래처명 입력"}
                         value={ocrVendorInput}
                         onChange={(e) => setOcrVendorInput(e.target.value)}
+                        readOnly={ocrVendorMatched}
                       />
                       <button
                         className={styles.submitBtn}
                         onClick={handleOcrComplete}
-                        disabled={!ocrVendorInput || completeOcrMutation.isPending}
+                        disabled={!ocrBizNoInput || !ocrVendorInput || completeOcrMutation.isPending}
                       >
                         {completeOcrMutation.isPending ? "처리 중..." : "전표 생성"}
                       </button>
                     </div>
                   </>
-                ) : !result.ocr.total_amount ? (
+                ) : (
                   <p className={styles.ocrWarning}>
-                    금액을 추출하지 못해 전표를 자동 생성하지 못했습니다. 수동으로 수정해주세요.
+                    금액을 추출하지 못해 전표를 자동 생성하지 못했습니다. 수동으로 입력해주세요.
                   </p>
-                ) : null}
+                )}
               </div>
             )}
           </div>
