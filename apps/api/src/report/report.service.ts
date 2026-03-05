@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 
 export interface TrialBalanceRow {
@@ -92,6 +93,68 @@ export class ReportService {
       expense,
       totalExpense,
       netIncome: totalRevenue - totalExpense,
+    };
+  }
+
+  // 대시보드 요약
+  async dashboardSummary(tenantId: string) {
+    // 최근 6개월 범위 계산
+    const now = new Date();
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+    // 1. 월별 지출 추이
+    const monthlyExpense = await this.prisma.$queryRaw<
+      { month: string; total: number }[]
+    >(Prisma.sql`
+      SELECT TO_CHAR("transactionAt", 'YYYY-MM') as month,
+             SUM("totalAmount")::float as total
+      FROM "Document"
+      WHERE "tenantId" = ${tenantId}
+        AND "transactionAt" >= ${sixMonthsAgo}
+        AND "totalAmount" IS NOT NULL
+      GROUP BY month
+      ORDER BY month
+    `);
+
+    // 2. 영수증 상태별 건수
+    const statusCounts = await this.prisma.document.groupBy({
+      by: ["status"],
+      where: { tenantId },
+      _count: true,
+    });
+
+    // 3. 상위 5개 거래처 지출
+    const topVendors = await this.prisma.$queryRaw<
+      { name: string; total: number }[]
+    >(Prisma.sql`
+      SELECT v.name, SUM(d."totalAmount")::float as total
+      FROM "Document" d
+      JOIN "Vendor" v ON d."vendorId" = v.id
+      WHERE d."tenantId" = ${tenantId}
+        AND d."totalAmount" IS NOT NULL
+      GROUP BY v.name
+      ORDER BY total DESC
+      LIMIT 5
+    `);
+
+    // 4. 당월 손익
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const income = await this.incomeStatement(
+      tenantId,
+      monthStart.toISOString().slice(0, 10),
+      now.toISOString().slice(0, 10),
+    );
+
+    return {
+      monthlyExpense,
+      statusCounts: statusCounts.map((s) => ({
+        status: s.status,
+        count: s._count,
+      })),
+      topVendors,
+      totalRevenue: income.totalRevenue,
+      totalExpense: income.totalExpense,
+      netIncome: income.netIncome,
     };
   }
 

@@ -33,4 +33,9 @@ export class ReportController {
   ) {
     return this.reportService.balanceSheet(tenantId, startDate, endDate);
   }
+
+  @Get("dashboard-summary")
+  async dashboardSummary(@Query("tenantId") tenantId: string) {
+    return this.reportService.dashboardSummary(tenantId);
+  }
 }
