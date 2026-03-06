@@ -1,11 +1,27 @@
 import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { ClosingService } from "../closing/closing.service";
 import { CreateJournalDto, JournalLineDto } from "./dto/create-journal.dto";
 import { UpdateJournalDto } from "./dto/update-journal.dto";
 
 @Injectable()
 export class JournalService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly closingService: ClosingService,
+  ) {}
+
+  // 마감 기간 체크 헬퍼
+  private async checkClosedPeriod(tenantId: string, date: Date) {
+    const isClosed = await this.closingService.isClosedPeriod(tenantId, date);
+    if (isClosed) {
+      const y = date.getFullYear();
+      const m = date.getMonth() + 1;
+      throw new BadRequestException(
+        `${y}년 ${m}월은 마감된 기간입니다. 마감 취소 후 처리하세요.`,
+      );
+    }
+  }
 
   // 라인의 vendorId를 확정 (bizNo로 조회/생성)
   private async resolveVendorId(
@@ -33,6 +49,9 @@ export class JournalService {
 
   // 전표 생성 (차대변 균형 검증 포함)
   async create(dto: CreateJournalDto) {
+    // 마감 기간 체크
+    await this.checkClosedPeriod(dto.tenantId, new Date(dto.date));
+
     if (!dto.lines || dto.lines.length === 0) {
       throw new BadRequestException("전표 라인이 최소 1건 이상 필요합니다");
     }
@@ -124,6 +143,12 @@ export class JournalService {
       throw new NotFoundException(`JournalEntry ${id} not found`);
     }
 
+    // 마감 기간 체크
+    await this.checkClosedPeriod(entry.tenantId, entry.date);
+    if (dto.date) {
+      await this.checkClosedPeriod(entry.tenantId, new Date(dto.date));
+    }
+
     // 상태 전이 검증 (DRAFT → APPROVED → POSTED)
     if (dto.status) {
       const validTransitions: Record<string, string[]> = {
@@ -196,6 +221,9 @@ export class JournalService {
     if (!entry) {
       throw new NotFoundException(`JournalEntry ${id} not found`);
     }
+
+    // 마감 기간 체크
+    await this.checkClosedPeriod(entry.tenantId, entry.date);
 
     return this.prisma.$transaction(async (tx) => {
       // 연결된 Document가 있으면 상태를 PENDING으로 복원
