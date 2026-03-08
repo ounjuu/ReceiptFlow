@@ -36,6 +36,13 @@ export class JournalController {
     return this.journalService.createFromDocument(documentId, accountId);
   }
 
+  // 일괄 상태 변경 (`:id` 라우트보다 먼저 선언)
+  @Patch("batch/status")
+  @Roles("ADMIN", "ACCOUNTANT")
+  async batchUpdateStatus(@Body() body: { ids: string[]; status: string }) {
+    return this.journalService.batchUpdateStatus(body.ids, body.status);
+  }
+
   @Get()
   async findAll(
     @Query("tenantId") tenantId: string,

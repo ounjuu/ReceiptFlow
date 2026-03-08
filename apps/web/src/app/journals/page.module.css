@@ -381,3 +381,62 @@
   background: var(--danger);
   color: #fff;
 }
+
+/* 일괄 처리 바 */
+.batchBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--primary-light);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  margin-bottom: 12px;
+}
+
+.batchCount {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.batchApproveBtn {
+  background: var(--primary);
+  color: #fff;
+  padding: 5px 14px;
+  font-size: 0.8rem;
+}
+
+.batchApproveBtn:disabled {
+  opacity: 0.6;
+}
+
+.batchPostBtn {
+  background: #166534;
+  color: #fff;
+  padding: 5px 14px;
+  font-size: 0.8rem;
+}
+
+.batchPostBtn:disabled {
+  opacity: 0.6;
+}
+
+.batchClearBtn {
+  background: #fff;
+  color: var(--text-muted);
+  padding: 5px 14px;
+  font-size: 0.8rem;
+  border: 1px solid var(--border);
+  margin-left: auto;
+}
+
+.batchError {
+  color: var(--danger);
+  font-size: 0.8rem;
+}
+
+/* 선택된 행 */
+.selectedRow {
+  background: var(--primary-light) !important;
+}

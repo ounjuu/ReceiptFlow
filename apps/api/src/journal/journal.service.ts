@@ -290,6 +290,42 @@ export class JournalService {
     });
   }
 
+  // 일괄 상태 변경
+  async batchUpdateStatus(ids: string[], status: string) {
+    const validTransitions: Record<string, string[]> = {
+      DRAFT: ["APPROVED"],
+      APPROVED: ["POSTED", "DRAFT"],
+      POSTED: [],
+    };
+
+    const entries = await this.prisma.journalEntry.findMany({
+      where: { id: { in: ids } },
+    });
+
+    if (entries.length !== ids.length) {
+      throw new BadRequestException("일부 전표를 찾을 수 없습니다");
+    }
+
+    // 각 전표별 검증
+    for (const entry of entries) {
+      await this.checkClosedPeriod(entry.tenantId, entry.date);
+      const allowed = validTransitions[entry.status] || [];
+      if (!allowed.includes(status)) {
+        throw new BadRequestException(
+          `전표(${entry.id})의 상태를 ${entry.status}에서 ${status}(으)로 변경할 수 없습니다`,
+        );
+      }
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const result = await tx.journalEntry.updateMany({
+        where: { id: { in: ids } },
+        data: { status },
+      });
+      return { count: result.count };
+    });
+  }
+
   // 테넌트의 현금 계정(1010) 조회
   private async getCashAccountId(tenantId: string): Promise<string> {
     const account = await this.prisma.account.findUnique({

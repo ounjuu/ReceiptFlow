@@ -68,6 +68,7 @@ export default function JournalsPage() {
   const queryClient = useQueryClient();
   const [formMode, setFormMode] = useState<"none" | "create" | "edit">("none");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
   const [lines, setLines] = useState<LineInput[]>([emptyLine(), emptyLine()]);
@@ -327,6 +328,43 @@ export default function JournalsPage() {
     }
   };
 
+  // 일괄 상태 변경
+  const batchMutation = useMutation({
+    mutationFn: ({ ids, status }: { ids: string[]; status: string }) =>
+      apiPatch<{ count: number }>("/journals/batch/status", { ids, status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["journals"] });
+      setSelectedIds(new Set());
+    },
+  });
+
+  const selectableJournals = journals.filter((j) => j.status !== "POSTED");
+  const allSelectableChecked =
+    selectableJournals.length > 0 &&
+    selectableJournals.every((j) => selectedIds.has(j.id));
+
+  const toggleAll = () => {
+    if (allSelectableChecked) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(selectableJournals.map((j) => j.id)));
+    }
+  };
+
+  const toggleOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // 선택된 전표들의 상태 분석
+  const selectedJournals = journals.filter((j) => selectedIds.has(j.id));
+  const hasDraft = selectedJournals.some((j) => j.status === "DRAFT");
+  const hasApproved = selectedJournals.some((j) => j.status === "APPROVED");
+
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
@@ -555,9 +593,69 @@ export default function JournalsPage() {
             )}
           </div>
         </div>
+
+        {/* 일괄 처리 바 */}
+        {selectedIds.size > 0 && canEdit && (
+          <div className={styles.batchBar}>
+            <span className={styles.batchCount}>{selectedIds.size}건 선택됨</span>
+            {hasDraft && (
+              <button
+                className={styles.batchApproveBtn}
+                disabled={batchMutation.isPending}
+                onClick={() => {
+                  const draftIds = selectedJournals
+                    .filter((j) => j.status === "DRAFT")
+                    .map((j) => j.id);
+                  if (confirm(`${draftIds.length}건을 일괄 승인하시겠습니까?`)) {
+                    batchMutation.mutate({ ids: draftIds, status: "APPROVED" });
+                  }
+                }}
+              >
+                일괄 승인
+              </button>
+            )}
+            {hasApproved && (
+              <button
+                className={styles.batchPostBtn}
+                disabled={batchMutation.isPending}
+                onClick={() => {
+                  const approvedIds = selectedJournals
+                    .filter((j) => j.status === "APPROVED")
+                    .map((j) => j.id);
+                  if (confirm(`${approvedIds.length}건을 일괄 확정하시겠습니까?`)) {
+                    batchMutation.mutate({ ids: approvedIds, status: "POSTED" });
+                  }
+                }}
+              >
+                일괄 확정
+              </button>
+            )}
+            <button
+              className={styles.batchClearBtn}
+              onClick={() => setSelectedIds(new Set())}
+            >
+              선택 해제
+            </button>
+            {batchMutation.isError && (
+              <span className={styles.batchError}>
+                {(batchMutation.error as Error).message}
+              </span>
+            )}
+          </div>
+        )}
+
         <table>
           <thead>
             <tr>
+              {canEdit && (
+                <th style={{ width: 36 }}>
+                  <input
+                    type="checkbox"
+                    checked={allSelectableChecked}
+                    onChange={toggleAll}
+                  />
+                </th>
+              )}
               <th>날짜</th>
               <th>거래처</th>
               <th>설명</th>
@@ -573,8 +671,19 @@ export default function JournalsPage() {
               const s = statusLabel(j.status);
               const jTotalDebit = j.lines.reduce((sum, l) => sum + Number(l.debit), 0);
               const jTotalCredit = j.lines.reduce((sum, l) => sum + Number(l.credit), 0);
+              const isPosted = j.status === "POSTED";
               return (
-                <tr key={j.id}>
+                <tr key={j.id} className={selectedIds.has(j.id) ? styles.selectedRow : ""}>
+                  {canEdit && (
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(j.id)}
+                        disabled={isPosted}
+                        onChange={() => toggleOne(j.id)}
+                      />
+                    </td>
+                  )}
                   <td>{new Date(j.date).toLocaleDateString("ko-KR")}</td>
                   <td>
                     {[...new Set(j.lines.map((l) => l.vendor?.name).filter(Boolean))].join(", ") || "-"}
@@ -623,7 +732,7 @@ export default function JournalsPage() {
             })}
             {journals.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)" }}>
+                <td colSpan={canEdit ? 9 : 8} style={{ textAlign: "center", color: "var(--text-muted)" }}>
                   전표가 없습니다
                 </td>
               </tr>
