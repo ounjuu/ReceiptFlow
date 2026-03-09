@@ -1,9 +1,13 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { AuditLogService } from "../audit-log/audit-log.service";
 
 @Injectable()
 export class ClosingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLogService: AuditLogService,
+  ) {}
 
   // 마감 이력 조회
   async findAll(tenantId: string) {
@@ -53,27 +57,41 @@ export class ClosingService {
       throw new BadRequestException("이미 마감된 기간입니다");
     }
 
+    let period;
     if (existing) {
-      return this.prisma.accountingPeriod.update({
+      period = await this.prisma.accountingPeriod.update({
         where: { id: existing.id },
         data: { status: "CLOSED", closedAt: new Date(), closedBy: userId },
       });
+    } else {
+      period = await this.prisma.accountingPeriod.create({
+        data: {
+          tenantId,
+          year,
+          month,
+          status: "CLOSED",
+          closedAt: new Date(),
+          closedBy: userId,
+        },
+      });
     }
 
-    return this.prisma.accountingPeriod.create({
-      data: {
-        tenantId,
-        year,
-        month,
-        status: "CLOSED",
-        closedAt: new Date(),
-        closedBy: userId,
-      },
+    // 감사 로그
+    await this.auditLogService.log({
+      tenantId,
+      userId,
+      action: "PERIOD_CLOSED",
+      entityType: "AccountingPeriod",
+      entityId: period.id,
+      description: `${year}년 ${month}월 마감`,
+      newValue: { year, month, status: "CLOSED" },
     });
+
+    return period;
   }
 
   // 마감 취소
-  async reopen(id: string) {
+  async reopen(id: string, userId: string) {
     const period = await this.prisma.accountingPeriod.findUniqueOrThrow({
       where: { id },
     });
@@ -82,10 +100,24 @@ export class ClosingService {
       throw new BadRequestException("마감되지 않은 기간입니다");
     }
 
-    return this.prisma.accountingPeriod.update({
+    const updated = await this.prisma.accountingPeriod.update({
       where: { id },
       data: { status: "OPEN", closedAt: null, closedBy: null },
     });
+
+    // 감사 로그
+    await this.auditLogService.log({
+      tenantId: period.tenantId,
+      userId,
+      action: "PERIOD_REOPENED",
+      entityType: "AccountingPeriod",
+      entityId: id,
+      description: `${period.year}년 ${period.month}월 마감 취소`,
+      oldValue: { status: "CLOSED" },
+      newValue: { status: "OPEN" },
+    });
+
+    return updated;
   }
 
   // 특정 월의 전표 현황 (마감 페이지용)

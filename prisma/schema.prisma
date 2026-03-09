@@ -23,6 +23,7 @@ model Tenant {
   journalEntries JournalEntry[]
   vendors      Vendor[]
   periods      AccountingPeriod[]
+  auditLogs    AuditLog[]
 }
 
 model User {
@@ -105,6 +106,24 @@ model AccountingPeriod {
 
   @@unique([tenantId, year, month])
   @@index([tenantId])
+}
+
+// 감사 로그
+model AuditLog {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  userId      String
+  action      String   // JOURNAL_CREATED, JOURNAL_UPDATED, JOURNAL_DELETED, JOURNAL_BATCH_STATUS, PERIOD_CLOSED, PERIOD_REOPENED
+  entityType  String   // JournalEntry, AccountingPeriod
+  entityId    String
+  description String?
+  oldValue    Json?
+  newValue    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([createdAt])
 }
 
 // ──────────────────────────────────

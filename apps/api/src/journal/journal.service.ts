@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { ClosingService } from "../closing/closing.service";
+import { AuditLogService } from "../audit-log/audit-log.service";
 import { CreateJournalDto, JournalLineDto } from "./dto/create-journal.dto";
 import { UpdateJournalDto } from "./dto/update-journal.dto";
 
@@ -9,6 +10,7 @@ export class JournalService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly closingService: ClosingService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   // 마감 기간 체크 헬퍼
@@ -48,7 +50,7 @@ export class JournalService {
   }
 
   // 전표 생성 (차대변 균형 검증 포함)
-  async create(dto: CreateJournalDto) {
+  async create(dto: CreateJournalDto, userId?: string) {
     // 마감 기간 체크
     await this.checkClosedPeriod(dto.tenantId, new Date(dto.date));
 
@@ -98,6 +100,19 @@ export class JournalService {
         });
       }
 
+      // 감사 로그
+      if (userId) {
+        await this.auditLogService.log({
+          tenantId: dto.tenantId,
+          userId,
+          action: "JOURNAL_CREATED",
+          entityType: "JournalEntry",
+          entityId: entry.id,
+          description: `전표 생성: ${dto.description || new Date(dto.date).toLocaleDateString("ko-KR")}`,
+          newValue: { date: dto.date, description: dto.description, lines: resolvedLines },
+        });
+      }
+
       return entry;
     });
   }
@@ -133,7 +148,7 @@ export class JournalService {
   }
 
   // 전표 수정
-  async update(id: string, dto: UpdateJournalDto) {
+  async update(id: string, dto: UpdateJournalDto, userId?: string) {
     const entry = await this.prisma.journalEntry.findUnique({
       where: { id },
       include: { lines: true },
@@ -194,7 +209,7 @@ export class JournalService {
         await tx.journalLine.deleteMany({ where: { journalEntryId: id } });
       }
 
-      return tx.journalEntry.update({
+      const updated = await tx.journalEntry.update({
         where: { id },
         data: {
           ...(dto.date !== undefined && { date: new Date(dto.date) }),
@@ -208,11 +223,32 @@ export class JournalService {
         },
         include: { lines: { include: { account: true, vendor: true } } },
       });
+
+      // 감사 로그
+      if (userId) {
+        const action = dto.status && !dto.lines && !dto.date
+          ? "JOURNAL_STATUS_CHANGED"
+          : "JOURNAL_UPDATED";
+        await this.auditLogService.log({
+          tenantId: entry.tenantId,
+          userId,
+          action,
+          entityType: "JournalEntry",
+          entityId: id,
+          description: dto.status
+            ? `상태 변경: ${entry.status} → ${dto.status}`
+            : `전표 수정`,
+          oldValue: { status: entry.status, date: entry.date, description: entry.description },
+          newValue: { status: updated.status, date: updated.date, description: updated.description },
+        });
+      }
+
+      return updated;
     });
   }
 
   // 전표 삭제
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const entry = await this.prisma.journalEntry.findUnique({
       where: { id },
       include: { document: true },
@@ -235,12 +271,27 @@ export class JournalService {
       }
 
       // JournalLine은 cascade로 자동 삭제
-      return tx.journalEntry.delete({ where: { id } });
+      const deleted = await tx.journalEntry.delete({ where: { id } });
+
+      // 감사 로그
+      if (userId) {
+        await this.auditLogService.log({
+          tenantId: entry.tenantId,
+          userId,
+          action: "JOURNAL_DELETED",
+          entityType: "JournalEntry",
+          entityId: id,
+          description: `전표 삭제: ${entry.description || new Date(entry.date).toLocaleDateString("ko-KR")}`,
+          oldValue: { status: entry.status, date: entry.date, description: entry.description },
+        });
+      }
+
+      return deleted;
     });
   }
 
   // 영수증 → 전표 자동 생성
-  async createFromDocument(documentId: string, accountId: string) {
+  async createFromDocument(documentId: string, accountId: string, userId?: string) {
     const document = await this.prisma.document.findUnique({
       where: { id: documentId },
       include: { vendor: true },
@@ -287,11 +338,11 @@ export class JournalService {
         { accountId, vendorId, debit: amount, credit: 0 },
         { accountId: await this.getCashAccountId(document.tenantId), vendorId, debit: 0, credit: amount },
       ],
-    });
+    }, userId);
   }
 
   // 일괄 상태 변경
-  async batchUpdateStatus(ids: string[], status: string) {
+  async batchUpdateStatus(ids: string[], status: string, userId?: string) {
     const validTransitions: Record<string, string[]> = {
       DRAFT: ["APPROVED"],
       APPROVED: ["POSTED", "DRAFT"],
@@ -317,11 +368,28 @@ export class JournalService {
       }
     }
 
+    const prevStatuses = entries.map((e) => e.status);
+
     return this.prisma.$transaction(async (tx) => {
       const result = await tx.journalEntry.updateMany({
         where: { id: { in: ids } },
         data: { status },
       });
+
+      // 감사 로그
+      if (userId && entries.length > 0) {
+        await this.auditLogService.log({
+          tenantId: entries[0].tenantId,
+          userId,
+          action: "JOURNAL_BATCH_STATUS",
+          entityType: "JournalEntry",
+          entityId: ids.join(","),
+          description: `일괄 상태 변경: ${[...new Set(prevStatuses)].join("/")} → ${status} (${result.count}건)`,
+          oldValue: { ids, statuses: prevStatuses },
+          newValue: { status, count: result.count },
+        });
+      }
+
       return { count: result.count };
     });
   }

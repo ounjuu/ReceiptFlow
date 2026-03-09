@@ -48,7 +48,7 @@ export class ClosingController {
   // 마감 취소
   @Patch(":id/reopen")
   @Roles("ADMIN")
-  async reopen(@Param("id") id: string) {
-    return this.closingService.reopen(id);
+  async reopen(@Param("id") id: string, @Req() req: { user: { sub: string } }) {
+    return this.closingService.reopen(id, req.user.sub);
   }
 }

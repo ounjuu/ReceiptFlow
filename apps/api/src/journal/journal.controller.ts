@@ -7,6 +7,7 @@ import {
   Param,
   Query,
   Body,
+  Req,
   UseGuards,
 } from "@nestjs/common";
 import { JournalService } from "./journal.service";
@@ -23,8 +24,8 @@ export class JournalController {
 
   @Post()
   @Roles("ADMIN", "ACCOUNTANT")
-  async create(@Body() dto: CreateJournalDto) {
-    return this.journalService.create(dto);
+  async create(@Body() dto: CreateJournalDto, @Req() req: { user: { sub: string } }) {
+    return this.journalService.create(dto, req.user.sub);
   }
 
   @Post("from-document/:documentId")
@@ -32,15 +33,16 @@ export class JournalController {
   async createFromDocument(
     @Param("documentId") documentId: string,
     @Query("accountId") accountId: string,
+    @Req() req: { user: { sub: string } },
   ) {
-    return this.journalService.createFromDocument(documentId, accountId);
+    return this.journalService.createFromDocument(documentId, accountId, req.user.sub);
   }
 
   // 일괄 상태 변경 (`:id` 라우트보다 먼저 선언)
   @Patch("batch/status")
   @Roles("ADMIN", "ACCOUNTANT")
-  async batchUpdateStatus(@Body() body: { ids: string[]; status: string }) {
-    return this.journalService.batchUpdateStatus(body.ids, body.status);
+  async batchUpdateStatus(@Body() body: { ids: string[]; status: string }, @Req() req: { user: { sub: string } }) {
+    return this.journalService.batchUpdateStatus(body.ids, body.status, req.user.sub);
   }
 
   @Get()
@@ -59,13 +61,13 @@ export class JournalController {
 
   @Patch(":id")
   @Roles("ADMIN", "ACCOUNTANT")
-  async update(@Param("id") id: string, @Body() dto: UpdateJournalDto) {
-    return this.journalService.update(id, dto);
+  async update(@Param("id") id: string, @Body() dto: UpdateJournalDto, @Req() req: { user: { sub: string } }) {
+    return this.journalService.update(id, dto, req.user.sub);
   }
 
   @Delete(":id")
   @Roles("ADMIN")
-  async remove(@Param("id") id: string) {
-    return this.journalService.remove(id);
+  async remove(@Param("id") id: string, @Req() req: { user: { sub: string } }) {
+    return this.journalService.remove(id, req.user.sub);
   }
 }

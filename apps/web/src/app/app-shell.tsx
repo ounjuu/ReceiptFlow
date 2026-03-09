@@ -66,9 +66,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
           {isAdmin && (
-            <Link href="/members" className={styles.navLink}>
-              멤버 관리
-            </Link>
+            <>
+              <Link href="/members" className={styles.navLink}>
+                멤버 관리
+              </Link>
+              <Link href="/audit-logs" className={styles.navLink}>
+                감사 로그
+              </Link>
+            </>
           )}
         </nav>
       </aside>
