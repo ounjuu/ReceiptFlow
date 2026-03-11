@@ -24,6 +24,7 @@ model Tenant {
   vendors      Vendor[]
   periods      AccountingPeriod[]
   auditLogs    AuditLog[]
+  journalTemplates JournalTemplate[]
 }
 
 model User {
@@ -69,6 +70,7 @@ model Account {
   updatedAt     DateTime @updatedAt
 
   journalLines JournalLine[]
+  templateLines JournalTemplateLine[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -86,6 +88,7 @@ model Vendor {
 
   documents    Document[]
   journalLines JournalLine[]
+  templateLines JournalTemplateLine[]
 
   @@unique([tenantId, bizNo])
   @@index([tenantId])
@@ -191,4 +194,36 @@ model JournalLine {
   @@index([journalEntryId])
   @@index([accountId])
   @@index([vendorId])
+}
+
+// ──────────────────────────────────
+// 반복 전표 템플릿
+// ──────────────────────────────────
+
+model JournalTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lines JournalTemplateLine[]
+
+  @@index([tenantId])
+}
+
+model JournalTemplateLine {
+  id                String          @id @default(uuid())
+  debit             Decimal         @default(0) @db.Decimal(18, 2)
+  credit            Decimal         @default(0) @db.Decimal(18, 2)
+  journalTemplateId String
+  journalTemplate   JournalTemplate @relation(fields: [journalTemplateId], references: [id], onDelete: Cascade)
+  accountId         String
+  account           Account         @relation(fields: [accountId], references: [id])
+  vendorId          String?
+  vendor            Vendor?         @relation(fields: [vendorId], references: [id])
+
+  @@index([journalTemplateId])
 }

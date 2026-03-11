@@ -14,6 +14,7 @@ const navItems = [
   { href: "/accounts", label: "계정과목" },
   { href: "/vendors", label: "거래처" },
   { href: "/closings", label: "결산" },
+  { href: "/journal-templates", label: "반복 전표" },
 ];
 
 const ROLE_LABEL: Record<string, string> = {
