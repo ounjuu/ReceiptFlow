@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
+import { apiGet, apiPost, apiPatch, apiDelete, apiUpload } from "@/lib/api";
+import { API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { exportToXlsx } from "@/lib/export-xlsx";
 import styles from "./page.module.css";
@@ -27,6 +28,13 @@ interface JournalLine {
   vendor: { id: string; name: string; bizNo: string | null } | null;
 }
 
+interface JournalAttachment {
+  id: string;
+  filename: string;
+  url: string;
+  createdAt: string;
+}
+
 interface JournalEntry {
   id: string;
   date: string;
@@ -34,6 +42,7 @@ interface JournalEntry {
   status: string;
   documentId: string | null;
   lines: JournalLine[];
+  attachments?: JournalAttachment[];
 }
 
 interface LineInput {
@@ -73,6 +82,8 @@ export default function JournalsPage() {
   const [description, setDescription] = useState("");
   const [lines, setLines] = useState<LineInput[]>([emptyLine(), emptyLine()]);
   const [error, setError] = useState("");
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // 기간 필터
   const [filterStart, setFilterStart] = useState("");
@@ -198,6 +209,21 @@ export default function JournalsPage() {
       queryClient.invalidateQueries({ queryKey: ["journals"] });
       queryClient.invalidateQueries({ queryKey: ["documents"] });
     },
+  });
+
+  const uploadAttachmentMut = useMutation({
+    mutationFn: ({ journalId, file }: { journalId: string; file: File }) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      return apiUpload<JournalAttachment>(`/journals/${journalId}/attachments`, formData);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["journals"] }),
+  });
+
+  const deleteAttachmentMut = useMutation({
+    mutationFn: ({ journalId, attachmentId }: { journalId: string; attachmentId: string }) =>
+      apiDelete(`/journals/${journalId}/attachments/${attachmentId}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["journals"] }),
   });
 
   const resetForm = () => {
@@ -663,6 +689,7 @@ export default function JournalsPage() {
               <th>차변 합계</th>
               <th>대변 합계</th>
               <th>영수증</th>
+              <th>첨부</th>
               <th>관리</th>
             </tr>
           </thead>
@@ -673,7 +700,8 @@ export default function JournalsPage() {
               const jTotalCredit = j.lines.reduce((sum, l) => sum + Number(l.credit), 0);
               const isPosted = j.status === "POSTED";
               return (
-                <tr key={j.id} className={selectedIds.has(j.id) ? styles.selectedRow : ""}>
+                <React.Fragment key={j.id}>
+                <tr className={selectedIds.has(j.id) ? styles.selectedRow : ""}>
                   {canEdit && (
                     <td>
                       <input
@@ -695,6 +723,14 @@ export default function JournalsPage() {
                   <td>{jTotalDebit.toLocaleString()}원</td>
                   <td>{jTotalCredit.toLocaleString()}원</td>
                   <td>{j.documentId ? "O" : "-"}</td>
+                  <td>
+                    <button
+                      className={styles.attachToggle}
+                      onClick={() => setExpandedId(expandedId === j.id ? null : j.id)}
+                    >
+                      {(j.attachments?.length || 0)}건
+                    </button>
+                  </td>
                   <td>
                     <div className={styles.actions}>
                       {canEdit && nextStatus(j.status) && (
@@ -728,11 +764,65 @@ export default function JournalsPage() {
                     </div>
                   </td>
                 </tr>
+                {expandedId === j.id && (
+                  <tr>
+                    <td colSpan={canEdit ? 11 : 10} className={styles.attachmentRow}>
+                      <div className={styles.attachmentSection}>
+                        <div className={styles.attachmentList}>
+                          {(j.attachments || []).map((att) => (
+                            <div key={att.id} className={styles.attachmentItem}>
+                              <a
+                                href={`${API_BASE}${att.url}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={styles.attachmentLink}
+                              >
+                                {att.filename}
+                              </a>
+                              {canEdit && (
+                                <button
+                                  className={styles.attachmentDeleteBtn}
+                                  onClick={() => {
+                                    if (confirm(`${att.filename}을(를) 삭제하시겠습니까?`)) {
+                                      deleteAttachmentMut.mutate({ journalId: j.id, attachmentId: att.id });
+                                    }
+                                  }}
+                                >
+                                  X
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                          {(j.attachments || []).length === 0 && (
+                            <span className={styles.attachmentEmpty}>첨부파일 없음</span>
+                          )}
+                        </div>
+                        {canEdit && (
+                          <label className={styles.attachmentUploadBtn}>
+                            파일 첨부
+                            <input
+                              type="file"
+                              hidden
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  uploadAttachmentMut.mutate({ journalId: j.id, file });
+                                  e.target.value = "";
+                                }
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               );
             })}
             {journals.length === 0 && (
               <tr>
-                <td colSpan={canEdit ? 9 : 8} style={{ textAlign: "center", color: "var(--text-muted)" }}>
+                <td colSpan={canEdit ? 11 : 10} style={{ textAlign: "center", color: "var(--text-muted)" }}>
                   전표가 없습니다
                 </td>
               </tr>

@@ -440,3 +440,86 @@
 .selectedRow {
   background: var(--primary-light) !important;
 }
+
+/* 첨부파일 */
+.attachToggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2px 8px;
+  font-size: 0.78rem;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.attachToggle:hover {
+  background: var(--primary-light);
+}
+
+.attachmentRow {
+  background: #fafafa;
+  padding: 12px 16px !important;
+}
+
+.attachmentSection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.attachmentList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+}
+
+.attachmentItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
+.attachmentLink {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.attachmentLink:hover {
+  text-decoration: underline;
+}
+
+.attachmentDeleteBtn {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.attachmentEmpty {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.attachmentUploadBtn {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.8rem;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.attachmentUploadBtn:hover {
+  background: var(--primary);
+  color: #fff;
+}

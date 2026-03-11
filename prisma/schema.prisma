@@ -173,6 +173,7 @@ model JournalEntry {
   updatedAt   DateTime @updatedAt
 
   lines JournalLine[]
+  attachments JournalAttachment[]
 
   @@index([tenantId])
   @@index([date])
@@ -194,6 +195,18 @@ model JournalLine {
   @@index([journalEntryId])
   @@index([accountId])
   @@index([vendorId])
+}
+
+// 전표 첨부파일
+model JournalAttachment {
+  id             String       @id @default(uuid())
+  filename       String
+  url            String
+  journalEntryId String
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@index([journalEntryId])
 }
 
 // ──────────────────────────────────

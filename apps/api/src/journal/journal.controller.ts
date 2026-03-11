@@ -9,7 +9,12 @@ import {
   Body,
   Req,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { diskStorage } from "multer";
+import { extname } from "path";
 import { JournalService } from "./journal.service";
 import { CreateJournalDto } from "./dto/create-journal.dto";
 import { UpdateJournalDto } from "./dto/update-journal.dto";
@@ -69,5 +74,31 @@ export class JournalController {
   @Roles("ADMIN")
   async remove(@Param("id") id: string, @Req() req: { user: { sub: string } }) {
     return this.journalService.remove(id, req.user.sub);
+  }
+
+  @Post(":id/attachments")
+  @Roles("ADMIN", "ACCOUNTANT")
+  @UseInterceptors(
+    FileInterceptor("file", {
+      storage: diskStorage({
+        destination: "./uploads/journal-attachments",
+        filename: (_req, file, cb) => {
+          const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+          cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+    }),
+  )
+  async addAttachment(
+    @Param("id") id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.journalService.addAttachment(id, file);
+  }
+
+  @Delete(":id/attachments/:attachmentId")
+  @Roles("ADMIN", "ACCOUNTANT")
+  async removeAttachment(@Param("attachmentId") attachmentId: string) {
+    return this.journalService.removeAttachment(attachmentId);
   }
 }

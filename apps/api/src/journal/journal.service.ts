@@ -4,6 +4,8 @@ import { ClosingService } from "../closing/closing.service";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { CreateJournalDto, JournalLineDto } from "./dto/create-journal.dto";
 import { UpdateJournalDto } from "./dto/update-journal.dto";
+import * as fs from "fs";
+import * as path from "path";
 
 @Injectable()
 export class JournalService {
@@ -128,7 +130,7 @@ export class JournalService {
     }
     return this.prisma.journalEntry.findMany({
       where,
-      include: { lines: { include: { account: true, vendor: true } }, document: true },
+      include: { lines: { include: { account: true, vendor: true } }, document: true, attachments: true },
       orderBy: { date: "desc" },
     });
   }
@@ -137,7 +139,7 @@ export class JournalService {
   async findOne(id: string) {
     const entry = await this.prisma.journalEntry.findUnique({
       where: { id },
-      include: { lines: { include: { account: true, vendor: true } }, document: true },
+      include: { lines: { include: { account: true, vendor: true } }, document: true, attachments: true },
     });
 
     if (!entry) {
@@ -392,6 +394,34 @@ export class JournalService {
 
       return { count: result.count };
     });
+  }
+
+  // 첨부파일 추가
+  async addAttachment(journalEntryId: string, file: { filename: string; originalname: string }) {
+    const entry = await this.prisma.journalEntry.findUnique({ where: { id: journalEntryId } });
+    if (!entry) throw new NotFoundException("전표를 찾을 수 없습니다");
+
+    return this.prisma.journalAttachment.create({
+      data: {
+        journalEntryId,
+        filename: file.originalname,
+        url: `/uploads/journal-attachments/${file.filename}`,
+      },
+    });
+  }
+
+  // 첨부파일 삭제
+  async removeAttachment(attachmentId: string) {
+    const attachment = await this.prisma.journalAttachment.findUnique({ where: { id: attachmentId } });
+    if (!attachment) throw new NotFoundException("첨부파일을 찾을 수 없습니다");
+
+    // 파일 삭제
+    const filePath = path.join(process.cwd(), attachment.url);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    return this.prisma.journalAttachment.delete({ where: { id: attachmentId } });
   }
 
   // 테넌트의 현금 계정(1010) 조회
