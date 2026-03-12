@@ -1,0 +1,108 @@
+.title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.formSection {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.form {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.input,
+.select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  background: #fff;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.submitBtn {
+  background: var(--primary);
+  color: #fff;
+  padding: 8px 24px;
+  font-size: 0.85rem;
+}
+
+.submitBtn:disabled {
+  opacity: 0.6;
+}
+
+.tableSection {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.currencyGroup {
+  margin-bottom: 20px;
+}
+
+.currencyGroup:last-child {
+  margin-bottom: 0;
+}
+
+.currencyTitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--primary);
+}
+
+.deleteBtn {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--danger);
+  background: #fff;
+  color: var(--danger);
+}
+
+.deleteBtn:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.empty {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 40px 0;
+}

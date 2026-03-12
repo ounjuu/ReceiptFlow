@@ -38,4 +38,9 @@ export class ReportController {
   async dashboardSummary(@Query("tenantId") tenantId: string) {
     return this.reportService.dashboardSummary(tenantId);
   }
+
+  @Get("dashboard-alerts")
+  async dashboardAlerts(@Query("tenantId") tenantId: string) {
+    return this.reportService.getDashboardAlerts(tenantId);
+  }
 }

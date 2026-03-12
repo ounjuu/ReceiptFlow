@@ -37,6 +37,9 @@ export class ReportService {
               ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
             },
           },
+          include: {
+            journalEntry: { select: { exchangeRate: true } },
+          },
         },
       },
       orderBy: { code: "asc" },
@@ -44,11 +47,11 @@ export class ReportService {
 
     const rows: TrialBalanceRow[] = accounts.map((account) => {
       const debit = account.journalLines.reduce(
-        (sum, l) => sum + Number(l.debit),
+        (sum, l) => sum + Number(l.debit) * Number(l.journalEntry.exchangeRate),
         0,
       );
       const credit = account.journalLines.reduce(
-        (sum, l) => sum + Number(l.credit),
+        (sum, l) => sum + Number(l.credit) * Number(l.journalEntry.exchangeRate),
         0,
       );
       return {
@@ -155,6 +158,66 @@ export class ReportService {
       totalRevenue: income.totalRevenue,
       totalExpense: income.totalExpense,
       netIncome: income.netIncome,
+    };
+  }
+
+  // 대시보드 알림 데이터
+  async getDashboardAlerts(tenantId: string) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    // 1) 미승인 전표 수 (DRAFT 상태)
+    const draftCount = await this.prisma.journalEntry.count({
+      where: { tenantId, status: "DRAFT" },
+    });
+
+    // 2) 승인 대기 전표 수 (APPROVED 상태, 아직 POSTED 안됨)
+    const approvedCount = await this.prisma.journalEntry.count({
+      where: { tenantId, status: "APPROVED" },
+    });
+
+    // 3) 마감 임박 체크
+    const closedPeriod = await this.prisma.accountingPeriod.findUnique({
+      where: { tenantId_year_month: { tenantId, year, month } },
+    });
+    const isCurrentMonthClosed = closedPeriod?.status === "CLOSED";
+    const lastDay = new Date(year, month, 0).getDate();
+    const daysUntilMonthEnd = lastDay - now.getDate();
+
+    // 4) 미처리 영수증 수 (PENDING 상태)
+    const pendingDocCount = await this.prisma.document.count({
+      where: { tenantId, status: "PENDING" },
+    });
+
+    // 5) 최근 활동 로그 (최근 10건) + 사용자명 조회
+    const recentLogs = await this.prisma.auditLog.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+
+    const userIds = [...new Set(recentLogs.map((l) => l.userId))];
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true },
+    });
+    const userMap = new Map(users.map((u) => [u.id, u.name]));
+
+    const logsWithUser = recentLogs.map((log) => ({
+      id: log.id,
+      action: log.action,
+      description: log.description,
+      createdAt: log.createdAt,
+      userName: userMap.get(log.userId) || "알 수 없음",
+    }));
+
+    return {
+      draftCount,
+      approvedCount,
+      pendingDocCount,
+      closing: { year, month, isClosed: isCurrentMonthClosed, daysUntilMonthEnd },
+      recentLogs: logsWithUser,
     };
   }
 

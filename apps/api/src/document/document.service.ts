@@ -146,6 +146,7 @@ export class DocumentService {
           vendorName: dto.vendorName,
           vendorId: vendor.id,
           totalAmount: dto.totalAmount,
+          currency: dto.currency || "KRW",
           transactionAt: new Date(dto.transactionAt),
           status: "JOURNAL_CREATED",
         },

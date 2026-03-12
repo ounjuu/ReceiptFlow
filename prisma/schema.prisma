@@ -12,19 +12,21 @@ datasource db {
 // ──────────────────────────────────
 
 model Tenant {
-  id        String   @id @default(uuid())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(uuid())
+  name            String
+  defaultCurrency String   @default("KRW") // ISO 4217
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  memberships  Membership[]
-  accounts     Account[]
-  documents    Document[]
-  journalEntries JournalEntry[]
-  vendors      Vendor[]
-  periods      AccountingPeriod[]
-  auditLogs    AuditLog[]
+  memberships      Membership[]
+  accounts         Account[]
+  documents        Document[]
+  journalEntries   JournalEntry[]
+  vendors          Vendor[]
+  periods          AccountingPeriod[]
+  auditLogs        AuditLog[]
   journalTemplates JournalTemplate[]
+  exchangeRates    ExchangeRate[]
 }
 
 model User {
@@ -139,6 +141,7 @@ model Document {
   vendorName    String?
   transactionAt DateTime?
   totalAmount   Decimal? @db.Decimal(18, 2)
+  currency      String   @default("KRW") // ISO 4217
   status        String   @default("PENDING") // PENDING, OCR_DONE, JOURNAL_CREATED
   ocrRaw        Json?
   imageUrl      String?
@@ -164,9 +167,11 @@ model JournalEntry {
   id          String   @id @default(uuid())
   date        DateTime
   description String?
-  status      String   @default("DRAFT") // DRAFT, APPROVED, POSTED
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  status       String   @default("DRAFT") // DRAFT, APPROVED, POSTED
+  currency     String   @default("KRW") // ISO 4217
+  exchangeRate Decimal  @default(1) @db.Decimal(18, 6) // 1 외화 = rate 기준통화
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
   documentId  String?  @unique
   document    Document? @relation(fields: [documentId], references: [id])
   createdAt   DateTime @default(now())
@@ -239,4 +244,21 @@ model JournalTemplateLine {
   vendor            Vendor?         @relation(fields: [vendorId], references: [id])
 
   @@index([journalTemplateId])
+}
+
+// ──────────────────────────────────
+// 환율 관리
+// ──────────────────────────────────
+
+model ExchangeRate {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  currency  String   // USD, EUR, JPY, CNY 등 ISO 4217
+  rate      Decimal  @db.Decimal(18, 6) // 1 외화 = rate 기준통화
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, currency, date])
+  @@index([tenantId])
 }

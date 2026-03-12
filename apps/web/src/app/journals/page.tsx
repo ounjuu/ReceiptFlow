@@ -40,6 +40,8 @@ interface JournalEntry {
   date: string;
   description: string | null;
   status: string;
+  currency: string;
+  exchangeRate: string;
   documentId: string | null;
   lines: JournalLine[];
   attachments?: JournalAttachment[];
@@ -63,6 +65,24 @@ function statusLabel(status: string) {
   }
 }
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  KRW: "₩",
+  USD: "$",
+  EUR: "€",
+  JPY: "¥",
+  CNY: "¥",
+  GBP: "£",
+};
+
+const CURRENCY_OPTIONS = [
+  { code: "KRW", name: "원 (KRW)" },
+  { code: "USD", name: "달러 (USD)" },
+  { code: "EUR", name: "유로 (EUR)" },
+  { code: "JPY", name: "엔 (JPY)" },
+  { code: "CNY", name: "위안 (CNY)" },
+  { code: "GBP", name: "파운드 (GBP)" },
+];
+
 const emptyLine = (): LineInput => ({
   accountId: "",
   vendorBizNo: "",
@@ -80,6 +100,8 @@ export default function JournalsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
+  const [currency, setCurrency] = useState("KRW");
+  const [exchangeRate, setExchangeRate] = useState("1");
   const [lines, setLines] = useState<LineInput[]>([emptyLine(), emptyLine()]);
   const [error, setError] = useState("");
 
@@ -120,6 +142,21 @@ export default function JournalsPage() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  // 통화 변경 시 최신 환율 자동 조회
+  const handleCurrencyChange = async (cur: string) => {
+    setCurrency(cur);
+    if (cur === "KRW") {
+      setExchangeRate("1");
+      return;
+    }
+    try {
+      const res = await apiGet<{ rate: string }>(`/exchange-rates/latest?tenantId=${tenantId}&currency=${cur}`);
+      setExchangeRate(String(Number(res.rate)));
+    } catch {
+      setExchangeRate("1");
+    }
+  };
 
   // 부분검색 API
   const searchAutocomplete = useCallback(async (query: string): Promise<Vendor[]> => {
@@ -182,6 +219,8 @@ export default function JournalsPage() {
       tenantId: string;
       date: string;
       description: string;
+      currency: string;
+      exchangeRate: number;
       lines: { accountId: string; vendorId?: string; vendorBizNo?: string; vendorName?: string; debit: number; credit: number }[];
     }) => apiPost<JournalEntry>("/journals", body),
     onSuccess: () => {
@@ -231,6 +270,8 @@ export default function JournalsPage() {
     setEditingId(null);
     setDate(new Date().toISOString().slice(0, 10));
     setDescription("");
+    setCurrency("KRW");
+    setExchangeRate("1");
     setLines([emptyLine(), emptyLine()]);
     setError("");
   };
@@ -240,6 +281,8 @@ export default function JournalsPage() {
     setEditingId(j.id);
     setDate(new Date(j.date).toISOString().slice(0, 10));
     setDescription(j.description || "");
+    setCurrency(j.currency || "KRW");
+    setExchangeRate(String(Number(j.exchangeRate) || 1));
     setLines(
       j.lines.map((l) => ({
         accountId: l.account.id,
@@ -320,13 +363,15 @@ export default function JournalsPage() {
     if (formMode === "edit" && editingId) {
       updateMutation.mutate({
         id: editingId,
-        body: { date, description, lines: submitLines },
+        body: { date, description, currency, exchangeRate: Number(exchangeRate), lines: submitLines },
       });
     } else {
       createMutation.mutate({
         tenantId: tenantId!,
         date,
         description,
+        currency,
+        exchangeRate: Number(exchangeRate),
         lines: submitLines,
       });
     }
@@ -434,6 +479,31 @@ export default function JournalsPage() {
                   onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
+              <div className={styles.formRow}>
+                <label className={styles.label}>통화</label>
+                <select
+                  className={styles.select}
+                  value={currency}
+                  onChange={(e) => handleCurrencyChange(e.target.value)}
+                >
+                  {CURRENCY_OPTIONS.map((c) => (
+                    <option key={c.code} value={c.code}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              {currency !== "KRW" && (
+                <div className={styles.formRow}>
+                  <label className={styles.label}>환율 (1 {currency} = KRW)</label>
+                  <input
+                    className={styles.input}
+                    type="number"
+                    step="0.000001"
+                    min="0"
+                    value={exchangeRate}
+                    onChange={(e) => setExchangeRate(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
 
             <div className={styles.linesHeader}>
@@ -531,8 +601,8 @@ export default function JournalsPage() {
                 + 라인 추가
               </button>
               <div className={styles.totals}>
-                <span>차변: {totalDebit.toLocaleString()}원</span>
-                <span>대변: {totalCredit.toLocaleString()}원</span>
+                <span>차변: {(CURRENCY_SYMBOLS[currency] || "")}{totalDebit.toLocaleString()}</span>
+                <span>대변: {(CURRENCY_SYMBOLS[currency] || "")}{totalCredit.toLocaleString()}</span>
                 <span className={isBalanced ? styles.balanced : styles.unbalanced}>
                   {isBalanced ? "균형" : "불균형"}
                 </span>
@@ -685,6 +755,7 @@ export default function JournalsPage() {
               <th>날짜</th>
               <th>거래처</th>
               <th>설명</th>
+              <th>통화</th>
               <th>상태</th>
               <th>차변 합계</th>
               <th>대변 합계</th>
@@ -717,11 +788,12 @@ export default function JournalsPage() {
                     {[...new Set(j.lines.map((l) => l.vendor?.name).filter(Boolean))].join(", ") || "-"}
                   </td>
                   <td>{j.description || "-"}</td>
+                  <td>{j.currency || "KRW"}</td>
                   <td>
                     <span className={`${styles.status} ${s.cls}`}>{s.text}</span>
                   </td>
-                  <td>{jTotalDebit.toLocaleString()}원</td>
-                  <td>{jTotalCredit.toLocaleString()}원</td>
+                  <td>{(CURRENCY_SYMBOLS[j.currency] || "")}{jTotalDebit.toLocaleString()}</td>
+                  <td>{(CURRENCY_SYMBOLS[j.currency] || "")}{jTotalCredit.toLocaleString()}</td>
                   <td>{j.documentId ? "O" : "-"}</td>
                   <td>
                     <button
@@ -766,7 +838,7 @@ export default function JournalsPage() {
                 </tr>
                 {expandedId === j.id && (
                   <tr>
-                    <td colSpan={canEdit ? 11 : 10} className={styles.attachmentRow}>
+                    <td colSpan={canEdit ? 12 : 11} className={styles.attachmentRow}>
                       <div className={styles.attachmentSection}>
                         <div className={styles.attachmentList}>
                           {(j.attachments || []).map((att) => (
@@ -822,7 +894,7 @@ export default function JournalsPage() {
             })}
             {journals.length === 0 && (
               <tr>
-                <td colSpan={canEdit ? 11 : 10} style={{ textAlign: "center", color: "var(--text-muted)" }}>
+                <td colSpan={canEdit ? 12 : 11} style={{ textAlign: "center", color: "var(--text-muted)" }}>
                   전표가 없습니다
                 </td>
               </tr>

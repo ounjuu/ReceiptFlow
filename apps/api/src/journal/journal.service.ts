@@ -87,6 +87,8 @@ export class JournalService {
           date: new Date(dto.date),
           description: dto.description,
           documentId: dto.documentId,
+          currency: dto.currency || "KRW",
+          exchangeRate: dto.exchangeRate || 1,
           lines: {
             create: resolvedLines,
           },
@@ -217,6 +219,8 @@ export class JournalService {
           ...(dto.date !== undefined && { date: new Date(dto.date) }),
           ...(dto.description !== undefined && { description: dto.description }),
           ...(dto.status !== undefined && { status: dto.status }),
+          ...(dto.currency !== undefined && { currency: dto.currency }),
+          ...(dto.exchangeRate !== undefined && { exchangeRate: dto.exchangeRate }),
           ...(resolvedLines && {
               lines: {
                 create: resolvedLines,

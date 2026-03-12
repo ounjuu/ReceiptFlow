@@ -31,11 +31,25 @@ interface Document {
   vendorName: string | null;
   transactionAt: string | null;
   totalAmount: string | null;
+  currency: string;
   status: string;
   imageUrl: string | null;
   createdAt: string;
   journalEntry: JournalEntry | null;
 }
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  KRW: "₩", USD: "$", EUR: "€", JPY: "¥", CNY: "¥", GBP: "£",
+};
+
+const CURRENCY_OPTIONS = [
+  { code: "KRW", name: "원 (KRW)" },
+  { code: "USD", name: "달러 (USD)" },
+  { code: "EUR", name: "유로 (EUR)" },
+  { code: "JPY", name: "엔 (JPY)" },
+  { code: "CNY", name: "위안 (CNY)" },
+  { code: "GBP", name: "파운드 (GBP)" },
+];
 
 interface OcrData {
   raw_text: string;
@@ -76,6 +90,7 @@ export default function DocumentsPage() {
   const [vendorBizNo, setVendorBizNo] = useState("");
   const [vendorMatched, setVendorMatched] = useState(false);
   const [totalAmount, setTotalAmount] = useState("");
+  const [docCurrency, setDocCurrency] = useState("KRW");
   const [transactionAt, setTransactionAt] = useState(
     new Date().toISOString().slice(0, 10),
   );
@@ -201,6 +216,7 @@ export default function DocumentsPage() {
       vendorName: string;
       vendorBizNo: string;
       totalAmount: number;
+      currency: string;
       transactionAt: string;
     }) => apiPost<CreateResult>("/documents", body),
     onSuccess: (data) => {
@@ -209,6 +225,7 @@ export default function DocumentsPage() {
       setVendorBizNo("");
       setVendorMatched(false);
       setTotalAmount("");
+      setDocCurrency("KRW");
       queryClient.invalidateQueries({ queryKey: ["documents"] });
       queryClient.invalidateQueries({ queryKey: ["journals"] });
       queryClient.invalidateQueries({ queryKey: ["vendors"] });
@@ -245,6 +262,7 @@ export default function DocumentsPage() {
       vendorName,
       vendorBizNo,
       totalAmount: Number(totalAmount),
+      currency: docCurrency,
       transactionAt,
     });
   };
@@ -433,7 +451,7 @@ export default function DocumentsPage() {
               />
             </div>
             <div className={styles.formRow}>
-              <label className={styles.label}>금액 (원)</label>
+              <label className={styles.label}>금액</label>
               <input
                 className={styles.input}
                 type="number"
@@ -443,6 +461,18 @@ export default function DocumentsPage() {
                 required
                 min={1}
               />
+            </div>
+            <div className={styles.formRow}>
+              <label className={styles.label}>통화</label>
+              <select
+                className={styles.input}
+                value={docCurrency}
+                onChange={(e) => setDocCurrency(e.target.value)}
+              >
+                {CURRENCY_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>{c.name}</option>
+                ))}
+              </select>
             </div>
             <div className={styles.formRow}>
               <label className={styles.label}>거래일</label>
@@ -738,7 +768,7 @@ export default function DocumentsPage() {
                   </td>
                   <td>
                     {doc.totalAmount
-                      ? `${Number(doc.totalAmount).toLocaleString()}원`
+                      ? `${CURRENCY_SYMBOLS[doc.currency] || ""}${Number(doc.totalAmount).toLocaleString()}`
                       : "-"}
                   </td>
                   <td>

@@ -61,3 +61,174 @@
   text-align: center;
   padding: 40px 0;
 }
+
+/* 알림 배너 */
+.alertsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.alertItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.alertItem:hover {
+  opacity: 0.85;
+}
+
+.alertIcon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.alertMessage {
+  flex: 1;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.alertArrow {
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
+
+.alert_warning {
+  background: #fef3cd;
+  border: 1px solid #ffc107;
+}
+
+.alert_warning .alertIcon {
+  background: #e5a336;
+}
+
+.alert_warning .alertMessage {
+  color: #856404;
+}
+
+.alert_info {
+  background: #e8e0f5;
+  border: 1px solid #c4b0e0;
+}
+
+.alert_info .alertIcon {
+  background: #7c5cbf;
+}
+
+.alert_info .alertMessage {
+  color: #5a3d8a;
+}
+
+.alert_danger {
+  background: #fde2e2;
+  border: 1px solid #f5c6c6;
+}
+
+.alert_danger .alertIcon {
+  background: #d95454;
+}
+
+.alert_danger .alertMessage {
+  color: #8b2525;
+}
+
+.alert_muted {
+  background: #f0edf5;
+  border: 1px solid #ddd8e6;
+}
+
+.alert_muted .alertIcon {
+  background: #8578a0;
+}
+
+.alert_muted .alertMessage {
+  color: #5a5069;
+}
+
+/* 하단 2컬럼 그리드 */
+.bottomGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* 최근 활동 피드 */
+.activityFeed {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.activityItem {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.activityItem:last-child {
+  border-bottom: none;
+}
+
+.activityDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.activityContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.activityTop {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.activityUser {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.activityAction {
+  font-size: 0.8rem;
+  color: var(--primary);
+  background: var(--primary-light);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.activityDesc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activityTime {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
