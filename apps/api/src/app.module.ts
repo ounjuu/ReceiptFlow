@@ -10,9 +10,10 @@ import { ClosingModule } from "./closing/closing.module";
 import { AuditLogModule } from "./audit-log/audit-log.module";
 import { JournalTemplateModule } from "./journal-template/journal-template.module";
 import { ExchangeRateModule } from "./exchange-rate/exchange-rate.module";
+import { TaxInvoiceModule } from "./tax-invoice/tax-invoice.module";
 
 @Module({
-  imports: [PrismaModule, AuthModule, DocumentModule, JournalModule, ReportModule, AccountModule, VendorModule, ClosingModule, AuditLogModule, JournalTemplateModule, ExchangeRateModule],
+  imports: [PrismaModule, AuthModule, DocumentModule, JournalModule, ReportModule, AccountModule, VendorModule, ClosingModule, AuditLogModule, JournalTemplateModule, ExchangeRateModule, TaxInvoiceModule],
   controllers: [],
   providers: [],
 })

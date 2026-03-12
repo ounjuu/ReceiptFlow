@@ -27,6 +27,7 @@ model Tenant {
   auditLogs        AuditLog[]
   journalTemplates JournalTemplate[]
   exchangeRates    ExchangeRate[]
+  taxInvoices      TaxInvoice[]
 }
 
 model User {
@@ -91,6 +92,7 @@ model Vendor {
   documents    Document[]
   journalLines JournalLine[]
   templateLines JournalTemplateLine[]
+  taxInvoices  TaxInvoice[]
 
   @@unique([tenantId, bizNo])
   @@index([tenantId])
@@ -179,6 +181,7 @@ model JournalEntry {
 
   lines JournalLine[]
   attachments JournalAttachment[]
+  taxInvoice  TaxInvoice?
 
   @@index([tenantId])
   @@index([date])
@@ -261,4 +264,50 @@ model ExchangeRate {
 
   @@unique([tenantId, currency, date])
   @@index([tenantId])
+}
+
+// ──────────────────────────────────
+// 세금계산서
+// ──────────────────────────────────
+
+model TaxInvoice {
+  id              String    @id @default(uuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  invoiceType     String    // PURCHASE (매입), SALES (매출)
+  invoiceNo       String?   // 세금계산서 번호
+  invoiceDate     DateTime  // 발행일
+  status          String    @default("DRAFT") // DRAFT, APPROVED, FINALIZED
+
+  // 공급자
+  issuerBizNo     String    // 사업자등록번호
+  issuerName      String    // 상호
+
+  // 공급받는자
+  recipientBizNo  String
+  recipientName   String
+
+  // 금액
+  supplyAmount    Decimal   @db.Decimal(18, 2) // 공급가액
+  taxAmount       Decimal   @db.Decimal(18, 2) // 세액
+  totalAmount     Decimal   @db.Decimal(18, 2) // 합계
+
+  // 전자세금계산서 승인
+  approvalNo      String?   // 국세청 승인번호
+
+  // 거래처 연결
+  vendorId        String?
+  vendor          Vendor?   @relation(fields: [vendorId], references: [id])
+
+  // 전표 연결
+  journalEntryId  String?   @unique
+  journalEntry    JournalEntry? @relation(fields: [journalEntryId], references: [id])
+
+  description     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([invoiceDate])
+  @@index([invoiceType])
 }
