@@ -13,6 +13,7 @@ const navItems = [
   { href: "/reports", label: "재무제표" },
   { href: "/accounts", label: "계정과목" },
   { href: "/vendors", label: "거래처" },
+  { href: "/vendor-ledger", label: "거래처 원장" },
   { href: "/closings", label: "결산" },
   { href: "/cash-flow", label: "자금 관리" },
   { href: "/tax-invoices", label: "세금계산서" },

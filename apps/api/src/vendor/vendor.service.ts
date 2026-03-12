@@ -45,6 +45,140 @@ export class VendorService {
     });
   }
 
+  // 거래처별 잔액 요약
+  async getBalanceSummary(tenantId: string) {
+    const vendors = await this.prisma.vendor.findMany({
+      where: { tenantId },
+      include: {
+        journalLines: {
+          where: {
+            journalEntry: { status: "POSTED", tenantId },
+          },
+          include: {
+            journalEntry: { select: { exchangeRate: true } },
+          },
+        },
+      },
+      orderBy: { name: "asc" },
+    });
+
+    const rows = vendors.map((v) => {
+      const totalDebit = v.journalLines.reduce(
+        (sum, l) => sum + Number(l.debit) * Number(l.journalEntry.exchangeRate),
+        0,
+      );
+      const totalCredit = v.journalLines.reduce(
+        (sum, l) => sum + Number(l.credit) * Number(l.journalEntry.exchangeRate),
+        0,
+      );
+      return {
+        vendorId: v.id,
+        name: v.name,
+        bizNo: v.bizNo,
+        totalDebit,
+        totalCredit,
+        balance: totalDebit - totalCredit,
+      };
+    });
+
+    // 잔액이 0인 거래처 제외
+    const filtered = rows.filter((r) => Math.abs(r.balance) >= 0.01);
+
+    const totalReceivable = filtered
+      .filter((r) => r.balance > 0)
+      .reduce((s, r) => s + r.balance, 0);
+    const totalPayable = filtered
+      .filter((r) => r.balance < 0)
+      .reduce((s, r) => s + Math.abs(r.balance), 0);
+
+    return {
+      vendors: filtered,
+      totalReceivable,
+      totalPayable,
+      netBalance: totalReceivable - totalPayable,
+    };
+  }
+
+  // 거래처 원장 (개별 거래처 거래 내역)
+  async getVendorLedger(
+    tenantId: string,
+    vendorId: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    // 기초잔액 (기간 이전)
+    const beforeFilter: Record<string, unknown> = {};
+    if (startDate) {
+      beforeFilter.lt = new Date(startDate);
+    }
+
+    const beforeLines = await this.prisma.journalLine.findMany({
+      where: {
+        vendorId,
+        journalEntry: {
+          status: "POSTED",
+          tenantId,
+          ...(Object.keys(beforeFilter).length > 0 && { date: beforeFilter }),
+        },
+      },
+      include: { journalEntry: { select: { exchangeRate: true } } },
+    });
+
+    const openingBalance = beforeLines.reduce(
+      (sum, l) =>
+        sum + (Number(l.debit) - Number(l.credit)) * Number(l.journalEntry.exchangeRate),
+      0,
+    );
+
+    // 기간 내 거래
+    const dateFilter: Record<string, unknown> = {};
+    if (startDate) dateFilter.gte = new Date(startDate);
+    if (endDate) dateFilter.lte = new Date(endDate + "T23:59:59");
+
+    const lines = await this.prisma.journalLine.findMany({
+      where: {
+        vendorId,
+        journalEntry: {
+          status: "POSTED",
+          tenantId,
+          ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
+        },
+      },
+      include: {
+        journalEntry: { select: { date: true, description: true, exchangeRate: true } },
+        account: { select: { code: true, name: true } },
+      },
+      orderBy: { journalEntry: { date: "asc" } },
+    });
+
+    let runningBalance = openingBalance;
+    const entries = lines.map((l) => {
+      const debit = Number(l.debit) * Number(l.journalEntry.exchangeRate);
+      const credit = Number(l.credit) * Number(l.journalEntry.exchangeRate);
+      runningBalance += debit - credit;
+      return {
+        date: l.journalEntry.date,
+        description: l.journalEntry.description || "",
+        accountCode: l.account.code,
+        accountName: l.account.name,
+        debit,
+        credit,
+        balance: runningBalance,
+      };
+    });
+
+    const totalDebit = entries.reduce((s, e) => s + e.debit, 0);
+    const totalCredit = entries.reduce((s, e) => s + e.credit, 0);
+
+    return {
+      openingBalance,
+      entries,
+      totalDebit,
+      totalCredit,
+      closingBalance: openingBalance + totalDebit - totalCredit,
+    };
+  }
+
   async findOne(id: string) {
     return this.prisma.vendor.findUniqueOrThrow({ where: { id } });
   }

@@ -45,6 +45,21 @@ export class VendorController {
     return this.vendorService.searchByBizNoPartial(tenantId, query);
   }
 
+  @Get("balance-summary")
+  async balanceSummary(@Query("tenantId") tenantId: string) {
+    return this.vendorService.getBalanceSummary(tenantId);
+  }
+
+  @Get(":id/ledger")
+  async vendorLedger(
+    @Param("id") id: string,
+    @Query("tenantId") tenantId: string,
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string,
+  ) {
+    return this.vendorService.getVendorLedger(tenantId, id, startDate, endDate);
+  }
+
   @Get(":id")
   async findOne(@Param("id") id: string) {
     return this.vendorService.findOne(id);
