@@ -34,6 +34,24 @@ export class ReportController {
     return this.reportService.balanceSheet(tenantId, startDate, endDate);
   }
 
+  @Get("daily-cash")
+  async dailyCash(
+    @Query("tenantId") tenantId: string,
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string,
+  ) {
+    return this.reportService.getDailyCashReport(tenantId, startDate, endDate);
+  }
+
+  @Get("cash-flow")
+  async cashFlow(
+    @Query("tenantId") tenantId: string,
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string,
+  ) {
+    return this.reportService.getCashFlowStatement(tenantId, startDate, endDate);
+  }
+
   @Get("dashboard-summary")
   async dashboardSummary(@Query("tenantId") tenantId: string) {
     return this.reportService.dashboardSummary(tenantId);
