@@ -21,11 +21,18 @@ interface Vendor {
   bizNo: string | null;
 }
 
+interface ProjectOption {
+  id: string;
+  code: string;
+  name: string;
+}
+
 interface JournalLine {
   debit: string;
   credit: string;
   account: { id: string; code: string; name: string };
   vendor: { id: string; name: string; bizNo: string | null } | null;
+  project: { id: string; code: string; name: string } | null;
 }
 
 interface JournalAttachment {
@@ -52,6 +59,7 @@ interface LineInput {
   vendorBizNo: string;
   vendorName: string;
   vendorId: string; // 기존 거래처 매칭 시
+  projectId: string;
   debit: number;
   credit: number;
 }
@@ -89,6 +97,7 @@ const emptyLine = (): LineInput => ({
   vendorBizNo: "",
   vendorName: "",
   vendorId: "",
+  projectId: "",
   debit: 0,
   credit: 0,
 });
@@ -125,6 +134,12 @@ export default function JournalsPage() {
   const { data: accounts = [] } = useQuery({
     queryKey: ["accounts"],
     queryFn: () => apiGet<Account[]>(`/accounts?tenantId=${tenantId}`),
+    enabled: formMode !== "none",
+  });
+
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => apiGet<ProjectOption[]>(`/projects?tenantId=${tenantId}`),
     enabled: formMode !== "none",
   });
 
@@ -290,6 +305,7 @@ export default function JournalsPage() {
         vendorBizNo: l.vendor?.bizNo || "",
         vendorName: l.vendor?.name || "",
         vendorId: l.vendor?.id || "",
+        projectId: l.project?.id || "",
         debit: Number(l.debit),
         credit: Number(l.credit),
       })),
@@ -357,6 +373,7 @@ export default function JournalsPage() {
       ...(l.vendorId
         ? { vendorId: l.vendorId }
         : { vendorBizNo: l.vendorBizNo, vendorName: l.vendorName }),
+      ...(l.projectId ? { projectId: l.projectId } : {}),
       debit: l.debit,
       credit: l.credit,
     }));
@@ -536,6 +553,7 @@ export default function JournalsPage() {
               <span>사업자번호</span>
               <span>거래처명</span>
               <span>계정과목</span>
+              <span>프로젝트</span>
               <span>차변</span>
               <span>대변</span>
               <span></span>
@@ -587,6 +605,18 @@ export default function JournalsPage() {
                   {accounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>
                       {acc.code} {acc.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className={styles.select}
+                  value={line.projectId}
+                  onChange={(e) => updateLine(i, "projectId", e.target.value)}
+                >
+                  <option value="">선택 안함</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.code} {p.name}
                     </option>
                   ))}
                 </select>

@@ -3,6 +3,7 @@ export class JournalLineDto {
   vendorId?: string;
   vendorBizNo?: string;
   vendorName?: string;
+  projectId?: string;
   debit!: number;
   credit!: number;
 }

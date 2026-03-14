@@ -21,6 +21,7 @@ const navItems = [
   { href: "/fixed-assets", label: "고정자산" },
   { href: "/payroll", label: "급여 관리" },
   { href: "/budgets", label: "예산 관리" },
+  { href: "/projects", label: "프로젝트 손익" },
   { href: "/exchange-rates", label: "환율 관리" },
   { href: "/journal-templates", label: "반복 전표" },
 ];
