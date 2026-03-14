@@ -29,6 +29,8 @@ model Tenant {
   exchangeRates    ExchangeRate[]
   taxInvoices      TaxInvoice[]
   fixedAssets       FixedAsset[]
+  approvalLines    ApprovalLine[]
+  approvalRequests ApprovalRequest[]
 }
 
 model User {
@@ -39,7 +41,9 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberships Membership[]
+  memberships    Membership[]
+  approvalLines  ApprovalLine[]
+  approvalActions ApprovalAction[]
 }
 
 // 멀티 테넌트 소속 관계
@@ -373,4 +377,58 @@ model DepreciationRecord {
 
   @@unique([fixedAssetId, period])
   @@index([fixedAssetId])
+}
+
+// ──────────────────────────────────
+// 전자결재
+// ──────────────────────────────────
+
+// 결재선 설정
+model ApprovalLine {
+  id           String @id @default(uuid())
+  tenantId     String
+  tenant       Tenant @relation(fields: [tenantId], references: [id])
+  documentType String // JOURNAL, TAX_INVOICE
+  step         Int    // 결재 순서 (1, 2, 3...)
+  approverId   String
+  approver     User   @relation(fields: [approverId], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@unique([tenantId, documentType, step])
+  @@index([tenantId])
+}
+
+// 결재 요청
+model ApprovalRequest {
+  id           String   @id @default(uuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  documentType String   // JOURNAL, TAX_INVOICE
+  documentId   String   // 전표/세금계산서 ID
+  currentStep  Int      @default(1)
+  totalSteps   Int
+  status       String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  submittedBy  String   // 요청자 User ID
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  actions      ApprovalAction[]
+
+  @@index([tenantId])
+  @@index([documentType, documentId])
+}
+
+// 결재 처리 이력
+model ApprovalAction {
+  id                String          @id @default(uuid())
+  approvalRequestId String
+  approvalRequest   ApprovalRequest @relation(fields: [approvalRequestId], references: [id], onDelete: Cascade)
+  step              Int
+  approverId        String
+  approver          User            @relation(fields: [approverId], references: [id])
+  action            String          // APPROVED, REJECTED
+  comment           String?
+  createdAt         DateTime        @default(now())
+
+  @@index([approvalRequestId])
 }

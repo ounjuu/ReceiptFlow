@@ -321,6 +321,11 @@
   color: var(--text-muted);
 }
 
+.statusPending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .statusApproved {
   background: var(--primary-light);
   color: var(--primary);

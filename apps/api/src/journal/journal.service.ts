@@ -168,10 +168,11 @@ export class JournalService {
       await this.checkClosedPeriod(entry.tenantId, new Date(dto.date));
     }
 
-    // 상태 전이 검증 (DRAFT → APPROVED → POSTED)
+    // 상태 전이 검증 (DRAFT → PENDING_APPROVAL → APPROVED → POSTED)
     if (dto.status) {
       const validTransitions: Record<string, string[]> = {
-        DRAFT: ["APPROVED"],
+        DRAFT: ["APPROVED", "PENDING_APPROVAL"],
+        PENDING_APPROVAL: ["APPROVED", "DRAFT"],
         APPROVED: ["POSTED", "DRAFT"],
         POSTED: [],
       };
@@ -350,7 +351,8 @@ export class JournalService {
   // 일괄 상태 변경
   async batchUpdateStatus(ids: string[], status: string, userId?: string) {
     const validTransitions: Record<string, string[]> = {
-      DRAFT: ["APPROVED"],
+      DRAFT: ["APPROVED", "PENDING_APPROVAL"],
+      PENDING_APPROVAL: ["APPROVED", "DRAFT"],
       APPROVED: ["POSTED", "DRAFT"],
       POSTED: [],
     };

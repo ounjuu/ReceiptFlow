@@ -88,10 +88,15 @@ export class TaxInvoiceService {
       throw new BadRequestException("확정된 세금계산서는 수정할 수 없습니다");
     }
 
+    if (existing.status === "PENDING_APPROVAL" && !dto.status) {
+      throw new BadRequestException("결재 대기 중인 세금계산서는 수정할 수 없습니다");
+    }
+
     // 상태 전이 검증
     if (dto.status) {
       const valid: Record<string, string[]> = {
-        DRAFT: ["APPROVED"],
+        DRAFT: ["APPROVED", "PENDING_APPROVAL"],
+        PENDING_APPROVAL: ["APPROVED", "DRAFT"],
         APPROVED: ["FINALIZED", "DRAFT"],
         FINALIZED: [],
       };

@@ -59,6 +59,7 @@ interface LineInput {
 function statusLabel(status: string) {
   switch (status) {
     case "DRAFT": return { text: "임시", cls: styles.statusDraft };
+    case "PENDING_APPROVAL": return { text: "결재중", cls: styles.statusPending };
     case "APPROVED": return { text: "승인", cls: styles.statusApproved };
     case "POSTED": return { text: "확정", cls: styles.statusPosted };
     default: return { text: status, cls: "" };
@@ -398,6 +399,31 @@ export default function JournalsPage() {
       default: return null;
     }
   };
+
+  // 결재 요청
+  const submitApprovalMutation = useMutation({
+    mutationFn: (documentId: string) =>
+      apiPost("/approvals/submit", {
+        tenantId,
+        documentType: "JOURNAL",
+        documentId,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["journals"] });
+    },
+  });
+
+  // 결재선 존재 여부
+  const { data: approvalLines = [] } = useQuery({
+    queryKey: ["approval-lines-journal"],
+    queryFn: () =>
+      apiGet<{ id: string }[]>(
+        `/approvals/lines?tenantId=${tenantId}&documentType=JOURNAL`,
+      ),
+    enabled: !!tenantId,
+  });
+
+  const hasApprovalLine = approvalLines.length > 0;
 
   // 일괄 상태 변경
   const batchMutation = useMutation({
@@ -805,7 +831,16 @@ export default function JournalsPage() {
                   </td>
                   <td>
                     <div className={styles.actions}>
-                      {canEdit && nextStatus(j.status) && (
+                      {canEdit && j.status === "DRAFT" && hasApprovalLine && (
+                        <button
+                          className={styles.statusBtn}
+                          onClick={() => submitApprovalMutation.mutate(j.id)}
+                          disabled={submitApprovalMutation.isPending}
+                        >
+                          결재요청
+                        </button>
+                      )}
+                      {canEdit && nextStatus(j.status) && !(j.status === "DRAFT" && hasApprovalLine) && (
                         <button
                           className={styles.statusBtn}
                           onClick={() => {
@@ -817,7 +852,7 @@ export default function JournalsPage() {
                           {nextStatus(j.status)!.label}
                         </button>
                       )}
-                      {j.status !== "POSTED" && canEdit && (
+                      {j.status !== "POSTED" && j.status !== "PENDING_APPROVAL" && canEdit && (
                         <button
                           className={styles.editBtn}
                           onClick={() => startEdit(j)}

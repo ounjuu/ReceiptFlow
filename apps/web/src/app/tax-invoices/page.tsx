@@ -42,6 +42,7 @@ interface TaxSummary {
 function statusLabel(status: string) {
   switch (status) {
     case "DRAFT": return { text: "임시", cls: styles.statusDraft };
+    case "PENDING_APPROVAL": return { text: "결재중", cls: styles.statusPending };
     case "APPROVED": return { text: "승인", cls: styles.statusApproved };
     case "FINALIZED": return { text: "확정", cls: styles.statusFinalized };
     default: return { text: status, cls: "" };
@@ -256,6 +257,31 @@ export default function TaxInvoicesPage() {
       default: return null;
     }
   };
+
+  // 결재 요청
+  const submitApprovalMutation = useMutation({
+    mutationFn: (documentId: string) =>
+      apiPost("/approvals/submit", {
+        tenantId,
+        documentType: "TAX_INVOICE",
+        documentId,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tax-invoices"] });
+    },
+  });
+
+  // 결재선 존재 여부
+  const { data: approvalLines = [] } = useQuery({
+    queryKey: ["approval-lines-tax-invoice"],
+    queryFn: () =>
+      apiGet<{ id: string }[]>(
+        `/approvals/lines?tenantId=${tenantId}&documentType=TAX_INVOICE`,
+      ),
+    enabled: !!tenantId,
+  });
+
+  const hasApprovalLine = approvalLines.length > 0;
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
@@ -630,7 +656,16 @@ export default function TaxInvoicesPage() {
                   </td>
                   <td>
                     <div className={styles.actions}>
-                      {canEdit && nextStatus(inv.status) && (
+                      {canEdit && inv.status === "DRAFT" && hasApprovalLine && (
+                        <button
+                          className={styles.statusBtn}
+                          onClick={() => submitApprovalMutation.mutate(inv.id)}
+                          disabled={submitApprovalMutation.isPending}
+                        >
+                          결재요청
+                        </button>
+                      )}
+                      {canEdit && nextStatus(inv.status) && !(inv.status === "DRAFT" && hasApprovalLine) && (
                         <button
                           className={styles.statusBtn}
                           onClick={() => {
@@ -642,7 +677,7 @@ export default function TaxInvoicesPage() {
                           {nextStatus(inv.status)!.label}
                         </button>
                       )}
-                      {inv.status !== "FINALIZED" && canEdit && (
+                      {inv.status !== "FINALIZED" && inv.status !== "PENDING_APPROVAL" && canEdit && (
                         <button
                           className={styles.editBtn}
                           onClick={() => startEdit(inv)}
