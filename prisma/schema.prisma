@@ -31,6 +31,7 @@ model Tenant {
   fixedAssets       FixedAsset[]
   approvalLines    ApprovalLine[]
   approvalRequests ApprovalRequest[]
+  employees        Employee[]
 }
 
 model User {
@@ -191,6 +192,7 @@ model JournalEntry {
   attachments JournalAttachment[]
   taxInvoice  TaxInvoice?
   depreciationRecords DepreciationRecord[]
+  payrollRecords PayrollRecord[]
 
   @@index([tenantId])
   @@index([date])
@@ -431,4 +433,62 @@ model ApprovalAction {
   createdAt         DateTime        @default(now())
 
   @@index([approvalRequestId])
+}
+
+// ──────────────────────────────────
+// 급여 관리
+// ──────────────────────────────────
+
+model Employee {
+  id           String    @id @default(uuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  employeeNo   String
+  name         String
+  department   String?
+  position     String?
+  joinDate     DateTime
+  leaveDate    DateTime?
+  status       String    @default("ACTIVE") // ACTIVE, INACTIVE
+  baseSalary   Decimal   @db.Decimal(18, 2) // 월 기본급
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  payrollRecords PayrollRecord[]
+
+  @@unique([tenantId, employeeNo])
+  @@index([tenantId])
+}
+
+model PayrollRecord {
+  id                  String        @id @default(uuid())
+  employeeId          String
+  employee            Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  period              String        // YYYY-MM
+
+  // 지급
+  baseSalary          Decimal       @db.Decimal(18, 2)
+  overtimePay         Decimal       @default(0) @db.Decimal(18, 2)
+  bonusPay            Decimal       @default(0) @db.Decimal(18, 2)
+  grossPay            Decimal       @db.Decimal(18, 2) // 총지급액
+
+  // 공제 (개인부담)
+  nationalPension     Decimal       @db.Decimal(18, 2) // 국민연금
+  healthInsurance     Decimal       @db.Decimal(18, 2) // 건강보험
+  longTermCare        Decimal       @db.Decimal(18, 2) // 장기요양보험
+  employmentInsurance Decimal       @db.Decimal(18, 2) // 고용보험
+  incomeTax           Decimal       @db.Decimal(18, 2) // 소득세
+  localIncomeTax      Decimal       @db.Decimal(18, 2) // 지방소득세
+
+  totalDeduction      Decimal       @db.Decimal(18, 2) // 총공제액
+  netPay              Decimal       @db.Decimal(18, 2) // 실수령액
+
+  // 전표 연결
+  journalEntryId      String?
+  journalEntry        JournalEntry? @relation(fields: [journalEntryId], references: [id])
+
+  createdAt           DateTime      @default(now())
+
+  @@unique([employeeId, period])
+  @@index([employeeId])
 }
