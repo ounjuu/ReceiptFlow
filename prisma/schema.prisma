@@ -28,6 +28,7 @@ model Tenant {
   journalTemplates JournalTemplate[]
   exchangeRates    ExchangeRate[]
   taxInvoices      TaxInvoice[]
+  fixedAssets       FixedAsset[]
 }
 
 model User {
@@ -74,6 +75,9 @@ model Account {
 
   journalLines JournalLine[]
   templateLines JournalTemplateLine[]
+  fixedAssetsAsAsset         FixedAsset[] @relation("AssetAccount")
+  fixedAssetsAsDepreciation  FixedAsset[] @relation("DepreciationAccount")
+  fixedAssetsAsAccumulated   FixedAsset[] @relation("AccumulatedDepAccount")
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -182,6 +186,7 @@ model JournalEntry {
   lines JournalLine[]
   attachments JournalAttachment[]
   taxInvoice  TaxInvoice?
+  depreciationRecords DepreciationRecord[]
 
   @@index([tenantId])
   @@index([date])
@@ -310,4 +315,62 @@ model TaxInvoice {
   @@index([tenantId])
   @@index([invoiceDate])
   @@index([invoiceType])
+}
+
+// ──────────────────────────────────
+// 고정자산
+// ──────────────────────────────────
+
+model FixedAsset {
+  id                      String    @id @default(uuid())
+  name                    String
+  description             String?
+  tenantId                String
+  tenant                  Tenant    @relation(fields: [tenantId], references: [id])
+
+  // 계정 연결
+  assetAccountId          String    // 자산 계정 (13100 토지, 13200 건물, 13500 비품)
+  assetAccount            Account   @relation("AssetAccount", fields: [assetAccountId], references: [id])
+  depreciationAccountId   String    // 감가상각비 계정 (50900)
+  depreciationAccount     Account   @relation("DepreciationAccount", fields: [depreciationAccountId], references: [id])
+  accumulatedDepAccountId String    // 감가상각누계액 계정 (13600)
+  accumulatedDepAccount   Account   @relation("AccumulatedDepAccount", fields: [accumulatedDepAccountId], references: [id])
+
+  // 자산 정보
+  acquisitionDate         DateTime
+  acquisitionCost         Decimal   @db.Decimal(18, 2)
+  usefulLifeMonths        Int       // 내용연수 (월 단위)
+  residualValue           Decimal   @default(0) @db.Decimal(18, 2) // 잔존가치
+  depreciationMethod      String    // STRAIGHT_LINE, DECLINING_BALANCE
+
+  // 상태
+  status                  String    @default("ACTIVE") // ACTIVE, DISPOSED, FULLY_DEPRECIATED
+  disposalDate            DateTime?
+  disposalAmount          Decimal?  @db.Decimal(18, 2)
+
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  depreciationRecords     DepreciationRecord[]
+
+  @@index([tenantId])
+}
+
+model DepreciationRecord {
+  id                String       @id @default(uuid())
+  fixedAssetId      String
+  fixedAsset        FixedAsset   @relation(fields: [fixedAssetId], references: [id], onDelete: Cascade)
+  period            String       // YYYY-MM
+  amount            Decimal      @db.Decimal(18, 2) // 당기 감가상각액
+  accumulatedAmount Decimal      @db.Decimal(18, 2) // 누적 감가상각액
+  bookValue         Decimal      @db.Decimal(18, 2) // 장부가액
+
+  // 전표 연결
+  journalEntryId    String?
+  journalEntry      JournalEntry? @relation(fields: [journalEntryId], references: [id])
+
+  createdAt         DateTime     @default(now())
+
+  @@unique([fixedAssetId, period])
+  @@index([fixedAssetId])
 }

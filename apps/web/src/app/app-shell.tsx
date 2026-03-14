@@ -17,6 +17,7 @@ const navItems = [
   { href: "/closings", label: "결산" },
   { href: "/cash-flow", label: "자금 관리" },
   { href: "/tax-invoices", label: "세금계산서" },
+  { href: "/fixed-assets", label: "고정자산" },
   { href: "/exchange-rates", label: "환율 관리" },
   { href: "/journal-templates", label: "반복 전표" },
 ];
