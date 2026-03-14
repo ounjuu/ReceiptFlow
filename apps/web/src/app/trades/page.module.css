@@ -1,0 +1,471 @@
+.title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+}
+
+/* 요약 카드 */
+.summaryCards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.summaryCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.summaryLabel {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.summaryValue {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.summaryPositive {
+  color: #166534;
+}
+
+.summaryNegative {
+  color: #991b1b;
+}
+
+/* 탭 */
+.tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--border);
+}
+
+.tab {
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tabActive {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+/* 섹션 */
+.section {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.sectionHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 버튼 */
+.primaryBtn {
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.primaryBtn:hover {
+  opacity: 0.9;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondaryBtn {
+  background: #fff;
+  color: var(--text);
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.secondaryBtn:hover {
+  background: var(--bg);
+}
+
+.downloadBtn {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.downloadBtn:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.downloadBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.dangerBtn {
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.dangerBtn:hover {
+  opacity: 0.9;
+}
+
+.editBtn {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.editBtn:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.confirmBtn {
+  background: #dcfce7;
+  color: #166534;
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.confirmBtn:hover {
+  background: #166534;
+  color: #fff;
+}
+
+.cancelBtn {
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.cancelBtn:hover {
+  background: #92400e;
+  color: #fff;
+}
+
+/* 폼 */
+.form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.formGroupFull {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  grid-column: 1 / -1;
+}
+
+.formLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.formInput {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  background: #fff;
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.formSelect {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  background: #fff;
+}
+
+.formSelect:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.formActions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* 품목 라인 */
+.itemsHeader {
+  display: grid;
+  grid-template-columns: 1fr 120px 80px 120px 120px 36px;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.itemRow {
+  display: grid;
+  grid-template-columns: 1fr 120px 80px 120px 120px 36px;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.removeBtn {
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.removeBtn:disabled {
+  opacity: 0.3;
+}
+
+.removeBtn:not(:disabled):hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.addItemBtn {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.itemFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px 0 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* 상태 배지 */
+.status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.statusDraft {
+  background: #f0edf5;
+  color: var(--text-muted);
+}
+
+.statusConfirmed {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.statusPartialPaid {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.statusPaid {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.statusCancelled {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+/* 액션 */
+.actions {
+  display: flex;
+  gap: 4px;
+}
+
+/* 컨트롤 */
+.controlSelect {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  background: #fff;
+}
+
+.unit {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* 필터 */
+.filterRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterInput {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  background: #fff;
+}
+
+.filterInput:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* 입금/출금 */
+.paymentSection {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.paymentList {
+  margin-bottom: 16px;
+}
+
+.paymentItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.paymentItem:last-child {
+  border-bottom: none;
+}
+
+.remainingAmount {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+/* 연령 분석 */
+.agingBuckets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.agingBucket {
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  text-align: center;
+}
+
+.agingBucketLabel {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.agingBucketValue {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}

@@ -1,0 +1,109 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Query,
+  Body,
+  UseGuards,
+} from "@nestjs/common";
+import { TradeService } from "./trade.service";
+import { CreateTradeDto } from "./dto/create-trade.dto";
+import { UpdateTradeDto } from "./dto/update-trade.dto";
+import { CreatePaymentDto } from "./dto/create-payment.dto";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { RolesGuard } from "../auth/roles.guard";
+import { Roles } from "../auth/roles.decorator";
+
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller("trades")
+export class TradeController {
+  constructor(private readonly service: TradeService) {}
+
+  // 정적 경로 먼저
+  @Get("summary")
+  async getSummary(
+    @Query("tenantId") tenantId: string,
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string,
+  ) {
+    return this.service.getSummary(tenantId, startDate, endDate);
+  }
+
+  @Get("aging")
+  async getAging(
+    @Query("tenantId") tenantId: string,
+    @Query("tradeType") tradeType: string,
+  ) {
+    return this.service.getAgingReport(tenantId, tradeType);
+  }
+
+  @Get()
+  async list(
+    @Query("tenantId") tenantId: string,
+    @Query("tradeType") tradeType?: string,
+    @Query("status") status?: string,
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string,
+  ) {
+    return this.service.getTrades(
+      tenantId,
+      tradeType,
+      status,
+      startDate,
+      endDate,
+    );
+  }
+
+  @Get(":id")
+  async getOne(@Param("id") id: string) {
+    return this.service.getTrade(id);
+  }
+
+  @Post()
+  @Roles("ADMIN", "ACCOUNTANT")
+  async create(@Body() dto: CreateTradeDto) {
+    return this.service.createTrade(dto);
+  }
+
+  @Patch(":id")
+  @Roles("ADMIN", "ACCOUNTANT")
+  async update(@Param("id") id: string, @Body() dto: UpdateTradeDto) {
+    return this.service.updateTrade(id, dto);
+  }
+
+  @Delete(":id")
+  @Roles("ADMIN")
+  async delete(@Param("id") id: string) {
+    return this.service.deleteTrade(id);
+  }
+
+  @Post(":id/confirm")
+  @Roles("ADMIN", "ACCOUNTANT")
+  async confirm(@Param("id") id: string) {
+    return this.service.confirmTrade(id);
+  }
+
+  @Post(":id/cancel")
+  @Roles("ADMIN", "ACCOUNTANT")
+  async cancel(@Param("id") id: string) {
+    return this.service.cancelTrade(id);
+  }
+
+  @Post(":id/payments")
+  @Roles("ADMIN", "ACCOUNTANT")
+  async addPayment(
+    @Param("id") id: string,
+    @Body() dto: CreatePaymentDto,
+  ) {
+    return this.service.addPayment(id, dto);
+  }
+
+  @Delete(":id/payments/:paymentId")
+  @Roles("ADMIN")
+  async deletePayment(@Param("paymentId") paymentId: string) {
+    return this.service.deletePayment(paymentId);
+  }
+}

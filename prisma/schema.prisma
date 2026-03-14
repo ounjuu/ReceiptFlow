@@ -34,6 +34,8 @@ model Tenant {
   employees        Employee[]
   budgets          Budget[]
   projects         Project[]
+  trades           Trade[]
+  payments         Payment[]
 }
 
 model User {
@@ -105,6 +107,7 @@ model Vendor {
   journalLines JournalLine[]
   templateLines JournalTemplateLine[]
   taxInvoices  TaxInvoice[]
+  trades       Trade[]
 
   @@unique([tenantId, bizNo])
   @@index([tenantId])
@@ -196,6 +199,8 @@ model JournalEntry {
   taxInvoice  TaxInvoice?
   depreciationRecords DepreciationRecord[]
   payrollRecords PayrollRecord[]
+  trade          Trade?
+  payment        Payment?
 
   @@index([tenantId])
   @@index([date])
@@ -542,5 +547,76 @@ model Project {
   journalLines JournalLine[]
 
   @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+// ──────────────────────────────────
+// 매출/매입 관리
+// ──────────────────────────────────
+
+// 거래명세서
+model Trade {
+  id             String    @id @default(uuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+  tradeType      String    // SALES (매출), PURCHASE (매입)
+  tradeNo        String    // 거래번호 (자동 채번)
+  tradeDate      DateTime
+  dueDate        DateTime? // 결제 예정일
+  vendorId       String
+  vendor         Vendor    @relation(fields: [vendorId], references: [id])
+  supplyAmount   Decimal   @db.Decimal(18, 2) // 공급가액
+  taxAmount      Decimal   @db.Decimal(18, 2) // 세액
+  totalAmount    Decimal   @db.Decimal(18, 2) // 합계
+  paidAmount     Decimal   @default(0) @db.Decimal(18, 2) // 입금/출금 완료 금액
+  status         String    @default("DRAFT") // DRAFT, CONFIRMED, PARTIAL_PAID, PAID, CANCELLED
+  journalEntryId String?   @unique
+  journalEntry   JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  taxInvoiceId   String?
+  description    String?
+  note           String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  items    TradeItem[]
+  payments Payment[]
+
+  @@unique([tenantId, tradeNo])
+  @@index([tenantId])
+  @@index([tradeDate])
+  @@index([tradeType])
+}
+
+// 거래 품목
+model TradeItem {
+  id            String  @id @default(uuid())
+  tradeId       String
+  trade         Trade   @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  itemName      String
+  specification String?
+  quantity      Int     @default(1)
+  unitPrice     Decimal @db.Decimal(18, 2)
+  amount        Decimal @db.Decimal(18, 2)
+  note          String?
+
+  @@index([tradeId])
+}
+
+// 입금/출금
+model Payment {
+  id             String        @id @default(uuid())
+  tenantId       String
+  tenant         Tenant        @relation(fields: [tenantId], references: [id])
+  tradeId        String
+  trade          Trade         @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  paymentDate    DateTime
+  amount         Decimal       @db.Decimal(18, 2)
+  paymentMethod  String        // CASH, BANK_TRANSFER, CARD, NOTE
+  journalEntryId String?       @unique
+  journalEntry   JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  note           String?
+  createdAt      DateTime      @default(now())
+
+  @@index([tradeId])
   @@index([tenantId])
 }
