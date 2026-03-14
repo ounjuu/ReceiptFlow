@@ -32,6 +32,7 @@ model Tenant {
   approvalLines    ApprovalLine[]
   approvalRequests ApprovalRequest[]
   employees        Employee[]
+  budgets          Budget[]
 }
 
 model User {
@@ -83,6 +84,7 @@ model Account {
   fixedAssetsAsAsset         FixedAsset[] @relation("AssetAccount")
   fixedAssetsAsDepreciation  FixedAsset[] @relation("DepreciationAccount")
   fixedAssetsAsAccumulated   FixedAsset[] @relation("AccumulatedDepAccount")
+  budgets                    Budget[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -491,4 +493,25 @@ model PayrollRecord {
 
   @@unique([employeeId, period])
   @@index([employeeId])
+}
+
+// ──────────────────────────────────
+// 예산 관리
+// ──────────────────────────────────
+
+model Budget {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id])
+  year      Int
+  month     Int      // 1-12
+  amount    Decimal  @db.Decimal(18, 2)
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, accountId, year, month])
+  @@index([tenantId])
 }

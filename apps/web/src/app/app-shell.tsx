@@ -20,6 +20,7 @@ const navItems = [
   { href: "/approvals", label: "전자결재" },
   { href: "/fixed-assets", label: "고정자산" },
   { href: "/payroll", label: "급여 관리" },
+  { href: "/budgets", label: "예산 관리" },
   { href: "/exchange-rates", label: "환율 관리" },
   { href: "/journal-templates", label: "반복 전표" },
 ];
