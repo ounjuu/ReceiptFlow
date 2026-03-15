@@ -76,6 +76,7 @@ export class JournalService {
         accountId: line.accountId,
         vendorId: await this.resolveVendorId(dto.tenantId, line),
         projectId: line.projectId || null,
+        departmentId: line.departmentId || null,
         debit: line.debit,
         credit: line.credit,
       })),
@@ -133,7 +134,7 @@ export class JournalService {
     }
     return this.prisma.journalEntry.findMany({
       where,
-      include: { lines: { include: { account: true, vendor: true, project: true } }, document: true, attachments: true },
+      include: { lines: { include: { account: true, vendor: true, project: true, department: true } }, document: true, attachments: true },
       orderBy: { date: "desc" },
     });
   }
@@ -142,7 +143,7 @@ export class JournalService {
   async findOne(id: string) {
     const entry = await this.prisma.journalEntry.findUnique({
       where: { id },
-      include: { lines: { include: { account: true, vendor: true, project: true } }, document: true, attachments: true },
+      include: { lines: { include: { account: true, vendor: true, project: true, department: true } }, document: true, attachments: true },
     });
 
     if (!entry) {
@@ -197,13 +198,14 @@ export class JournalService {
     }
 
     // 라인이 제공되면 vendorId 확정
-    let resolvedLines: { accountId: string; vendorId: string; projectId: string | null; debit: number; credit: number }[] | undefined;
+    let resolvedLines: { accountId: string; vendorId: string; projectId: string | null; departmentId: string | null; debit: number; credit: number }[] | undefined;
     if (dto.lines && dto.lines.length > 0) {
       resolvedLines = await Promise.all(
         dto.lines.map(async (line) => ({
           accountId: line.accountId,
           vendorId: await this.resolveVendorId(entry.tenantId, line),
           projectId: line.projectId || null,
+          departmentId: line.departmentId || null,
           debit: line.debit,
           credit: line.credit,
         })),

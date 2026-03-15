@@ -82,7 +82,7 @@
 /* 라인 헤더 */
 .linesHeader {
   display: grid;
-  grid-template-columns: 140px 1fr 1fr 140px 110px 110px 36px;
+  grid-template-columns: 140px 1fr 1fr 130px 130px 100px 100px 36px;
   gap: 8px;
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -93,7 +93,7 @@
 
 .lineRow {
   display: grid;
-  grid-template-columns: 140px 1fr 1fr 140px 110px 110px 36px;
+  grid-template-columns: 140px 1fr 1fr 130px 130px 100px 100px 36px;
   gap: 8px;
   margin-bottom: 8px;
   align-items: center;

@@ -17,9 +17,10 @@ import { PayrollModule } from "./payroll/payroll.module";
 import { BudgetModule } from "./budget/budget.module";
 import { ProjectModule } from "./project/project.module";
 import { TradeModule } from "./trade/trade.module";
+import { DepartmentModule } from "./department/department.module";
 
 @Module({
-  imports: [PrismaModule, AuthModule, DocumentModule, JournalModule, ReportModule, AccountModule, VendorModule, ClosingModule, AuditLogModule, JournalTemplateModule, ExchangeRateModule, TaxInvoiceModule, FixedAssetModule, ApprovalModule, PayrollModule, BudgetModule, ProjectModule, TradeModule],
+  imports: [PrismaModule, AuthModule, DocumentModule, JournalModule, ReportModule, AccountModule, VendorModule, ClosingModule, AuditLogModule, JournalTemplateModule, ExchangeRateModule, TaxInvoiceModule, FixedAssetModule, ApprovalModule, PayrollModule, BudgetModule, ProjectModule, TradeModule, DepartmentModule],
   controllers: [],
   providers: [],
 })

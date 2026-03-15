@@ -34,6 +34,7 @@ model Tenant {
   employees        Employee[]
   budgets          Budget[]
   projects         Project[]
+  departments      Department[]
   trades           Trade[]
   payments         Payment[]
 }
@@ -219,12 +220,15 @@ model JournalLine {
   vendor         Vendor?      @relation(fields: [vendorId], references: [id])
   projectId      String?
   project        Project?     @relation(fields: [projectId], references: [id])
+  departmentId   String?
+  department     Department?  @relation(fields: [departmentId], references: [id])
   createdAt      DateTime     @default(now())
 
   @@index([journalEntryId])
   @@index([accountId])
   @@index([vendorId])
   @@index([projectId])
+  @@index([departmentId])
 }
 
 // 전표 첨부파일
@@ -539,6 +543,28 @@ model Project {
   status      String    @default("ACTIVE") // ACTIVE, COMPLETED, ON_HOLD
   startDate   DateTime
   endDate     DateTime?
+  manager     String?
+  budget      Decimal?  @db.Decimal(18, 2)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  journalLines JournalLine[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+// ──────────────────────────────────
+// 부서 관리
+// ──────────────────────────────────
+
+model Department {
+  id          String    @id @default(uuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  code        String    // DP-001
+  name        String
+  description String?
   manager     String?
   budget      Decimal?  @db.Decimal(18, 2)
   createdAt   DateTime  @default(now())

@@ -1,0 +1,67 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Query,
+  Body,
+  UseGuards,
+} from "@nestjs/common";
+import { DepartmentService } from "./department.service";
+import { CreateDepartmentDto } from "./dto/create-department.dto";
+import { UpdateDepartmentDto } from "./dto/update-department.dto";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { RolesGuard } from "../auth/roles.guard";
+import { Roles } from "../auth/roles.decorator";
+
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller("departments")
+export class DepartmentController {
+  constructor(private readonly service: DepartmentService) {}
+
+  // 정적 경로 먼저
+  @Get("pnl/comparison")
+  async getComparison(@Query("tenantId") tenantId: string) {
+    return this.service.getDepartmentComparison(tenantId);
+  }
+
+  @Get()
+  async list(@Query("tenantId") tenantId: string) {
+    return this.service.getDepartments(tenantId);
+  }
+
+  @Get(":id")
+  async getOne(@Param("id") id: string) {
+    return this.service.getDepartment(id);
+  }
+
+  @Get(":id/pnl")
+  async getPnL(
+    @Param("id") id: string,
+    @Query("tenantId") tenantId: string,
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string,
+  ) {
+    return this.service.getDepartmentPnL(tenantId, id, startDate, endDate);
+  }
+
+  @Post()
+  @Roles("ADMIN", "ACCOUNTANT")
+  async create(@Body() dto: CreateDepartmentDto) {
+    return this.service.createDepartment(dto);
+  }
+
+  @Patch(":id")
+  @Roles("ADMIN", "ACCOUNTANT")
+  async update(@Param("id") id: string, @Body() dto: UpdateDepartmentDto) {
+    return this.service.updateDepartment(id, dto);
+  }
+
+  @Delete(":id")
+  @Roles("ADMIN")
+  async delete(@Param("id") id: string) {
+    return this.service.deleteDepartment(id);
+  }
+}

@@ -22,6 +22,7 @@ const navItems = [
   { href: "/payroll", label: "급여 관리" },
   { href: "/budgets", label: "예산 관리" },
   { href: "/projects", label: "프로젝트 손익" },
+  { href: "/departments", label: "부서별 손익" },
   { href: "/trades", label: "매출/매입" },
   { href: "/vat-returns", label: "부가세 신고" },
   { href: "/exchange-rates", label: "환율 관리" },

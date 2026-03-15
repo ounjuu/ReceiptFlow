@@ -4,6 +4,7 @@ export class JournalLineDto {
   vendorBizNo?: string;
   vendorName?: string;
   projectId?: string;
+  departmentId?: string;
   debit!: number;
   credit!: number;
 }

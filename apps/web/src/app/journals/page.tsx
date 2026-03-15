@@ -27,12 +27,19 @@ interface ProjectOption {
   name: string;
 }
 
+interface DepartmentOption {
+  id: string;
+  code: string;
+  name: string;
+}
+
 interface JournalLine {
   debit: string;
   credit: string;
   account: { id: string; code: string; name: string };
   vendor: { id: string; name: string; bizNo: string | null } | null;
   project: { id: string; code: string; name: string } | null;
+  department: { id: string; code: string; name: string } | null;
 }
 
 interface JournalAttachment {
@@ -60,6 +67,7 @@ interface LineInput {
   vendorName: string;
   vendorId: string; // 기존 거래처 매칭 시
   projectId: string;
+  departmentId: string;
   debit: number;
   credit: number;
 }
@@ -98,6 +106,7 @@ const emptyLine = (): LineInput => ({
   vendorName: "",
   vendorId: "",
   projectId: "",
+  departmentId: "",
   debit: 0,
   credit: 0,
 });
@@ -140,6 +149,12 @@ export default function JournalsPage() {
   const { data: projects = [] } = useQuery({
     queryKey: ["projects"],
     queryFn: () => apiGet<ProjectOption[]>(`/projects?tenantId=${tenantId}`),
+    enabled: formMode !== "none",
+  });
+
+  const { data: departments = [] } = useQuery({
+    queryKey: ["departments"],
+    queryFn: () => apiGet<DepartmentOption[]>(`/departments?tenantId=${tenantId}`),
     enabled: formMode !== "none",
   });
 
@@ -306,6 +321,7 @@ export default function JournalsPage() {
         vendorName: l.vendor?.name || "",
         vendorId: l.vendor?.id || "",
         projectId: l.project?.id || "",
+        departmentId: l.department?.id || "",
         debit: Number(l.debit),
         credit: Number(l.credit),
       })),
@@ -374,6 +390,7 @@ export default function JournalsPage() {
         ? { vendorId: l.vendorId }
         : { vendorBizNo: l.vendorBizNo, vendorName: l.vendorName }),
       ...(l.projectId ? { projectId: l.projectId } : {}),
+      ...(l.departmentId ? { departmentId: l.departmentId } : {}),
       debit: l.debit,
       credit: l.credit,
     }));
@@ -554,6 +571,7 @@ export default function JournalsPage() {
               <span>거래처명</span>
               <span>계정과목</span>
               <span>프로젝트</span>
+              <span>부서</span>
               <span>차변</span>
               <span>대변</span>
               <span></span>
@@ -617,6 +635,18 @@ export default function JournalsPage() {
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.code} {p.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className={styles.select}
+                  value={line.departmentId}
+                  onChange={(e) => updateLine(i, "departmentId", e.target.value)}
+                >
+                  <option value="">선택 안함</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.code} {d.name}
                     </option>
                   ))}
                 </select>
