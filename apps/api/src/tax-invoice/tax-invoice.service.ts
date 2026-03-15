@@ -173,4 +173,117 @@ export class TaxInvoiceService {
       netTaxAmount: salesTax - purchaseTax, // 납부세액
     };
   }
+
+  // 부가세 신고서 상세 (분기별)
+  async getVatReturn(tenantId: string, year: number, quarter: number) {
+    const startMonth = (quarter - 1) * 3 + 1;
+    const endMonth = startMonth + 2;
+    const startDate = new Date(year, startMonth - 1, 1);
+    const endDate = new Date(year, endMonth, 0, 23, 59, 59);
+
+    // 세금계산서 조회
+    const invoices = await this.prisma.taxInvoice.findMany({
+      where: {
+        tenantId,
+        invoiceDate: { gte: startDate, lte: endDate },
+      },
+      include: { vendor: true },
+      orderBy: { invoiceDate: "asc" },
+    });
+
+    // 매출/매입 분류
+    const salesInvoices = invoices
+      .filter((inv) => inv.invoiceType === "SALES")
+      .map((inv) => ({
+        id: inv.id,
+        invoiceNo: inv.invoiceNo,
+        invoiceDate: inv.invoiceDate,
+        bizNo: inv.recipientBizNo,
+        name: inv.recipientName,
+        supplyAmount: Number(inv.supplyAmount),
+        taxAmount: Number(inv.taxAmount),
+        totalAmount: Number(inv.totalAmount),
+        status: inv.status,
+      }));
+
+    const purchaseInvoices = invoices
+      .filter((inv) => inv.invoiceType === "PURCHASE")
+      .map((inv) => ({
+        id: inv.id,
+        invoiceNo: inv.invoiceNo,
+        invoiceDate: inv.invoiceDate,
+        bizNo: inv.issuerBizNo,
+        name: inv.issuerName,
+        supplyAmount: Number(inv.supplyAmount),
+        taxAmount: Number(inv.taxAmount),
+        totalAmount: Number(inv.totalAmount),
+        status: inv.status,
+      }));
+
+    const salesSupply = salesInvoices.reduce((s, i) => s + i.supplyAmount, 0);
+    const salesTax = salesInvoices.reduce((s, i) => s + i.taxAmount, 0);
+    const purchaseSupply = purchaseInvoices.reduce((s, i) => s + i.supplyAmount, 0);
+    const purchaseTax = purchaseInvoices.reduce((s, i) => s + i.taxAmount, 0);
+    const netTax = salesTax - purchaseTax;
+
+    // 전표 부가세 계정 교차검증 (해당 분기 POSTED 전표)
+    const journalLines = await this.prisma.journalLine.findMany({
+      where: {
+        journalEntry: {
+          tenantId,
+          status: "POSTED",
+          date: { gte: startDate, lte: endDate },
+        },
+        account: { code: { in: ["25500", "13500"] } },
+      },
+      include: {
+        account: { select: { code: true } },
+        journalEntry: { select: { exchangeRate: true } },
+      },
+    });
+
+    let vatPayable = 0; // 25500 부가세예수금 (대변잔액)
+    let vatReceivable = 0; // 13500 부가세대급금 (차변잔액)
+
+    for (const line of journalLines) {
+      const rate = Number(line.journalEntry.exchangeRate);
+      if (line.account.code === "25500") {
+        vatPayable += (Number(line.credit) - Number(line.debit)) * rate;
+      } else if (line.account.code === "13500") {
+        vatReceivable += (Number(line.debit) - Number(line.credit)) * rate;
+      }
+    }
+
+    const isMatched =
+      Math.abs(vatPayable - salesTax) < 1 &&
+      Math.abs(vatReceivable - purchaseTax) < 1;
+
+    return {
+      year,
+      quarter,
+      periodStart: startDate,
+      periodEnd: endDate,
+      sales: {
+        invoiceCount: salesInvoices.length,
+        supplyAmount: salesSupply,
+        taxAmount: salesTax,
+        invoices: salesInvoices,
+      },
+      purchase: {
+        invoiceCount: purchaseInvoices.length,
+        supplyAmount: purchaseSupply,
+        taxAmount: purchaseTax,
+        invoices: purchaseInvoices,
+      },
+      outputTax: salesTax,
+      inputTax: purchaseTax,
+      netTax,
+      isRefund: netTax < 0,
+      journalValidation: {
+        vatPayable,
+        vatReceivable,
+        isMatched,
+      },
+    };
+  }
 }

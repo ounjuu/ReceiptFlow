@@ -20,7 +20,20 @@ export class TaxInvoiceController {
     return this.taxInvoiceService.create(dto);
   }
 
-  // report/summary는 :id 라우트보다 먼저 선언
+  // 정적 경로는 :id 라우트보다 먼저 선언
+  @Get("report/vat-return")
+  async getVatReturn(
+    @Query("tenantId") tenantId: string,
+    @Query("year") year: string,
+    @Query("quarter") quarter: string,
+  ) {
+    return this.taxInvoiceService.getVatReturn(
+      tenantId,
+      Number(year),
+      Number(quarter),
+    );
+  }
+
   @Get("report/summary")
   async getTaxSummary(
     @Query("tenantId") tenantId: string,
