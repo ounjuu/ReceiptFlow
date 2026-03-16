@@ -35,6 +35,7 @@ model Tenant {
   budgets          Budget[]
   projects         Project[]
   departments      Department[]
+  products         Product[]
   trades           Trade[]
   payments         Payment[]
 }
@@ -571,6 +572,27 @@ model Department {
   updatedAt   DateTime  @updatedAt
 
   journalLines JournalLine[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+// ──────────────────────────────────
+// 품목 관리
+// ──────────────────────────────────
+
+model Product {
+  id            String    @id @default(uuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  code          String    // P-001
+  name          String
+  category      String?   // 직접재료, 간접재료, 부품 등
+  unit          String?   // EA, KG, M 등
+  standardCost  Decimal?  @db.Decimal(18, 2)
+  description   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@unique([tenantId, code])
   @@index([tenantId])
