@@ -17,6 +17,7 @@ out/
 __pycache__/
 *.pyc
 .venv/
+venv/
 
 # IDE
 .vscode/
