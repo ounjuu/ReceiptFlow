@@ -6,7 +6,7 @@ import { UpdateDocumentDto } from "./dto/update-document.dto";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8001";
 
 @Injectable()
 export class DocumentService {
@@ -80,8 +80,8 @@ export class DocumentService {
       if (res.ok) {
         return await res.json();
       }
-    } catch {
-      // OCR 서비스 연결 실패
+    } catch (err: any) {
+      console.error("OCR 서비스 연결 실패:", err?.message || err);
     }
 
     return {
