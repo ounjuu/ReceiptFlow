@@ -65,6 +65,12 @@ export class VendorController {
     return this.vendorService.findOne(id);
   }
 
+  @Post("batch")
+  @Roles("ADMIN", "ACCOUNTANT")
+  async batchCreate(@Body() body: { tenantId: string; items: { name: string; bizNo?: string }[] }) {
+    return this.vendorService.batchCreate(body.tenantId, body.items);
+  }
+
   @Post()
   @Roles("ADMIN", "ACCOUNTANT")
   async create(@Body() dto: CreateVendorDto) {

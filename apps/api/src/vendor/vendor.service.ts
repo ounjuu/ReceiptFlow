@@ -179,6 +179,39 @@ export class VendorService {
     };
   }
 
+  // 일괄 등록
+  async batchCreate(tenantId: string, items: { name: string; bizNo?: string }[]) {
+    const results: { index: number; status: string; error?: string; data?: any }[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      try {
+        const item = items[i];
+        if (!item.name) {
+          results.push({ index: i, status: "error", error: `${i + 1}행: 거래처명은 필수입니다` });
+          continue;
+        }
+        if (item.bizNo) {
+          const exists = await this.prisma.vendor.findFirst({
+            where: { tenantId, bizNo: item.bizNo },
+          });
+          if (exists) {
+            results.push({ index: i, status: "error", error: `${i + 1}행: 사업자번호 ${item.bizNo} 이미 등록됨` });
+            continue;
+          }
+        }
+        const vendor = await this.prisma.vendor.create({
+          data: { tenantId, name: item.name, bizNo: item.bizNo || null },
+        });
+        results.push({ index: i, status: "success", data: vendor });
+      } catch (err: any) {
+        results.push({ index: i, status: "error", error: `${i + 1}행: ${err?.message || "등록 실패"}` });
+      }
+    }
+
+    const success = results.filter((r) => r.status === "success").length;
+    return { total: items.length, success, failed: items.length - success, results };
+  }
+
   async findOne(id: string) {
     return this.prisma.vendor.findUniqueOrThrow({ where: { id } });
   }

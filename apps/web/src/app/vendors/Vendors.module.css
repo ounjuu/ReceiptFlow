@@ -166,3 +166,34 @@
   font-size: 0.85rem;
   margin-top: 8px;
 }
+
+/* 엑셀 업로드 결과 */
+.importResult {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: var(--primary-light);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+}
+
+.importSummary {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.importSuccess { color: #166534; }
+.importFailed { color: #dc2626; }
+
+.importErrors {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-size: 0.8rem;
+  color: #dc2626;
+}
+
+.importErrors li {
+  margin-bottom: 2px;
+}

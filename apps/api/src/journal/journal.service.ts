@@ -123,6 +123,59 @@ export class JournalService {
     });
   }
 
+  // 전표 일괄 등록
+  async batchCreate(
+    tenantId: string,
+    journals: {
+      date: string;
+      description?: string;
+      currency?: string;
+      lines: { accountCode: string; vendorBizNo?: string; vendorName?: string; debit: number; credit: number }[];
+    }[],
+    userId?: string,
+  ) {
+    const results: { index: number; status: string; error?: string; data?: any }[] = [];
+
+    for (let i = 0; i < journals.length; i++) {
+      try {
+        const j = journals[i];
+        if (!j.date || !j.lines || j.lines.length === 0) {
+          results.push({ index: i, status: "error", error: `${i + 1}번 전표: 날짜와 라인이 필수입니다` });
+          continue;
+        }
+
+        // 계정코드 → accountId 변환
+        const resolvedLines: JournalLineDto[] = [];
+        for (const line of j.lines) {
+          const account = await this.prisma.account.findUnique({
+            where: { tenantId_code: { tenantId, code: line.accountCode } },
+          });
+          if (!account) {
+            throw new BadRequestException(`계정코드 ${line.accountCode}을 찾을 수 없습니다`);
+          }
+          resolvedLines.push({
+            accountId: account.id,
+            vendorBizNo: line.vendorBizNo,
+            vendorName: line.vendorName,
+            debit: line.debit,
+            credit: line.credit,
+          });
+        }
+
+        const entry = await this.create(
+          { tenantId, date: j.date, description: j.description, currency: j.currency, lines: resolvedLines },
+          userId,
+        );
+        results.push({ index: i, status: "success", data: { id: entry.id, date: entry.date, description: entry.description } });
+      } catch (err: any) {
+        results.push({ index: i, status: "error", error: `${i + 1}번 전표: ${err?.message || "등록 실패"}` });
+      }
+    }
+
+    const success = results.filter((r) => r.status === "success").length;
+    return { total: journals.length, success, failed: journals.length - success, results };
+  }
+
   // 테넌트별 전표 목록 조회 (기간 필터)
   async findAll(tenantId: string, startDate?: string, endDate?: string) {
     const where: Record<string, unknown> = { tenantId };

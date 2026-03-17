@@ -40,6 +40,48 @@ export class CostService {
     });
   }
 
+  // 품목 일괄 등록
+  async batchCreateProducts(
+    tenantId: string,
+    items: { code: string; name: string; category?: string; unit?: string; standardCost?: number; safetyStock?: number }[],
+  ) {
+    const results: { index: number; status: string; error?: string; data?: any }[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      try {
+        const item = items[i];
+        if (!item.code || !item.name) {
+          results.push({ index: i, status: "error", error: `${i + 1}행: 코드와 품목명은 필수입니다` });
+          continue;
+        }
+        const exists = await this.prisma.product.findFirst({
+          where: { tenantId, code: item.code },
+        });
+        if (exists) {
+          results.push({ index: i, status: "error", error: `${i + 1}행: 품목코드 ${item.code} 이미 등록됨` });
+          continue;
+        }
+        const product = await this.prisma.product.create({
+          data: {
+            tenantId,
+            code: item.code,
+            name: item.name,
+            category: item.category || null,
+            unit: item.unit || null,
+            standardCost: item.standardCost || null,
+            safetyStock: item.safetyStock ?? 0,
+          },
+        });
+        results.push({ index: i, status: "success", data: product });
+      } catch (err: any) {
+        results.push({ index: i, status: "error", error: `${i + 1}행: ${err?.message || "등록 실패"}` });
+      }
+    }
+
+    const success = results.filter((r) => r.status === "success").length;
+    return { total: items.length, success, failed: items.length - success, results };
+  }
+
   async updateProduct(id: string, dto: UpdateProductDto) {
     const data: Record<string, unknown> = {};
     if (dto.name !== undefined) data.name = dto.name;

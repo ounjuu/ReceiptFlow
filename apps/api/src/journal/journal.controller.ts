@@ -43,6 +43,23 @@ export class JournalController {
     return this.journalService.createFromDocument(documentId, accountId, req.user.sub);
   }
 
+  @Post("batch")
+  @Roles("ADMIN", "ACCOUNTANT")
+  async batchCreate(
+    @Body() body: {
+      tenantId: string;
+      journals: {
+        date: string;
+        description?: string;
+        currency?: string;
+        lines: { accountCode: string; vendorBizNo?: string; vendorName?: string; debit: number; credit: number }[];
+      }[];
+    },
+    @Req() req: { user: { sub: string } },
+  ) {
+    return this.journalService.batchCreate(body.tenantId, body.journals, req.user.sub);
+  }
+
   // 일괄 상태 변경 (`:id` 라우트보다 먼저 선언)
   @Patch("batch/status")
   @Roles("ADMIN", "ACCOUNTANT")

@@ -6,6 +6,7 @@ import { apiGet, apiPost, apiPatch, apiDelete, apiUpload } from "@/lib/api";
 import { API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { exportToXlsx } from "@/lib/export-xlsx";
+import { parseXlsx, downloadTemplate } from "@/lib/import-xlsx";
 import styles from "./Journals.module.css";
 
 interface Account {
@@ -125,6 +126,8 @@ export default function JournalsPage() {
   const [error, setError] = useState("");
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const journalImportRef = useRef<HTMLInputElement>(null);
+  const [journalImportResult, setJournalImportResult] = useState<{ total: number; success: number; failed: number; results: { index: number; status: string; error?: string }[] } | null>(null);
 
   // 기간 필터
   const [filterStart, setFilterStart] = useState("");
@@ -295,6 +298,47 @@ export default function JournalsPage() {
       apiDelete(`/journals/${journalId}/attachments/${attachmentId}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["journals"] }),
   });
+
+  const journalImportMutation = useMutation({
+    mutationFn: (journals: { date: string; description?: string; lines: { accountCode: string; vendorBizNo?: string; vendorName?: string; debit: number; credit: number }[] }[]) =>
+      apiPost<{ total: number; success: number; failed: number; results: { index: number; status: string; error?: string }[] }>("/journals/batch", { tenantId: tenantId!, journals }),
+    onSuccess: (data) => {
+      setJournalImportResult(data);
+      queryClient.invalidateQueries({ queryKey: ["journals"] });
+      if (journalImportRef.current) journalImportRef.current.value = "";
+    },
+  });
+
+  const handleJournalImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const rows = await parseXlsx(file);
+      // 전표번호(그룹키)로 그룹핑
+      const groups = new Map<string, typeof rows>();
+      rows.forEach((r) => {
+        const key = r["전표번호"] || `auto-${Math.random()}`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(r);
+      });
+      const journals = Array.from(groups.values()).map((group) => {
+        const first = group[0];
+        return {
+          date: first["날짜"] || new Date().toISOString().slice(0, 10),
+          description: first["적요"] || undefined,
+          lines: group.map((r) => ({
+            accountCode: r["계정코드"] || "",
+            vendorBizNo: r["사업자번호"] || undefined,
+            vendorName: r["거래처명"] || undefined,
+            debit: Number(r["차변"]) || 0,
+            credit: Number(r["대변"]) || 0,
+          })),
+        };
+      }).filter((j) => j.lines.some((l) => l.accountCode));
+      if (journals.length === 0) { alert("유효한 전표 데이터가 없습니다."); return; }
+      journalImportMutation.mutate(journals);
+    } catch { alert("엑셀 파일 파싱에 실패했습니다."); }
+  };
 
   const resetForm = () => {
     setFormMode("none");
@@ -725,6 +769,11 @@ export default function JournalsPage() {
         <div className={styles.tableHeader}>
           <h2 className={styles.sectionTitle}>전표 목록</h2>
           <div className={styles.filterRow}>
+            <button className={styles.downloadBtn} onClick={() => downloadTemplate("전표_템플릿", ["전표번호", "날짜", "적요", "계정코드", "거래처명", "사업자번호", "차변", "대변"])}>템플릿</button>
+            <input type="file" ref={journalImportRef} accept=".xlsx,.xls,.csv" onChange={handleJournalImport} hidden />
+            <button className={styles.downloadBtn} onClick={() => journalImportRef.current?.click()} disabled={journalImportMutation.isPending}>
+              {journalImportMutation.isPending ? "업로드 중..." : "엑셀 업로드"}
+            </button>
             <button
               className={styles.downloadBtn}
               onClick={() => {
@@ -775,6 +824,24 @@ export default function JournalsPage() {
             )}
           </div>
         </div>
+
+        {journalImportResult && (
+          <div style={{ marginBottom: "12px", padding: "12px", background: "var(--primary-light)", border: "1px solid var(--primary)", borderRadius: "var(--radius)" }}>
+            <div style={{ display: "flex", gap: "12px", alignItems: "center", fontSize: "0.85rem", fontWeight: 600 }}>
+              <span>총 {journalImportResult.total}건</span>
+              <span style={{ color: "#166534" }}>성공 {journalImportResult.success}건</span>
+              {journalImportResult.failed > 0 && <span style={{ color: "#dc2626" }}>실패 {journalImportResult.failed}건</span>}
+              <button className={styles.secondaryBtn} onClick={() => setJournalImportResult(null)}>닫기</button>
+            </div>
+            {journalImportResult.failed > 0 && (
+              <ul style={{ margin: "8px 0 0", paddingLeft: "20px", fontSize: "0.8rem", color: "#dc2626" }}>
+                {journalImportResult.results.filter((r) => r.status === "error").map((r) => (
+                  <li key={r.index}>{r.error}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {/* 일괄 처리 바 */}
         {selectedIds.size > 0 && canEdit && (

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { exportToXlsx } from "@/lib/export-xlsx";
+import { parseXlsx, downloadTemplate } from "@/lib/import-xlsx";
 import styles from "./CostManagement.module.css";
 
 interface Product {
@@ -81,6 +82,8 @@ export default function CostManagementPage() {
   const [formSafetyStock, setFormSafetyStock] = useState("");
   const [formDesc, setFormDesc] = useState("");
   const [formError, setFormError] = useState("");
+  const importRef = useRef<HTMLInputElement>(null);
+  const [importResult, setImportResult] = useState<{ total: number; success: number; failed: number; results: { index: number; status: string; error?: string }[] } | null>(null);
 
   // 분석 필터
   const [startDate, setStartDate] = useState("");
@@ -151,6 +154,34 @@ export default function CostManagementPage() {
     mutationFn: (id: string) => apiDelete(`/cost-management/products/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["products"] }),
   });
+
+  const importMutation = useMutation({
+    mutationFn: (items: { code: string; name: string; category?: string; unit?: string; standardCost?: number; safetyStock?: number }[]) =>
+      apiPost<{ total: number; success: number; failed: number; results: { index: number; status: string; error?: string }[] }>("/cost-management/products/batch", { tenantId: tenantId!, items }),
+    onSuccess: (data) => {
+      setImportResult(data);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      if (importRef.current) importRef.current.value = "";
+    },
+  });
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const rows = await parseXlsx(file);
+      const items = rows.map((r) => ({
+        code: r["코드"] || "",
+        name: r["품목명"] || "",
+        category: r["카테고리"] || undefined,
+        unit: r["단위"] || undefined,
+        standardCost: r["표준원가"] ? Number(r["표준원가"]) : undefined,
+        safetyStock: r["안전재고"] ? Number(r["안전재고"]) : undefined,
+      })).filter((i) => i.code && i.name);
+      if (items.length === 0) { alert("유효한 데이터가 없습니다."); return; }
+      importMutation.mutate(items);
+    } catch { alert("엑셀 파일 파싱에 실패했습니다."); }
+  };
 
   const resetForm = () => {
     setShowForm(false);
@@ -258,12 +289,37 @@ export default function CostManagementPage() {
         <div className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>품목 목록</h2>
-            {canEdit && (
-              <button className={styles.primaryBtn} onClick={() => { if (showForm) resetForm(); else setShowForm(true); }}>
-                {showForm ? "취소" : "품목 등록"}
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <button className={styles.secondaryBtn} onClick={() => downloadTemplate("품목_템플릿", ["코드", "품목명", "카테고리", "단위", "표준원가", "안전재고"])}>템플릿</button>
+              <input type="file" ref={importRef} accept=".xlsx,.xls,.csv" onChange={handleImport} hidden />
+              <button className={styles.secondaryBtn} onClick={() => importRef.current?.click()} disabled={importMutation.isPending}>
+                {importMutation.isPending ? "업로드 중..." : "엑셀 업로드"}
               </button>
-            )}
+              {canEdit && (
+                <button className={styles.primaryBtn} onClick={() => { if (showForm) resetForm(); else setShowForm(true); }}>
+                  {showForm ? "취소" : "품목 등록"}
+                </button>
+              )}
+            </div>
           </div>
+
+          {importResult && (
+            <div style={{ marginBottom: "12px", padding: "12px", background: "var(--primary-light)", border: "1px solid var(--primary)", borderRadius: "var(--radius)" }}>
+              <div style={{ display: "flex", gap: "12px", alignItems: "center", fontSize: "0.85rem", fontWeight: 600 }}>
+                <span>총 {importResult.total}건</span>
+                <span style={{ color: "#166534" }}>성공 {importResult.success}건</span>
+                {importResult.failed > 0 && <span style={{ color: "#dc2626" }}>실패 {importResult.failed}건</span>}
+                <button className={styles.secondaryBtn} onClick={() => setImportResult(null)}>닫기</button>
+              </div>
+              {importResult.failed > 0 && (
+                <ul style={{ margin: "8px 0 0", paddingLeft: "20px", fontSize: "0.8rem", color: "#dc2626" }}>
+                  {importResult.results.filter((r) => r.status === "error").map((r) => (
+                    <li key={r.index}>{r.error}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           {showForm && (
             <div className={styles.form}>

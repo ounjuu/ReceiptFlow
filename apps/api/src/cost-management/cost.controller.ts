@@ -74,6 +74,17 @@ export class CostController {
     return this.service.createProduct(dto);
   }
 
+  @Post("products/batch")
+  @Roles("ADMIN", "ACCOUNTANT")
+  async batchCreateProducts(
+    @Body() body: {
+      tenantId: string;
+      items: { code: string; name: string; category?: string; unit?: string; standardCost?: number; safetyStock?: number }[];
+    },
+  ) {
+    return this.service.batchCreateProducts(body.tenantId, body.items);
+  }
+
   @Patch("products/:id")
   @Roles("ADMIN", "ACCOUNTANT")
   async updateProduct(@Param("id") id: string, @Body() dto: UpdateProductDto) {
