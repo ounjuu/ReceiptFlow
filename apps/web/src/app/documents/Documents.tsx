@@ -70,6 +70,22 @@ interface CreateResult {
   ocr?: OcrData;
 }
 
+interface BatchItem {
+  index: number;
+  filename: string;
+  status: "success" | "error";
+  document?: Document;
+  ocr?: OcrData;
+  error?: string;
+}
+
+interface BatchResult {
+  total: number;
+  success: number;
+  failed: number;
+  results: BatchItem[];
+}
+
 function statusLabel(status: string) {
   switch (status) {
     case "PENDING": return { text: "대기", cls: styles.statusPending };
@@ -77,6 +93,103 @@ function statusLabel(status: string) {
     case "JOURNAL_CREATED": return { text: "전표 생성", cls: styles.statusJournal };
     default: return { text: status, cls: "" };
   }
+}
+
+function BatchCard({
+  item,
+  tenantId,
+  onJournalCreated,
+}: {
+  item: BatchItem;
+  tenantId: string;
+  onJournalCreated: () => void;
+}) {
+  const [bizNo, setBizNo] = useState("");
+  const [vName, setVName] = useState("");
+  const [done, setDone] = useState(false);
+  const [pending, setPending] = useState(false);
+
+  const handleCreate = async () => {
+    if (!bizNo || !vName || !item.ocr?.total_amount) return;
+    setPending(true);
+    try {
+      await apiPost("/documents", {
+        tenantId,
+        vendorName: vName,
+        vendorBizNo: bizNo,
+        totalAmount: item.ocr.total_amount,
+        transactionAt: item.ocr.transaction_date || new Date().toISOString().slice(0, 10),
+      });
+      setDone(true);
+      onJournalCreated();
+    } catch { /* ignore */ }
+    setPending(false);
+  };
+
+  if (item.status === "error") {
+    return (
+      <div className={`${styles.batchCard} ${styles.batchCardError}`}>
+        <div className={styles.batchCardHeader}>
+          <span className={styles.batchCardFilename}>{item.filename}</span>
+          <span className={`${styles.status} ${styles.statusPending}`}>실패</span>
+        </div>
+        <div className={styles.batchCardBody}>{item.error}</div>
+      </div>
+    );
+  }
+
+  const ocr = item.ocr!;
+  return (
+    <div className={`${styles.batchCard} ${styles.batchCardSuccess}`}>
+      <div className={styles.batchCardHeader}>
+        <span className={styles.batchCardFilename}>{item.filename}</span>
+        <span className={`${styles.status} ${done ? styles.statusJournal : styles.statusOcr}`}>
+          {done ? "전표 생성" : "OCR 완료"}
+        </span>
+      </div>
+      <div className={styles.batchCardGrid}>
+        <div>
+          <span className={styles.resultLabel}>거래처</span>
+          <span className={styles.resultValue}>{ocr.vendor_name || "-"}</span>
+        </div>
+        <div>
+          <span className={styles.resultLabel}>금액</span>
+          <span className={styles.resultValue}>
+            {ocr.total_amount ? `${ocr.total_amount.toLocaleString()}원` : "-"}
+          </span>
+        </div>
+        <div>
+          <span className={styles.resultLabel}>날짜</span>
+          <span className={styles.resultValue}>{ocr.transaction_date || "-"}</span>
+        </div>
+        <div>
+          <span className={styles.resultLabel}>신뢰도</span>
+          <span className={styles.resultValue}>{Math.round(ocr.confidence * 100)}%</span>
+        </div>
+      </div>
+      {!done && ocr.total_amount && (
+        <div className={styles.batchJournalForm}>
+          <input
+            placeholder="사업자번호"
+            value={bizNo}
+            onChange={(e) => setBizNo(e.target.value)}
+          />
+          <input
+            placeholder="거래처명"
+            value={vName}
+            onChange={(e) => setVName(e.target.value)}
+          />
+          <button
+            className={styles.batchJournalBtn}
+            onClick={handleCreate}
+            disabled={!bizNo || !vName || pending}
+          >
+            {pending ? "..." : "전표"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function DocumentsPage() {
@@ -96,6 +209,8 @@ export default function DocumentsPage() {
   );
 
   const [result, setResult] = useState<CreateResult | null>(null);
+  const [batchResult, setBatchResult] = useState<BatchResult | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   // 자동완성 상태 (수기 입력)
   const [suggestions, setSuggestions] = useState<Vendor[]>([]);
@@ -193,16 +308,18 @@ export default function DocumentsPage() {
     queryFn: () => apiGet<Document[]>(`/documents?tenantId=${tenantId}${dateParams ? `&${dateParams}` : ""}`),
   });
 
-  // 이미지 업로드 (OCR)
+  // 이미지 업로드 (OCR) — 일괄
   const uploadMutation = useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async (files: File[]) => {
       const fd = new FormData();
-      fd.append("file", file);
+      files.forEach((f) => fd.append("files", f));
       fd.append("tenantId", tenantId!);
-      return apiUpload<CreateResult>("/documents/upload", fd);
+      return apiUpload<BatchResult>("/documents/upload-batch", fd);
     },
     onSuccess: (data) => {
-      setResult(data);
+      setBatchResult(data);
+      setResult(null);
+      setSelectedFiles([]);
       if (fileRef.current) fileRef.current.value = "";
       queryClient.invalidateQueries({ queryKey: ["documents"] });
       queryClient.invalidateQueries({ queryKey: ["journals"] });
@@ -249,9 +366,24 @@ export default function DocumentsPage() {
     },
   });
 
+  const handleFileSelect = () => {
+    const files = fileRef.current?.files;
+    if (!files) return;
+    const arr = Array.from(files).slice(0, 10);
+    setSelectedFiles(arr);
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleUpload = () => {
-    const file = fileRef.current?.files?.[0];
-    if (file) uploadMutation.mutate(file);
+    if (selectedFiles.length === 0) return;
+    if (selectedFiles.length > 10) {
+      alert("최대 10장까지 업로드할 수 있습니다.");
+      return;
+    }
+    uploadMutation.mutate(selectedFiles);
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -375,33 +507,51 @@ export default function DocumentsPage() {
         <div className={styles.inputTabs}>
           <button
             className={`${styles.inputTab} ${inputTab === "upload" ? styles.inputTabActive : ""}`}
-            onClick={() => { setInputTab("upload"); setResult(null); }}
+            onClick={() => { setInputTab("upload"); setResult(null); setBatchResult(null); }}
           >
             이미지 업로드
           </button>
           <button
             className={`${styles.inputTab} ${inputTab === "manual" ? styles.inputTabActive : ""}`}
-            onClick={() => { setInputTab("manual"); setResult(null); }}
+            onClick={() => { setInputTab("manual"); setResult(null); setBatchResult(null); }}
           >
             직접 입력
           </button>
         </div>
 
         {inputTab === "upload" && (
-          <div className={styles.uploadArea}>
-            <input
-              type="file"
-              ref={fileRef}
-              accept="image/*"
-              className={styles.fileInput}
-            />
-            <button
-              className={styles.submitBtn}
-              onClick={handleUpload}
-              disabled={uploadMutation.isPending}
-            >
-              {uploadMutation.isPending ? "OCR 처리 중..." : "업로드 + OCR"}
-            </button>
+          <div>
+            <div className={styles.uploadArea}>
+              <input
+                type="file"
+                ref={fileRef}
+                accept="image/*"
+                multiple
+                className={styles.fileInput}
+                onChange={handleFileSelect}
+              />
+              <button
+                className={styles.submitBtn}
+                onClick={handleUpload}
+                disabled={uploadMutation.isPending || selectedFiles.length === 0}
+              >
+                {uploadMutation.isPending
+                  ? `OCR 처리 중... (${selectedFiles.length}장)`
+                  : selectedFiles.length > 0
+                    ? `업로드 + OCR (${selectedFiles.length}장)`
+                    : "업로드 + OCR"}
+              </button>
+            </div>
+            {selectedFiles.length > 0 && !uploadMutation.isPending && (
+              <div className={styles.fileList}>
+                {selectedFiles.map((f, i) => (
+                  <span key={i} className={styles.fileChip}>
+                    {f.name}
+                    <button className={styles.fileChipRemove} onClick={() => removeFile(i)}>x</button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -494,6 +644,7 @@ export default function DocumentsPage() {
           </form>
         )}
 
+        {/* 단건 결과 (수기 입력) */}
         {result && (
           <div className={styles.resultBox}>
             {result.ocr && (
@@ -613,6 +764,33 @@ export default function DocumentsPage() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* 일괄 업로드 결과 */}
+        {batchResult && (
+          <div className={styles.resultBox}>
+            <div className={styles.batchSummary}>
+              <span>총 {batchResult.total}장</span>
+              <span className={styles.batchSuccess}>성공 {batchResult.success}장</span>
+              {batchResult.failed > 0 && (
+                <span className={styles.batchFailed}>실패 {batchResult.failed}장</span>
+              )}
+            </div>
+            <div className={styles.batchResults}>
+              {batchResult.results.map((item) => (
+                <BatchCard
+                  key={item.index}
+                  item={item}
+                  tenantId={tenantId!}
+                  onJournalCreated={() => {
+                    queryClient.invalidateQueries({ queryKey: ["documents"] });
+                    queryClient.invalidateQueries({ queryKey: ["journals"] });
+                    queryClient.invalidateQueries({ queryKey: ["vendors"] });
+                  }}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>}

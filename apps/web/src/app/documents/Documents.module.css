@@ -448,3 +448,133 @@
   border-radius: 4px;
   display: block;
 }
+
+/* 일괄 업로드 */
+.fileList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.fileChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+}
+
+.fileChipRemove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0;
+  line-height: 1;
+}
+
+.fileChipRemove:hover { color: var(--danger); }
+
+.batchProgress {
+  font-size: 0.85rem;
+  color: var(--primary);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.batchSummary {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.batchSuccess { color: #166534; }
+.batchFailed { color: #dc2626; }
+
+.batchResults {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.batchCard {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.batchCardSuccess { border-left: 3px solid #16a34a; }
+.batchCardError { border-left: 3px solid #dc2626; }
+
+.batchCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.batchCardFilename {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.batchCardGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.batchCardGrid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.batchCardError .batchCardBody {
+  color: #dc2626;
+  font-size: 0.85rem;
+}
+
+.batchJournalForm {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.batchJournalForm input {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.batchJournalBtn {
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.batchJournalBtn:disabled { opacity: 0.5; }

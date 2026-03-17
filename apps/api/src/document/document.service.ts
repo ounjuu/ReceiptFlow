@@ -55,6 +55,57 @@ export class DocumentService {
     return { document, journalEntry: null, classification: null, ocr };
   }
 
+  // 영수증 일괄 업로드 (최대 10장)
+  async batchUploadWithOcr(dto: UploadDocumentDto, files: Express.Multer.File[]) {
+    const promises = files.map(async (file, index) => {
+      try {
+        const imageUrl = `/uploads/${file.filename}`;
+        const ocr = await this.ocrImage(file);
+        const txDate = ocr.transaction_date ? new Date(ocr.transaction_date) : null;
+
+        const document = await this.prisma.document.create({
+          data: {
+            tenantId: dto.tenantId,
+            imageUrl,
+            vendorName: ocr.vendor_name,
+            totalAmount: ocr.total_amount,
+            transactionAt: txDate,
+            ocrRaw: ocr as any,
+            status: "OCR_DONE",
+          },
+          include: {
+            journalEntry: { include: { lines: { include: { account: true } } } },
+          },
+        });
+
+        return {
+          index,
+          filename: file.originalname,
+          status: "success" as const,
+          document,
+          ocr,
+        };
+      } catch (err: any) {
+        return {
+          index,
+          filename: file.originalname,
+          status: "error" as const,
+          error: err?.message || "처리 실패",
+        };
+      }
+    });
+
+    const results = await Promise.all(promises);
+    const success = results.filter((r) => r.status === "success").length;
+
+    return {
+      total: files.length,
+      success,
+      failed: files.length - success,
+      results,
+    };
+  }
+
   // AI OCR 호출
   private async ocrImage(
     file: Express.Multer.File,

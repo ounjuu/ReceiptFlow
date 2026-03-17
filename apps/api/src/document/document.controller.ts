@@ -7,11 +7,12 @@ import {
   Param,
   Query,
   UploadedFile,
+  UploadedFiles,
   UseInterceptors,
   UseGuards,
   Body,
 } from "@nestjs/common";
-import { FileInterceptor } from "@nestjs/platform-express";
+import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
 import { extname } from "path";
 import { DocumentService } from "./document.service";
@@ -45,6 +46,26 @@ export class DocumentController {
     @Body() dto: UploadDocumentDto,
   ) {
     return this.documentService.uploadWithOcr(dto, file);
+  }
+
+  @Post("upload-batch")
+  @Roles("ADMIN", "ACCOUNTANT")
+  @UseInterceptors(
+    FilesInterceptor("files", 10, {
+      storage: diskStorage({
+        destination: "./uploads",
+        filename: (_req, file, cb) => {
+          const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+          cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+    }),
+  )
+  async uploadBatch(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() dto: UploadDocumentDto,
+  ) {
+    return this.documentService.batchUploadWithOcr(dto, files);
   }
 
   @Post()
