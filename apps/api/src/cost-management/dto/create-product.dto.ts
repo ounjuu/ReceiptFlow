@@ -5,5 +5,6 @@ export class CreateProductDto {
   category?: string;
   unit?: string;
   standardCost?: number;
+  safetyStock?: number;
   description?: string;
 }

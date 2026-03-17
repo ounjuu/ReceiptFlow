@@ -20,8 +20,8 @@ export class ApprovalService {
 
   // 결재선 설정 (기존 삭제 후 재생성)
   async setApprovalLines(dto: SetApprovalLinesDto) {
-    if (!["JOURNAL", "TAX_INVOICE"].includes(dto.documentType)) {
-      throw new BadRequestException("문서 유형은 JOURNAL 또는 TAX_INVOICE이어야 합니다");
+    if (!["JOURNAL", "TAX_INVOICE", "EXPENSE_CLAIM"].includes(dto.documentType)) {
+      throw new BadRequestException("문서 유형은 JOURNAL, TAX_INVOICE 또는 EXPENSE_CLAIM이어야 합니다");
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -89,6 +89,16 @@ export class ApprovalService {
         throw new BadRequestException("임시 상태의 세금계산서만 결재 요청할 수 있습니다");
       }
       await this.prisma.taxInvoice.update({
+        where: { id: documentId },
+        data: { status: "PENDING_APPROVAL" },
+      });
+    } else if (documentType === "EXPENSE_CLAIM") {
+      const claim = await this.prisma.expenseClaim.findUnique({ where: { id: documentId } });
+      if (!claim) throw new NotFoundException("경비 정산을 찾을 수 없습니다");
+      if (claim.status !== "DRAFT") {
+        throw new BadRequestException("임시저장 상태의 경비 정산만 결재 요청할 수 있습니다");
+      }
+      await this.prisma.expenseClaim.update({
         where: { id: documentId },
         data: { status: "PENDING_APPROVAL" },
       });
@@ -166,8 +176,13 @@ export class ApprovalService {
           where: { id: request.documentId },
           data: { status: "DRAFT" },
         });
-      } else {
+      } else if (request.documentType === "TAX_INVOICE") {
         await this.prisma.taxInvoice.update({
+          where: { id: request.documentId },
+          data: { status: "DRAFT" },
+        });
+      } else if (request.documentType === "EXPENSE_CLAIM") {
+        await this.prisma.expenseClaim.update({
           where: { id: request.documentId },
           data: { status: "DRAFT" },
         });
@@ -190,8 +205,13 @@ export class ApprovalService {
           where: { id: request.documentId },
           data: { status: "APPROVED" },
         });
-      } else {
+      } else if (request.documentType === "TAX_INVOICE") {
         await this.prisma.taxInvoice.update({
+          where: { id: request.documentId },
+          data: { status: "APPROVED" },
+        });
+      } else if (request.documentType === "EXPENSE_CLAIM") {
+        await this.prisma.expenseClaim.update({
           where: { id: request.documentId },
           data: { status: "APPROVED" },
         });
@@ -259,7 +279,7 @@ export class ApprovalService {
               date: entry.date.toISOString(),
             };
           }
-        } else {
+        } else if (r.documentType === "TAX_INVOICE") {
           const invoice = await this.prisma.taxInvoice.findUnique({
             where: { id: r.documentId },
             select: { description: true, invoiceDate: true, issuerName: true, recipientName: true },
@@ -268,6 +288,17 @@ export class ApprovalService {
             documentInfo = {
               description: invoice.description || `${invoice.issuerName} → ${invoice.recipientName}`,
               date: invoice.invoiceDate.toISOString(),
+            };
+          }
+        } else if (r.documentType === "EXPENSE_CLAIM") {
+          const claim = await this.prisma.expenseClaim.findUnique({
+            where: { id: r.documentId },
+            select: { title: true, claimDate: true, claimNo: true, totalAmount: true },
+          });
+          if (claim) {
+            documentInfo = {
+              description: `${claim.title} (${claim.claimNo}) - ${Number(claim.totalAmount).toLocaleString()}원`,
+              date: claim.claimDate.toISOString(),
             };
           }
         }
@@ -358,7 +389,7 @@ export class ApprovalService {
               date: entry.date.toISOString(),
             };
           }
-        } else {
+        } else if (r.documentType === "TAX_INVOICE") {
           const invoice = await this.prisma.taxInvoice.findUnique({
             where: { id: r.documentId },
             select: { description: true, invoiceDate: true, issuerName: true, recipientName: true },
@@ -367,6 +398,17 @@ export class ApprovalService {
             documentInfo = {
               description: invoice.description || `${invoice.issuerName} → ${invoice.recipientName}`,
               date: invoice.invoiceDate.toISOString(),
+            };
+          }
+        } else if (r.documentType === "EXPENSE_CLAIM") {
+          const claim = await this.prisma.expenseClaim.findUnique({
+            where: { id: r.documentId },
+            select: { title: true, claimDate: true, claimNo: true, totalAmount: true },
+          });
+          if (claim) {
+            documentInfo = {
+              description: `${claim.title} (${claim.claimNo}) - ${Number(claim.totalAmount).toLocaleString()}원`,
+              date: claim.claimDate.toISOString(),
             };
           }
         }

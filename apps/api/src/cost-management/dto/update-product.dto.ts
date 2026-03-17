@@ -3,5 +3,6 @@ export class UpdateProductDto {
   category?: string;
   unit?: string;
   standardCost?: number;
+  safetyStock?: number;
   description?: string;
 }

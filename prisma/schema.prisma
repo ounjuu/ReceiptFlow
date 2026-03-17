@@ -38,6 +38,10 @@ model Tenant {
   products         Product[]
   trades           Trade[]
   payments         Payment[]
+  expenseClaims    ExpenseClaim[]
+  inventoryTransactions InventoryTransaction[]
+  bankAccounts         BankAccount[]
+  bankTransactions     BankTransaction[]
 }
 
 model User {
@@ -90,6 +94,7 @@ model Account {
   fixedAssetsAsDepreciation  FixedAsset[] @relation("DepreciationAccount")
   fixedAssetsAsAccumulated   FixedAsset[] @relation("AccumulatedDepAccount")
   budgets                    Budget[]
+  bankAccounts               BankAccount[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -203,6 +208,9 @@ model JournalEntry {
   payrollRecords PayrollRecord[]
   trade          Trade?
   payment        Payment?
+  expenseClaim          ExpenseClaim?
+  inventoryTransaction  InventoryTransaction?
+  bankTransaction       BankTransaction?
 
   @@index([tenantId])
   @@index([date])
@@ -471,6 +479,7 @@ model Employee {
   updatedAt    DateTime  @updatedAt
 
   payrollRecords PayrollRecord[]
+  expenseClaims  ExpenseClaim[]
 
   @@unique([tenantId, employeeNo])
   @@index([tenantId])
@@ -591,8 +600,13 @@ model Product {
   unit          String?   // EA, KG, M 등
   standardCost  Decimal?  @db.Decimal(18, 2)
   description   String?
+  currentStock  Int       @default(0)          // 현재 재고 수량
+  avgCost       Decimal   @default(0) @db.Decimal(18, 2) // 이동평균 단가
+  safetyStock   Int       @default(0)          // 안전 재고
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  inventoryTransactions InventoryTransaction[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -667,4 +681,124 @@ model Payment {
 
   @@index([tradeId])
   @@index([tenantId])
+}
+
+// ──────────────────────────────────
+// 경비 정산
+// ──────────────────────────────────
+
+model ExpenseClaim {
+  id             String    @id @default(uuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+  claimNo        String    // EC-YYYYMMDD-NNN (자동 채번)
+  employeeId     String
+  employee       Employee  @relation(fields: [employeeId], references: [id])
+  title          String
+  claimDate      DateTime  @db.Date
+  totalAmount    Decimal   @default(0) @db.Decimal(18, 2)
+  status         String    @default("DRAFT") // DRAFT | PENDING_APPROVAL | APPROVED | REJECTED | SETTLED
+  memo           String?
+  settledAt      DateTime?
+  journalEntryId String?   @unique
+  journalEntry   JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  items          ExpenseClaimItem[]
+
+  @@unique([tenantId, claimNo])
+  @@index([tenantId])
+}
+
+model ExpenseClaimItem {
+  id             String       @id @default(uuid())
+  expenseClaimId String
+  expenseClaim   ExpenseClaim @relation(fields: [expenseClaimId], references: [id], onDelete: Cascade)
+  category       String       // 교통비 | 식비 | 숙박비 | 회의비 | 사무용품 | 기타
+  description    String
+  amount         Decimal      @db.Decimal(18, 2)
+  expenseDate    DateTime     @db.Date
+  receiptUrl     String?
+
+  @@index([expenseClaimId])
+}
+
+// ──────────────────────────────────
+// 재고 관리
+// ──────────────────────────────────
+
+model InventoryTransaction {
+  id             String    @id @default(uuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+  txNo           String    // IV-YYYYMMDD-NNN (자동 채번)
+  txType         String    // IN (입고) | OUT (출고) | ADJUST (조정)
+  txDate         DateTime  @db.Date
+  productId      String
+  product        Product   @relation(fields: [productId], references: [id])
+  quantity       Int       // 수량 (조정 시 음수 가능)
+  unitCost       Decimal   @db.Decimal(18, 2)  // 단가
+  totalCost      Decimal   @db.Decimal(18, 2)  // 총액
+  reason         String?   // 입고사유/출고사유/조정사유
+  tradeId        String?   // 매출/매입 연동 시
+  journalEntryId String?   @unique
+  journalEntry   JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  beforeStock    Int       // 변동 전 재고
+  afterStock     Int       // 변동 후 재고
+  createdAt      DateTime  @default(now())
+
+  @@unique([tenantId, txNo])
+  @@index([tenantId])
+  @@index([productId])
+  @@index([txDate])
+}
+
+// ──────────────────────────────────
+// 은행/계좌 관리
+// ──────────────────────────────────
+
+model BankAccount {
+  id              String   @id @default(uuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  bankName        String             // 은행명
+  accountNumber   String             // 계좌번호
+  accountHolder   String             // 예금주
+  currency        String   @default("KRW")
+  balance         Decimal  @default(0) @db.Decimal(18, 2) // 현재 잔액
+  accountId       String             // 계정과목 FK (보통예금 등)
+  account         Account  @relation(fields: [accountId], references: [id])
+  status          String   @default("ACTIVE") // ACTIVE | INACTIVE
+  memo            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  transactions    BankTransaction[]
+
+  @@unique([tenantId, accountNumber])
+  @@index([tenantId])
+}
+
+model BankTransaction {
+  id              String        @id @default(uuid())
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id])
+  bankAccountId   String
+  bankAccount     BankAccount   @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  txNo            String        // BA-YYYYMMDD-NNN (자동 채번)
+  txType          String        // DEPOSIT (입금) | WITHDRAW (출금) | TRANSFER (이체)
+  txDate          DateTime      @db.Date
+  amount          Decimal       @db.Decimal(18, 2)
+  balance         Decimal       @db.Decimal(18, 2) // 거래 후 잔액
+  counterparty    String?       // 상대방
+  description     String?       // 적요
+  paymentId       String?       // Payment 연동 (선택)
+  journalEntryId  String?       @unique
+  journalEntry    JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  createdAt       DateTime      @default(now())
+
+  @@unique([tenantId, txNo])
+  @@index([tenantId])
+  @@index([bankAccountId])
+  @@index([txDate])
 }

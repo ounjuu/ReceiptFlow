@@ -19,9 +19,12 @@ import { ProjectModule } from "./project/project.module";
 import { TradeModule } from "./trade/trade.module";
 import { DepartmentModule } from "./department/department.module";
 import { CostModule } from "./cost-management/cost.module";
+import { ExpenseClaimModule } from "./expense-claim/expense-claim.module";
+import { InventoryModule } from "./inventory/inventory.module";
+import { BankAccountModule } from "./bank-account/bank-account.module";
 
 @Module({
-  imports: [PrismaModule, AuthModule, DocumentModule, JournalModule, ReportModule, AccountModule, VendorModule, ClosingModule, AuditLogModule, JournalTemplateModule, ExchangeRateModule, TaxInvoiceModule, FixedAssetModule, ApprovalModule, PayrollModule, BudgetModule, ProjectModule, TradeModule, DepartmentModule, CostModule],
+  imports: [PrismaModule, AuthModule, DocumentModule, JournalModule, ReportModule, AccountModule, VendorModule, ClosingModule, AuditLogModule, JournalTemplateModule, ExchangeRateModule, TaxInvoiceModule, FixedAssetModule, ApprovalModule, PayrollModule, BudgetModule, ProjectModule, TradeModule, DepartmentModule, CostModule, ExpenseClaimModule, InventoryModule, BankAccountModule],
   controllers: [],
   providers: [],
 })

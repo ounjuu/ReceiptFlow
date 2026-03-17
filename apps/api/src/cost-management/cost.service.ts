@@ -34,6 +34,7 @@ export class CostService {
         category: dto.category,
         unit: dto.unit,
         standardCost: dto.standardCost,
+        safetyStock: dto.safetyStock ?? 0,
         description: dto.description,
       },
     });
@@ -45,6 +46,7 @@ export class CostService {
     if (dto.category !== undefined) data.category = dto.category;
     if (dto.unit !== undefined) data.unit = dto.unit;
     if (dto.standardCost !== undefined) data.standardCost = dto.standardCost;
+    if (dto.safetyStock !== undefined) data.safetyStock = dto.safetyStock;
     if (dto.description !== undefined) data.description = dto.description;
 
     return this.prisma.product.update({ where: { id }, data });
