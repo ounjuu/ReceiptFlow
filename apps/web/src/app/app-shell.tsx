@@ -1,8 +1,9 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { apiGet } from "@/lib/api";
 import styles from "./layout.module.css";
@@ -53,6 +54,29 @@ interface SearchGroup {
   items: SearchItem[];
 }
 
+interface DashboardAlerts {
+  draftCount: number;
+  approvedCount: number;
+  pendingDocCount: number;
+  closing: { year: number; month: number; isClosed: boolean; daysUntilMonthEnd: number };
+  recentLogs: unknown[];
+}
+
+interface DashboardKpi {
+  trades: { salesTotal: number; salesRemaining: number; purchaseTotal: number; purchaseRemaining: number };
+  bankBalance: number;
+  expenseClaims: { pendingCount: number; pendingAmount: number };
+  inventory: { lowStockCount: number };
+  approvals: { pendingCount: number };
+  budget: { year: number; totalBudget: number };
+}
+
+interface NotifItem {
+  type: "warning" | "danger" | "info" | "muted";
+  message: string;
+  href: string;
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading, logout, isAdmin, role, tenantId } = useAuth();
   const pathname = usePathname();
@@ -66,7 +90,51 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  // 알림 상태
+  const [showNotif, setShowNotif] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+
   const isLoginPage = pathname === "/login";
+  const isLoggedIn = !loading && !!user && !isLoginPage;
+
+  const { data: alertsData } = useQuery({
+    queryKey: ["notif-alerts", tenantId],
+    queryFn: () => apiGet<DashboardAlerts>(`/reports/dashboard-alerts?tenantId=${tenantId}`),
+    enabled: isLoggedIn && !!tenantId,
+    refetchInterval: 30000,
+  });
+
+  const { data: kpiData } = useQuery({
+    queryKey: ["notif-kpi", tenantId],
+    queryFn: () => apiGet<DashboardKpi>(`/reports/dashboard-kpi?tenantId=${tenantId}`),
+    enabled: isLoggedIn && !!tenantId,
+    refetchInterval: 30000,
+  });
+
+  const notifications = useMemo(() => {
+    const items: NotifItem[] = [];
+    if (alertsData) {
+      if (alertsData.draftCount > 0)
+        items.push({ type: "warning", message: `${alertsData.draftCount}건의 전표가 승인 대기 중`, href: "/journals" });
+      if (alertsData.approvedCount > 0)
+        items.push({ type: "info", message: `${alertsData.approvedCount}건의 전표가 전기 대기 중`, href: "/journals" });
+      if (!alertsData.closing.isClosed && alertsData.closing.daysUntilMonthEnd <= 5)
+        items.push({ type: "danger", message: `${alertsData.closing.month}월 마감 ${alertsData.closing.daysUntilMonthEnd}일 남음`, href: "/closings" });
+      if (alertsData.pendingDocCount > 0)
+        items.push({ type: "muted", message: `${alertsData.pendingDocCount}건의 영수증 처리 대기`, href: "/documents" });
+    }
+    if (kpiData) {
+      if (kpiData.approvals.pendingCount > 0)
+        items.push({ type: "info", message: `${kpiData.approvals.pendingCount}건의 결재 대기`, href: "/approvals" });
+      if (kpiData.inventory.lowStockCount > 0)
+        items.push({ type: "danger", message: `${kpiData.inventory.lowStockCount}개 품목 재고 부족`, href: "/inventory" });
+      if (kpiData.expenseClaims.pendingCount > 0)
+        items.push({ type: "warning", message: `${kpiData.expenseClaims.pendingCount}건 경비 정산 대기`, href: "/expense-claims" });
+      if (kpiData.trades.salesRemaining > 0)
+        items.push({ type: "warning", message: `미수금 ₩${kpiData.trades.salesRemaining.toLocaleString()}`, href: "/trades" });
+    }
+    return items;
+  }, [alertsData, kpiData]);
 
   // 미로그인 시 로그인 페이지로 리다이렉트
   useEffect(() => {
@@ -80,6 +148,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const handleClickOutside = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setShowDropdown(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotif(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -215,6 +286,43 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   전체 결과 보기
                 </div>
+              </div>
+            )}
+          </div>
+          <div className={styles.notifWrapper} ref={notifRef}>
+            <button
+              className={styles.notifBtn}
+              onClick={() => setShowNotif((v) => !v)}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              {notifications.length > 0 && (
+                <span className={styles.notifBadge}>{notifications.length}</span>
+              )}
+            </button>
+            {showNotif && (
+              <div className={styles.notifDropdown}>
+                <div className={styles.notifHeader}>알림</div>
+                {notifications.length === 0 ? (
+                  <div className={styles.notifEmpty}>새로운 알림이 없습니다</div>
+                ) : (
+                  notifications.map((n, i) => (
+                    <div
+                      key={i}
+                      className={`${styles.notifItem} ${styles[`notif_${n.type}`]}`}
+                      onClick={() => {
+                        setShowNotif(false);
+                        router.push(n.href);
+                      }}
+                    >
+                      <span className={styles.notifDot} />
+                      <span className={styles.notifMessage}>{n.message}</span>
+                      <span className={styles.notifArrow}>&rsaquo;</span>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>

@@ -92,12 +92,25 @@
   padding: 40px 0;
 }
 
+/* 하단 테이블 */
+.bottomGrid table {
+  font-size: 0.82rem;
+}
+
+.bottomGrid table th,
+.bottomGrid table td {
+  white-space: nowrap;
+  padding: 8px 6px;
+}
+
 /* 상태 배지 */
 .statusBadge {
-  font-size: 0.75rem;
+  display: inline-block;
+  font-size: 0.72rem;
   padding: 2px 8px;
   border-radius: 4px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .statusBadge[data-status="DRAFT"] {
