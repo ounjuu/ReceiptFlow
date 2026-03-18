@@ -242,6 +242,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             </>
           )}
+          <Link href="/settings" className={styles.navLink}>
+            설정
+          </Link>
         </nav>
       </aside>
       <div className={styles.main}>

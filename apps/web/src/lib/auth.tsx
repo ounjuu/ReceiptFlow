@@ -35,6 +35,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -121,9 +122,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/login");
   };
 
+  const refreshUser = useCallback(async () => {
+    if (token) await fetchMe(token);
+  }, [token, fetchMe]);
+
   return (
     <AuthContext.Provider
-      value={{ user, token, tenantId, role, canEdit, canDelete, isAdmin, loading, login, signup, logout }}
+      value={{ user, token, tenantId, role, canEdit, canDelete, isAdmin, loading, login, signup, logout, refreshUser }}
     >
       {children}
     </AuthContext.Provider>

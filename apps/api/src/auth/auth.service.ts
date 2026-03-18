@@ -230,6 +230,41 @@ export class AuthService {
     return { success: true };
   }
 
+  // 프로필 수정
+  async updateProfile(userId: string, name: string) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { name },
+      include: { memberships: { include: { tenant: true } } },
+    });
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      memberships: user.memberships.map((m) => ({
+        id: m.id,
+        role: m.role,
+        tenantId: m.tenantId,
+        tenantName: m.tenant.name,
+      })),
+    };
+  }
+
+  // 비밀번호 변경
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException("사용자를 찾을 수 없습니다");
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) throw new UnauthorizedException("현재 비밀번호가 올바르지 않습니다");
+
+    if (newPassword.length < 6) throw new BadRequestException("새 비밀번호는 6자 이상이어야 합니다");
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+    return { success: true };
+  }
+
   private generateToken(user: { id: string; email: string; name: string; memberships: { tenantId: string; role: string; tenant: { name: string } }[] }) {
     const payload = { sub: user.id, email: user.email };
     const token = this.jwtService.sign(payload);

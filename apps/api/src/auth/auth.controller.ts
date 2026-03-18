@@ -26,6 +26,26 @@ export class AuthController {
     return this.authService.getMe(req.user.userId);
   }
 
+  // --- 프로필 / 비밀번호 ---
+
+  @UseGuards(JwtAuthGuard)
+  @Patch("me")
+  async updateProfile(
+    @Request() req: { user: { userId: string } },
+    @Body() body: { name: string },
+  ) {
+    return this.authService.updateProfile(req.user.userId, body.name);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch("me/password")
+  async changePassword(
+    @Request() req: { user: { userId: string } },
+    @Body() body: { currentPassword: string; newPassword: string },
+  ) {
+    return this.authService.changePassword(req.user.userId, body.currentPassword, body.newPassword);
+  }
+
   // --- 멤버 관리 (ADMIN 전용) ---
 
   @UseGuards(JwtAuthGuard, RolesGuard)
