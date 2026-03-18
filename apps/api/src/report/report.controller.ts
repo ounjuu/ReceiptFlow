@@ -52,6 +52,11 @@ export class ReportController {
     return this.reportService.getCashFlowStatement(tenantId, startDate, endDate);
   }
 
+  @Get("dashboard-kpi")
+  async dashboardKpi(@Query("tenantId") tenantId: string) {
+    return this.reportService.getDashboardKpi(tenantId);
+  }
+
   @Get("dashboard-summary")
   async dashboardSummary(@Query("tenantId") tenantId: string) {
     return this.reportService.dashboardSummary(tenantId);

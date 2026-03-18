@@ -4,11 +4,12 @@
   margin-bottom: 20px;
 }
 
+/* KPI 카드 */
 .cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .card {
@@ -25,8 +26,14 @@
 }
 
 .cardValue {
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   font-weight: 700;
+}
+
+.cardSub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 4px;
 }
 
 /* 차트 그리드 (2컬럼) */
@@ -49,10 +56,33 @@
   margin-bottom: 0;
 }
 
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.sectionHeader .sectionTitle {
+  margin-bottom: 0;
+}
+
 .sectionTitle {
   font-size: 1rem;
   font-weight: 600;
   margin-bottom: 12px;
+}
+
+.budgetSummary {
+  display: flex;
+  gap: 16px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.budgetRate {
+  font-weight: 700;
+  color: var(--primary);
 }
 
 .empty {
@@ -60,6 +90,29 @@
   font-size: 0.9rem;
   text-align: center;
   padding: 40px 0;
+}
+
+/* 상태 배지 */
+.statusBadge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.statusBadge[data-status="DRAFT"] {
+  background: #fef3cd;
+  color: #856404;
+}
+
+.statusBadge[data-status="APPROVED"] {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.statusBadge[data-status="POSTED"] {
+  background: #d4edda;
+  color: #166534;
 }
 
 /* 알림 배너 */
@@ -160,11 +213,63 @@
   color: #5a5069;
 }
 
-/* 하단 2컬럼 그리드 */
+/* 하단 3컬럼 그리드 */
 .bottomGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 20px;
+}
+
+/* 결재 대기 */
+.approvalList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.approvalItem {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.approvalItem:last-child {
+  border-bottom: none;
+}
+
+.approvalItem:hover {
+  background: var(--primary-light);
+  margin: 0 -20px;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.approvalTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.approvalType {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.approvalStep {
+  font-size: 0.75rem;
+  color: var(--primary);
+  background: var(--primary-light);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.approvalTime {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
 }
 
 /* 최근 활동 피드 */

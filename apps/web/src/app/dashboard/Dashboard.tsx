@@ -7,22 +7,9 @@ import { useAuth } from "@/lib/auth";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
+  ComposedChart, Line,
 } from "recharts";
 import styles from "./Dashboard.module.css";
-
-interface Document {
-  id: string;
-  totalAmount: string | null;
-  status: string;
-}
-
-interface JournalEntry {
-  id: string;
-  date: string;
-  description: string | null;
-  status: string;
-  lines: { debit: string; credit: string; account: { name: string } }[];
-}
 
 interface DashboardSummary {
   monthlyExpense: { month: string; total: number }[];
@@ -47,8 +34,44 @@ interface DashboardAlerts {
   }[];
 }
 
+interface DashboardKpi {
+  trades: { salesTotal: number; salesRemaining: number; purchaseTotal: number; purchaseRemaining: number };
+  bankBalance: number;
+  expenseClaims: { pendingCount: number; pendingAmount: number };
+  inventory: { lowStockCount: number };
+  approvals: { pendingCount: number };
+  budget: { year: number; totalBudget: number };
+}
+
+interface BudgetVsActual {
+  rows: { accountName: string; budget: number; actual: number; variance: number; rate: number }[];
+  totalBudget: number;
+  totalActual: number;
+  totalVariance: number;
+  totalRate: number;
+}
+
+interface JournalEntry {
+  id: string;
+  date: string;
+  description: string | null;
+  status: string;
+  lines: { debit: string; credit: string; account: { name: string } }[];
+}
+
+interface PendingApproval {
+  id: string;
+  documentType: string;
+  status: string;
+  currentStep: number;
+  totalSteps: number;
+  submittedBy: string;
+  createdAt: string;
+}
+
 const COLORS = {
   primary: "#7c5cbf",
+  primaryLight: "#ede8f5",
   success: "#4caf82",
   danger: "#d95454",
   warning: "#e5a336",
@@ -59,6 +82,17 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   PENDING: { label: "대기", color: COLORS.warning },
   OCR_DONE: { label: "OCR 완료", color: COLORS.primary },
   JOURNAL_CREATED: { label: "전표 생성", color: COLORS.success },
+};
+
+const JOURNAL_STATUS: Record<string, string> = {
+  DRAFT: "작성",
+  APPROVED: "승인",
+  POSTED: "전기",
+};
+
+const DOC_TYPE_LABEL: Record<string, string> = {
+  JOURNAL: "전표",
+  TAX_INVOICE: "세금계산서",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -87,75 +121,90 @@ function timeAgo(dateStr: string) {
 export default function DashboardPage() {
   const { tenantId } = useAuth();
   const router = useRouter();
-
-  const { data: documents = [] } = useQuery({
-    queryKey: ["documents"],
-    queryFn: () => apiGet<Document[]>(`/documents?tenantId=${tenantId}`),
-  });
-
-  const { data: journals = [] } = useQuery({
-    queryKey: ["journals"],
-    queryFn: () => apiGet<JournalEntry[]>(`/journals?tenantId=${tenantId}`),
-  });
+  const currentYear = new Date().getFullYear();
 
   const { data: summary } = useQuery({
-    queryKey: ["dashboard-summary"],
+    queryKey: ["dashboard-summary", tenantId],
     queryFn: () => apiGet<DashboardSummary>(`/reports/dashboard-summary?tenantId=${tenantId}`),
+    enabled: !!tenantId,
   });
 
   const { data: alerts } = useQuery({
-    queryKey: ["dashboard-alerts"],
+    queryKey: ["dashboard-alerts", tenantId],
     queryFn: () => apiGet<DashboardAlerts>(`/reports/dashboard-alerts?tenantId=${tenantId}`),
+    enabled: !!tenantId,
   });
 
-  const totalSpent = documents.reduce(
-    (sum, d) => sum + (d.totalAmount ? Number(d.totalAmount) : 0),
-    0,
-  );
+  const { data: kpi } = useQuery({
+    queryKey: ["dashboard-kpi", tenantId],
+    queryFn: () => apiGet<DashboardKpi>(`/reports/dashboard-kpi?tenantId=${tenantId}`),
+    enabled: !!tenantId,
+  });
 
-  const recentJournals = journals.slice(0, 5);
+  const { data: budgetData } = useQuery({
+    queryKey: ["budgets-vs-actual", tenantId, currentYear],
+    queryFn: () => apiGet<BudgetVsActual>(`/budgets/vs-actual?tenantId=${tenantId}&year=${currentYear}`),
+    enabled: !!tenantId,
+  });
 
-  // 파이 차트 데이터
+  const { data: recentJournals = [] } = useQuery({
+    queryKey: ["journals-recent", tenantId],
+    queryFn: () => apiGet<JournalEntry[]>(`/journals?tenantId=${tenantId}`),
+    enabled: !!tenantId,
+    select: (data) => data.slice(0, 5),
+  });
+
+  const { data: pendingApprovals = [] } = useQuery({
+    queryKey: ["approvals-pending", tenantId],
+    queryFn: () => apiGet<PendingApproval[]>(`/approvals/pending?tenantId=${tenantId}`),
+    enabled: !!tenantId,
+  });
+
+  // 파이 차트
   const pieData = (summary?.statusCounts || []).map((s) => ({
     name: STATUS_MAP[s.status]?.label || s.status,
     value: s.count,
     color: STATUS_MAP[s.status]?.color || COLORS.muted,
   }));
 
-  // 알림 항목 구성
+  const totalDocs = pieData.reduce((s, p) => s + p.value, 0);
+
+  // 예산 vs 실적 차트 데이터 (상위 10개)
+  const budgetChartData = (budgetData?.rows || [])
+    .filter((r) => r.budget > 0)
+    .slice(0, 10)
+    .map((r) => ({
+      name: r.accountName.length > 6 ? r.accountName.slice(0, 6) + "…" : r.accountName,
+      예산: r.budget,
+      실적: r.actual,
+      집행률: r.rate,
+    }));
+
+  // 알림 구성
   const alertItems: { type: string; icon: string; message: string; href: string }[] = [];
   if (alerts) {
     if (alerts.draftCount > 0) {
-      alertItems.push({
-        type: "warning",
-        icon: "!",
-        message: `${alerts.draftCount}건의 전표가 승인 대기 중입니다`,
-        href: "/journals",
-      });
+      alertItems.push({ type: "warning", icon: "!", message: `${alerts.draftCount}건의 전표가 승인 대기 중입니다`, href: "/journals" });
     }
     if (alerts.approvedCount > 0) {
-      alertItems.push({
-        type: "info",
-        icon: "i",
-        message: `${alerts.approvedCount}건의 전표가 전기 대기 중입니다`,
-        href: "/journals",
-      });
+      alertItems.push({ type: "info", icon: "i", message: `${alerts.approvedCount}건의 전표가 전기 대기 중입니다`, href: "/journals" });
     }
     if (!alerts.closing.isClosed && alerts.closing.daysUntilMonthEnd <= 3) {
-      alertItems.push({
-        type: "danger",
-        icon: "!",
-        message: `${alerts.closing.month}월 마감이 ${alerts.closing.daysUntilMonthEnd}일 남았습니다`,
-        href: "/closings",
-      });
+      alertItems.push({ type: "danger", icon: "!", message: `${alerts.closing.month}월 마감이 ${alerts.closing.daysUntilMonthEnd}일 남았습니다`, href: "/closings" });
     }
     if (alerts.pendingDocCount > 0) {
-      alertItems.push({
-        type: "muted",
-        icon: "i",
-        message: `${alerts.pendingDocCount}건의 영수증이 처리 대기 중입니다`,
-        href: "/documents",
-      });
+      alertItems.push({ type: "muted", icon: "i", message: `${alerts.pendingDocCount}건의 영수증이 처리 대기 중입니다`, href: "/documents" });
+    }
+  }
+  if (kpi) {
+    if (kpi.inventory.lowStockCount > 0) {
+      alertItems.push({ type: "danger", icon: "!", message: `${kpi.inventory.lowStockCount}개 품목의 재고가 부족합니다`, href: "/inventory" });
+    }
+    if (kpi.expenseClaims.pendingCount > 0) {
+      alertItems.push({ type: "warning", icon: "!", message: `${kpi.expenseClaims.pendingCount}건의 경비 정산이 대기 중입니다`, href: "/expense-claims" });
+    }
+    if (kpi.approvals.pendingCount > 0) {
+      alertItems.push({ type: "info", icon: "i", message: `${kpi.approvals.pendingCount}건의 결재가 대기 중입니다`, href: "/approvals" });
     }
   }
 
@@ -180,18 +229,19 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* KPI 카드 Row 1 — 재무 */}
       <div className={styles.cards}>
         <div className={styles.card}>
-          <div className={styles.cardLabel}>총 영수증</div>
-          <div className={styles.cardValue}>{documents.length}건</div>
+          <div className={styles.cardLabel}>당월 매출</div>
+          <div className={styles.cardValue} style={{ color: COLORS.primary }}>
+            ₩{fmt(kpi?.trades.salesTotal || 0)}
+          </div>
         </div>
         <div className={styles.card}>
-          <div className={styles.cardLabel}>총 지출</div>
-          <div className={styles.cardValue}>₩{fmt(totalSpent)}</div>
-        </div>
-        <div className={styles.card}>
-          <div className={styles.cardLabel}>총 전표</div>
-          <div className={styles.cardValue}>{journals.length}건</div>
+          <div className={styles.cardLabel}>당월 매입</div>
+          <div className={styles.cardValue} style={{ color: COLORS.warning }}>
+            ₩{fmt(kpi?.trades.purchaseTotal || 0)}
+          </div>
         </div>
         <div className={styles.card}>
           <div className={styles.cardLabel}>당기순이익</div>
@@ -202,8 +252,55 @@ export default function DashboardPage() {
             {summary ? `₩${fmt(summary.netIncome)}` : "-"}
           </div>
         </div>
+        <div className={styles.card}>
+          <div className={styles.cardLabel}>은행 잔고</div>
+          <div className={styles.cardValue} style={{ color: COLORS.primary }}>
+            ₩{fmt(kpi?.bankBalance || 0)}
+          </div>
+        </div>
       </div>
 
+      {/* KPI 카드 Row 2 — 운영 */}
+      <div className={styles.cards}>
+        <div className={styles.card}>
+          <div className={styles.cardLabel}>미수금</div>
+          <div
+            className={styles.cardValue}
+            style={{ color: (kpi?.trades.salesRemaining || 0) > 0 ? COLORS.danger : COLORS.success }}
+          >
+            ₩{fmt(kpi?.trades.salesRemaining || 0)}
+          </div>
+        </div>
+        <div className={styles.card}>
+          <div className={styles.cardLabel}>미지급금</div>
+          <div
+            className={styles.cardValue}
+            style={{ color: (kpi?.trades.purchaseRemaining || 0) > 0 ? COLORS.warning : COLORS.success }}
+          >
+            ₩{fmt(kpi?.trades.purchaseRemaining || 0)}
+          </div>
+        </div>
+        <div className={styles.card}>
+          <div className={styles.cardLabel}>경비 정산 대기</div>
+          <div className={styles.cardValue}>
+            {kpi?.expenseClaims.pendingCount || 0}건
+          </div>
+          {kpi && kpi.expenseClaims.pendingAmount > 0 && (
+            <div className={styles.cardSub}>₩{fmt(kpi.expenseClaims.pendingAmount)}</div>
+          )}
+        </div>
+        <div className={styles.card}>
+          <div className={styles.cardLabel}>재고 부족</div>
+          <div
+            className={styles.cardValue}
+            style={{ color: (kpi?.inventory.lowStockCount || 0) > 0 ? COLORS.danger : COLORS.success }}
+          >
+            {kpi?.inventory.lowStockCount || 0}건
+          </div>
+        </div>
+      </div>
+
+      {/* 차트 그리드 */}
       <div className={styles.chartGrid}>
         {/* 월별 지출 추이 */}
         <div className={styles.section}>
@@ -225,7 +322,7 @@ export default function DashboardPage() {
 
         {/* 영수증 처리 현황 */}
         <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>영수증 처리 현황</h2>
+          <h2 className={styles.sectionTitle}>영수증 처리 현황 ({totalDocs}건)</h2>
           {pieData.length > 0 ? (
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
@@ -252,6 +349,40 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* 예산 vs 실적 */}
+      {budgetChartData.length > 0 && (
+        <div className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>예산 vs 실적 ({currentYear}년)</h2>
+            {budgetData && (
+              <div className={styles.budgetSummary}>
+                <span>예산 ₩{fmt(budgetData.totalBudget)}</span>
+                <span>실적 ₩{fmt(budgetData.totalActual)}</span>
+                <span className={styles.budgetRate}>{budgetData.totalRate.toFixed(1)}%</span>
+              </div>
+            )}
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <ComposedChart data={budgetChartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e8e4f0" />
+              <XAxis dataKey="name" fontSize={11} />
+              <YAxis yAxisId="left" fontSize={12} tickFormatter={(v) => `${(v / 10000).toFixed(0)}만`} />
+              <YAxis yAxisId="right" orientation="right" fontSize={12} tickFormatter={(v) => `${v}%`} />
+              <Tooltip
+                formatter={(v, name) => {
+                  const n = Number(v);
+                  return name === "집행률" ? [`${n.toFixed(1)}%`, name] : [`₩${fmt(n)}`, name];
+                }}
+              />
+              <Legend />
+              <Bar yAxisId="left" dataKey="예산" fill={COLORS.primaryLight} radius={[4, 4, 0, 0]} />
+              <Bar yAxisId="left" dataKey="실적" fill={COLORS.primary} radius={[4, 4, 0, 0]} />
+              <Line yAxisId="right" type="monotone" dataKey="집행률" stroke={COLORS.warning} strokeWidth={2} dot={{ r: 3 }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
       {/* 상위 거래처 TOP5 */}
       {summary && summary.topVendors.length > 0 && (
         <div className={styles.section}>
@@ -268,6 +399,7 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* 하단 3열 그리드 */}
       <div className={styles.bottomGrid}>
         {/* 최근 전표 */}
         <div className={styles.section} style={{ marginBottom: 0 }}>
@@ -286,12 +418,12 @@ export default function DashboardPage() {
                 <tr key={j.id}>
                   <td>{new Date(j.date).toLocaleDateString("ko-KR")}</td>
                   <td>{j.description || "-"}</td>
-                  <td>{j.status}</td>
                   <td>
-                    ₩{j.lines
-                      .reduce((s, l) => s + Number(l.debit), 0)
-                      .toLocaleString()}
+                    <span className={styles.statusBadge} data-status={j.status}>
+                      {JOURNAL_STATUS[j.status] || j.status}
+                    </span>
                   </td>
+                  <td>₩{j.lines.reduce((s, l) => s + Number(l.debit), 0).toLocaleString()}</td>
                 </tr>
               ))}
               {recentJournals.length === 0 && (
@@ -303,6 +435,30 @@ export default function DashboardPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* 결재 대기 */}
+        <div className={styles.section} style={{ marginBottom: 0 }}>
+          <h2 className={styles.sectionTitle}>결재 대기</h2>
+          {pendingApprovals.length > 0 ? (
+            <div className={styles.approvalList}>
+              {pendingApprovals.slice(0, 8).map((a) => (
+                <div key={a.id} className={styles.approvalItem} onClick={() => router.push("/approvals")}>
+                  <div className={styles.approvalTop}>
+                    <span className={styles.approvalType}>
+                      {DOC_TYPE_LABEL[a.documentType] || a.documentType}
+                    </span>
+                    <span className={styles.approvalStep}>
+                      {a.currentStep}/{a.totalSteps}단계
+                    </span>
+                  </div>
+                  <div className={styles.approvalTime}>{timeAgo(a.createdAt)}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className={styles.empty}>대기 중인 결재가 없습니다</p>
+          )}
         </div>
 
         {/* 최근 활동 */}

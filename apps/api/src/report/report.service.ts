@@ -221,6 +221,100 @@ export class ReportService {
     };
   }
 
+  // 대시보드 KPI (매출/매입, 은행잔고, 경비정산, 재고, 결재, 예산)
+  async getDashboardKpi(tenantId: string) {
+    const now = new Date();
+    const year = now.getFullYear();
+
+    const [
+      salesTrades,
+      purchaseTrades,
+      bankAccounts,
+      expensePending,
+      inventorySummary,
+      approvalPending,
+      budgets,
+    ] = await Promise.all([
+      // 매출 합계
+      this.prisma.trade.aggregate({
+        where: { tenantId, tradeType: "SALES", status: { not: "CANCELLED" } },
+        _sum: { totalAmount: true, paidAmount: true },
+      }),
+      // 매입 합계
+      this.prisma.trade.aggregate({
+        where: { tenantId, tradeType: "PURCHASE", status: { not: "CANCELLED" } },
+        _sum: { totalAmount: true, paidAmount: true },
+      }),
+      // 은행 잔고 합계
+      this.prisma.bankAccount.aggregate({
+        where: { tenantId, status: "ACTIVE" },
+        _sum: { balance: true },
+      }),
+      // 경비 정산 대기
+      this.prisma.expenseClaim.findMany({
+        where: { tenantId, status: { in: ["PENDING_APPROVAL", "APPROVED"] } },
+        select: { totalAmount: true },
+      }),
+      // 재고 부족 품목 수
+      this.prisma.product.count({
+        where: {
+          tenantId,
+          currentStock: { lte: this.prisma.product.fields?.safetyStock as never },
+        },
+      }).catch(() => 0),
+      // 결재 대기 건수
+      this.prisma.approvalRequest.count({
+        where: { tenantId, status: "PENDING" },
+      }),
+      // 예산 합계
+      this.prisma.budget.aggregate({
+        where: { tenantId, year },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    // 재고 부족 (Prisma에서 필드 비교가 어려우므로 raw query)
+    const lowStockProducts = await this.prisma.$queryRaw<{ count: bigint }[]>(
+      Prisma.sql`
+        SELECT COUNT(*)::bigint as count FROM "Product"
+        WHERE "tenantId" = ${tenantId}
+          AND "currentStock" <= "safetyStock"
+          AND "safetyStock" > 0
+      `,
+    );
+    const lowStockCount = Number(lowStockProducts[0]?.count || 0);
+
+    const salesTotal = Number(salesTrades._sum.totalAmount || 0);
+    const salesPaid = Number(salesTrades._sum.paidAmount || 0);
+    const purchaseTotal = Number(purchaseTrades._sum.totalAmount || 0);
+    const purchasePaid = Number(purchaseTrades._sum.paidAmount || 0);
+
+    const pendingAmount = expensePending.reduce(
+      (sum, e) => sum + Number(e.totalAmount),
+      0,
+    );
+
+    return {
+      trades: {
+        salesTotal,
+        salesRemaining: salesTotal - salesPaid,
+        purchaseTotal,
+        purchaseRemaining: purchaseTotal - purchasePaid,
+      },
+      bankBalance: Number(bankAccounts._sum.balance || 0),
+      expenseClaims: {
+        pendingCount: expensePending.length,
+        pendingAmount,
+      },
+      inventory: { lowStockCount },
+      approvals: { pendingCount: approvalPending },
+      budget: {
+        year,
+        totalBudget: Number(budgets._sum.amount || 0),
+      },
+    };
+  }
+
   // 자금 일보: 현금성 계정의 일별 입출금 현황
   async getDailyCashReport(tenantId: string, startDate?: string, endDate?: string) {
     const cashCodes = ["10100", "10300"]; // 현금, 보통예금
