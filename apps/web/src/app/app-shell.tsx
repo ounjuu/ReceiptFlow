@@ -1,9 +1,10 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
+import { apiGet } from "@/lib/api";
 import styles from "./layout.module.css";
 
 const navItems = [
@@ -39,10 +40,31 @@ const ROLE_LABEL: Record<string, string> = {
   VIEWER: "열람자",
 };
 
+interface SearchItem {
+  id: string;
+  title: string;
+  subtitle?: string;
+  link: string;
+}
+
+interface SearchGroup {
+  entity: string;
+  label: string;
+  items: SearchItem[];
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, loading, logout, isAdmin, role } = useAuth();
+  const { user, loading, logout, isAdmin, role, tenantId } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+
+  // 검색 상태
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchGroup[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const isLoginPage = pathname === "/login";
 
@@ -52,6 +74,63 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       router.push("/login");
     }
   }, [loading, user, isLoginPage, router]);
+
+  // 바깥 클릭 시 드롭다운 닫기
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const doSearch = useCallback(
+    async (q: string) => {
+      if (!q.trim() || !tenantId) {
+        setSearchResults([]);
+        setShowDropdown(false);
+        return;
+      }
+      setSearching(true);
+      try {
+        const data = await apiGet<{ results: SearchGroup[]; totalCount: number }>(
+          `/search?tenantId=${tenantId}&q=${encodeURIComponent(q.trim())}&limit=5`,
+        );
+        setSearchResults(data.results);
+        setShowDropdown(data.results.length > 0);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    },
+    [tenantId],
+  );
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setSearchQuery(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => doSearch(val), 300);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      setShowDropdown(false);
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+    if (e.key === "Escape") {
+      setShowDropdown(false);
+    }
+  };
+
+  const handleItemClick = (link: string) => {
+    setShowDropdown(false);
+    setSearchQuery("");
+    router.push(link);
+  };
 
   // 로그인 페이지: 사이드바/헤더 없이 렌더링
   if (isLoginPage) {
@@ -97,6 +176,48 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className={styles.main}>
         <header className={styles.header}>
           <span>LedgerFlow ERP</span>
+          <div className={styles.searchBar} ref={searchRef}>
+            <input
+              className={styles.searchInput}
+              type="text"
+              placeholder="통합 검색 (거래처, 전표, 계정과목...)"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onKeyDown={handleSearchKeyDown}
+              onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
+            />
+            {searching && <span className={styles.searchSpinner}>검색 중...</span>}
+            {showDropdown && searchResults.length > 0 && (
+              <div className={styles.searchDropdown}>
+                {searchResults.map((group) => (
+                  <div key={group.entity} className={styles.searchGroup}>
+                    <div className={styles.searchGroupLabel}>{group.label}</div>
+                    {group.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className={styles.searchItem}
+                        onClick={() => handleItemClick(item.link)}
+                      >
+                        <span className={styles.searchItemTitle}>{item.title}</span>
+                        {item.subtitle && (
+                          <span className={styles.searchItemSub}>{item.subtitle}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+                <div
+                  className={styles.searchViewAll}
+                  onClick={() => {
+                    setShowDropdown(false);
+                    router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+                  }}
+                >
+                  전체 결과 보기
+                </div>
+              </div>
+            )}
+          </div>
           <div className={styles.userArea}>
             {role && (
               <span className={styles.roleBadge}>

@@ -99,6 +99,113 @@
   border-color: var(--danger);
 }
 
+/* 검색바 */
+.searchBar {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+  margin: 0 24px;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  background: var(--bg);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.searchInput:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.searchSpinner {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.searchDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.searchGroup {
+  border-bottom: 1px solid var(--border);
+}
+
+.searchGroup:last-of-type {
+  border-bottom: none;
+}
+
+.searchGroupLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  padding: 8px 14px 4px;
+  letter-spacing: 0.03em;
+}
+
+.searchItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.searchItem:hover {
+  background: var(--primary-light);
+}
+
+.searchItemTitle {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.searchItemSub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.searchViewAll {
+  padding: 10px 14px;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  border-top: 1px solid var(--border);
+}
+
+.searchViewAll:hover {
+  background: var(--primary-light);
+}
+
 .content {
   flex: 1;
   padding: 24px;
