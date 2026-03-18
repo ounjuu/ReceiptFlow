@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "@/lib/theme";
 import { apiPatch } from "@/lib/api";
 import styles from "./Settings.module.css";
 
@@ -21,8 +22,15 @@ const NOTIF_KEYS = [
   { key: "notif_expense", label: "경비 정산 알림", desc: "경비 정산 대기 건이 있을 때 알림" },
 ];
 
+const THEME_OPTIONS = [
+  { value: "light", label: "라이트", desc: "밝은 테마" },
+  { value: "dark", label: "다크", desc: "어두운 테마" },
+  { value: "system", label: "시스템", desc: "OS 설정에 따라 자동 전환" },
+] as const;
+
 export default function Settings() {
   const { user, role, refreshUser } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [tab, setTab] = useState<Tab>("profile");
 
   // 프로필 탭
@@ -213,7 +221,27 @@ export default function Settings() {
 
       {tab === "notifications" && (
         <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>알림 설정</h2>
+          <h2 className={styles.sectionTitle}>테마</h2>
+          <div className={styles.radioGroup}>
+            {THEME_OPTIONS.map((opt) => (
+              <label key={opt.value} className={`${styles.radioItem} ${theme === opt.value ? styles.radioActive : ""}`}>
+                <input
+                  type="radio"
+                  name="theme"
+                  value={opt.value}
+                  checked={theme === opt.value}
+                  onChange={() => setTheme(opt.value)}
+                  className={styles.radioInput}
+                />
+                <div>
+                  <div className={styles.toggleLabel}>{opt.label}</div>
+                  <div className={styles.toggleDesc}>{opt.desc}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+
+          <h2 className={styles.sectionTitle} style={{ marginTop: 24 }}>알림</h2>
           <div className={styles.toggleList}>
             {NOTIF_KEYS.map((n) => (
               <div key={n.key} className={styles.toggleItem}>

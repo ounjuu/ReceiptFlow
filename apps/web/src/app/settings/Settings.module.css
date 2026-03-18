@@ -163,6 +163,38 @@
   margin-top: 2px;
 }
 
+/* 라디오 그룹 (테마 선택) */
+.radioGroup {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.radioItem {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.radioItem:hover {
+  background: var(--primary-light);
+}
+
+.radioActive {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.radioInput {
+  accent-color: var(--primary);
+}
+
 /* 토글 스위치 */
 .switch {
   position: relative;

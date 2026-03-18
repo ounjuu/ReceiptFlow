@@ -323,6 +323,28 @@
 .notif_info .notifDot { background: #7c5cbf; }
 .notif_muted .notifDot { background: #8578a0; }
 
+/* 테마 토글 */
+.themeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  margin-left: 8px;
+  padding: 0;
+}
+
+.themeBtn:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
 .content {
   flex: 1;
   padding: 24px;

@@ -15,6 +15,22 @@
   --radius: 10px;
 }
 
+html[data-theme="dark"] {
+  --bg: #1a1820;
+  --sidebar-bg: #2a2430;
+  --sidebar-text: #b8afc8;
+  --sidebar-active: #9d7ce0;
+  --card-bg: #2a2430;
+  --border: #3d3540;
+  --text: #f5f3f8;
+  --text-muted: #9b92aa;
+  --primary: #9d7ce0;
+  --primary-light: #3d3540;
+  --success: #5ab893;
+  --warning: #f0b543;
+  --danger: #e66666;
+}
+
 * {
   margin: 0;
   padding: 0;
