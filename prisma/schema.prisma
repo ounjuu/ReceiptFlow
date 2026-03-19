@@ -42,6 +42,7 @@ model Tenant {
   inventoryTransactions InventoryTransaction[]
   bankAccounts         BankAccount[]
   bankTransactions     BankTransaction[]
+  journalRules         JournalRule[]
 }
 
 model User {
@@ -95,8 +96,32 @@ model Account {
   fixedAssetsAsAccumulated   FixedAsset[] @relation("AccumulatedDepAccount")
   budgets                    Budget[]
   bankAccounts               BankAccount[]
+  journalRulesAsDebit        JournalRule[] @relation("DebitAccount")
+  journalRulesAsCredit       JournalRule[] @relation("CreditAccount")
 
   @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+// 전표 자동 생성 규칙
+model JournalRule {
+  id              String   @id @default(uuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  name            String
+  vendorName      String?
+  keywords        String?
+  amountMin       Decimal? @db.Decimal(18, 2)
+  amountMax       Decimal? @db.Decimal(18, 2)
+  debitAccountId  String
+  debitAccount    Account  @relation("DebitAccount", fields: [debitAccountId], references: [id])
+  creditAccountId String
+  creditAccount   Account  @relation("CreditAccount", fields: [creditAccountId], references: [id])
+  priority        Int      @default(0)
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
   @@index([tenantId])
 }
 

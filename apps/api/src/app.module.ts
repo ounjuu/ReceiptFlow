@@ -23,9 +23,10 @@ import { ExpenseClaimModule } from "./expense-claim/expense-claim.module";
 import { InventoryModule } from "./inventory/inventory.module";
 import { BankAccountModule } from "./bank-account/bank-account.module";
 import { SearchModule } from "./search/search.module";
+import { JournalRuleModule } from "./journal-rule/journal-rule.module";
 
 @Module({
-  imports: [PrismaModule, AuthModule, DocumentModule, JournalModule, ReportModule, AccountModule, VendorModule, ClosingModule, AuditLogModule, JournalTemplateModule, ExchangeRateModule, TaxInvoiceModule, FixedAssetModule, ApprovalModule, PayrollModule, BudgetModule, ProjectModule, TradeModule, DepartmentModule, CostModule, ExpenseClaimModule, InventoryModule, BankAccountModule, SearchModule],
+  imports: [PrismaModule, AuthModule, DocumentModule, JournalModule, ReportModule, AccountModule, VendorModule, ClosingModule, AuditLogModule, JournalTemplateModule, ExchangeRateModule, TaxInvoiceModule, FixedAssetModule, ApprovalModule, PayrollModule, BudgetModule, ProjectModule, TradeModule, DepartmentModule, CostModule, ExpenseClaimModule, InventoryModule, BankAccountModule, SearchModule, JournalRuleModule],
   controllers: [],
   providers: [],
 })

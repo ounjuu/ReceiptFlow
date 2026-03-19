@@ -1,0 +1,184 @@
+.title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.addBtn {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.addBtn:hover {
+  opacity: 0.9;
+}
+
+.enabledBadge {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.enabledBadge[data-enabled="true"] {
+  background: #d4edda;
+  color: #166534;
+}
+
+.enabledBadge[data-enabled="false"] {
+  background: #f0edf5;
+  color: #8578a0;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+}
+
+.editBtn,
+.deleteBtn {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+.editBtn {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.editBtn:hover {
+  opacity: 0.8;
+}
+
+.deleteBtn {
+  background: #fde2e2;
+  color: #d95454;
+}
+
+.deleteBtn:hover {
+  opacity: 0.8;
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 40px 0;
+}
+
+/* 모달 */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 24px;
+  width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modalTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.input,
+.select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  background: var(--bg);
+  outline: none;
+}
+
+.input:focus,
+.select:focus {
+  border-color: var(--primary);
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+}
+
+.row .field {
+  flex: 1;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.cancelBtn {
+  background: var(--bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.saveBtn {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.saveBtn:disabled {
+  opacity: 0.5;
+}
+
+.priority {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.vendorName {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.keywords {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.amountRange {
+  font-size: 0.8rem;
+  white-space: nowrap;
+}

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { JournalRuleService } from "../journal-rule/journal-rule.service";
 import { UploadDocumentDto } from "./dto/upload-document.dto";
 import { CreateDocumentDto } from "./dto/create-document.dto";
 import { UpdateDocumentDto } from "./dto/update-document.dto";
@@ -10,7 +11,10 @@ const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8001";
 
 @Injectable()
 export class DocumentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly journalRuleService: JournalRuleService,
+  ) {}
 
   // 영수증 이미지 업로드 → Document 생성
   async create(dto: UploadDocumentDto, file: Express.Multer.File) {
@@ -150,34 +154,38 @@ export class DocumentService {
       throw new BadRequestException("사업자등록번호는 필수입니다");
     }
 
-    // 1. AI 서비스에 계정 분류 요청
-    const classification = await this.classifyVendor(dto.vendorName);
+    // 1. 규칙 매칭 우선 시도
+    const ruleMatch = await this.journalRuleService.matchRule(
+      dto.tenantId,
+      dto.vendorName,
+      dto.totalAmount,
+    );
 
-    // 2. 추천된 계정과목 조회
-    const expenseAccount = await this.prisma.account.findUnique({
-      where: {
-        tenantId_code: {
-          tenantId: dto.tenantId,
-          code: classification.accountCode,
-        },
-      },
-    });
+    let debitAccountId: string;
+    let creditAccountId: string;
+    let classification: { accountCode: string; accountName: string; confidence: number } | null = null;
 
-    // 추천 계정이 없으면 지급수수료(51200)로 대체
-    const finalAccount =
-      expenseAccount ??
-      (await this.prisma.account.findUnique({
-        where: {
-          tenantId_code: { tenantId: dto.tenantId, code: "51200" },
-        },
-      }));
+    if (ruleMatch) {
+      // 규칙 매칭 성공 → 규칙의 계정 사용
+      debitAccountId = ruleMatch.debitAccountId;
+      creditAccountId = ruleMatch.creditAccountId;
+    } else {
+      // 규칙 없음 → AI 분류 fallback
+      classification = await this.classifyVendor(dto.vendorName);
 
-    // 현금 계정 조회
-    const cashAccount = await this.prisma.account.findUnique({
-      where: {
-        tenantId_code: { tenantId: dto.tenantId, code: "10100" },
-      },
-    });
+      const expenseAccount = await this.prisma.account.findUnique({
+        where: { tenantId_code: { tenantId: dto.tenantId, code: classification.accountCode } },
+      });
+      const finalAccount = expenseAccount ?? await this.prisma.account.findUnique({
+        where: { tenantId_code: { tenantId: dto.tenantId, code: "51200" } },
+      });
+      const cashAccount = await this.prisma.account.findUnique({
+        where: { tenantId_code: { tenantId: dto.tenantId, code: "10100" } },
+      });
+
+      debitAccountId = finalAccount!.id;
+      creditAccountId = cashAccount!.id;
+    }
 
     // 3. Document + JournalEntry + JournalLine 트랜잭션으로 생성
     const result = await this.prisma.$transaction(async (tx) => {
@@ -212,13 +220,13 @@ export class DocumentService {
           lines: {
             create: [
               {
-                accountId: finalAccount!.id,
+                accountId: debitAccountId,
                 vendorId: vendor.id,
                 debit: dto.totalAmount,
                 credit: 0,
               },
               {
-                accountId: cashAccount!.id,
+                accountId: creditAccountId,
                 vendorId: vendor.id,
                 debit: 0,
                 credit: dto.totalAmount,

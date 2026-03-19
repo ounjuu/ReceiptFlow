@@ -34,6 +34,7 @@ const navItems = [
   { href: "/vat-returns", label: "부가세 신고" },
   { href: "/exchange-rates", label: "환율 관리" },
   { href: "/journal-templates", label: "반복 전표" },
+  { href: "/journal-rules", label: "자동 전표 규칙" },
 ];
 
 const ROLE_LABEL: Record<string, string> = {
