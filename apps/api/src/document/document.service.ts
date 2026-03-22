@@ -7,7 +7,7 @@ import { UpdateDocumentDto } from "./dto/update-document.dto";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8001";
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
 
 @Injectable()
 export class DocumentService {

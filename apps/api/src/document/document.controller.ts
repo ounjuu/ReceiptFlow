@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Query,
+  Req,
   UploadedFile,
   UploadedFiles,
   UseInterceptors,
@@ -44,7 +45,11 @@ export class DocumentController {
   async upload(
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: UploadDocumentDto,
+    @Req() req: any,
   ) {
+    if (!dto.tenantId && req.user?.memberships?.length) {
+      dto.tenantId = req.user.memberships[0].tenantId;
+    }
     return this.documentService.uploadWithOcr(dto, file);
   }
 
@@ -64,7 +69,11 @@ export class DocumentController {
   async uploadBatch(
     @UploadedFiles() files: Express.Multer.File[],
     @Body() dto: UploadDocumentDto,
+    @Req() req: any,
   ) {
+    if (!dto.tenantId && req.user?.memberships?.length) {
+      dto.tenantId = req.user.memberships[0].tenantId;
+    }
     return this.documentService.batchUploadWithOcr(dto, files);
   }
 
