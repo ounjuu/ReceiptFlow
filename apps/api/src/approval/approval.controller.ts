@@ -16,6 +16,7 @@ import { ProcessApprovalDto } from "./dto/process-approval.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("approvals")
@@ -25,7 +26,7 @@ export class ApprovalController {
   // 결재선 조회
   @Get("lines")
   async getLines(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("documentType") documentType?: string,
   ) {
     return this.service.getApprovalLines(tenantId, documentType);
@@ -34,7 +35,8 @@ export class ApprovalController {
   // 결재선 설정
   @Put("lines")
   @Roles("ADMIN")
-  async setLines(@Body() dto: SetApprovalLinesDto) {
+  async setLines(@CurrentTenant() tenantId: string, @Body() dto: SetApprovalLinesDto) {
+    dto.tenantId = tenantId;
     return this.service.setApprovalLines(dto);
   }
 
@@ -42,11 +44,13 @@ export class ApprovalController {
   @Post("submit")
   @Roles("ADMIN", "ACCOUNTANT")
   async submit(
+    @CurrentTenant() tenantId: string,
     @Body() dto: SubmitApprovalDto,
     @Req() req: { user: { userId: string } },
   ) {
+    dto.tenantId = tenantId;
     return this.service.submitForApproval(
-      dto.tenantId,
+      tenantId,
       dto.documentType,
       dto.documentId,
       req.user.userId,
@@ -56,7 +60,7 @@ export class ApprovalController {
   // 내 결재 대기 건
   @Get("pending")
   async getPending(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Req() req: { user: { userId: string } },
   ) {
     return this.service.getMyPendingApprovals(tenantId, req.user.userId);
@@ -65,7 +69,7 @@ export class ApprovalController {
   // 내 결재 요청 현황
   @Get("submissions")
   async getSubmissions(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Req() req: { user: { userId: string } },
   ) {
     return this.service.getMySubmissions(tenantId, req.user.userId);
@@ -74,7 +78,7 @@ export class ApprovalController {
   // 결재 이력 (특정 문서)
   @Get("history")
   async getHistory(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("documentType") documentType: string,
     @Query("documentId") documentId: string,
   ) {

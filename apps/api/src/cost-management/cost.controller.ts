@@ -8,6 +8,7 @@ import { UpdateProductDto } from "./dto/update-product.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("cost-management")
@@ -18,7 +19,7 @@ export class CostController {
 
   @Get("analysis/by-item")
   async analysisByItem(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
   ) {
@@ -27,7 +28,7 @@ export class CostController {
 
   @Get("analysis/by-vendor")
   async analysisByVendor(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
   ) {
@@ -36,7 +37,7 @@ export class CostController {
 
   @Get("analysis/by-project")
   async analysisByProject(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
   ) {
@@ -45,7 +46,7 @@ export class CostController {
 
   @Get("analysis/by-department")
   async analysisByDepartment(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
   ) {
@@ -54,7 +55,7 @@ export class CostController {
 
   @Get("analysis/variance")
   async analysisVariance(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
   ) {
@@ -64,25 +65,26 @@ export class CostController {
   // ─── 품목 CRUD ───
 
   @Get("products")
-  async listProducts(@Query("tenantId") tenantId: string) {
+  async listProducts(@CurrentTenant() tenantId: string) {
     return this.service.getProducts(tenantId);
   }
 
   @Post("products")
   @Roles("ADMIN", "ACCOUNTANT")
-  async createProduct(@Body() dto: CreateProductDto) {
+  async createProduct(@CurrentTenant() tenantId: string, @Body() dto: CreateProductDto) {
+    dto.tenantId = tenantId;
     return this.service.createProduct(dto);
   }
 
   @Post("products/batch")
   @Roles("ADMIN", "ACCOUNTANT")
   async batchCreateProducts(
+    @CurrentTenant() tenantId: string,
     @Body() body: {
-      tenantId: string;
       items: { code: string; name: string; category?: string; unit?: string; standardCost?: number; safetyStock?: number }[];
     },
   ) {
-    return this.service.batchCreateProducts(body.tenantId, body.items);
+    return this.service.batchCreateProducts(tenantId, body.items);
   }
 
   @Patch("products/:id")

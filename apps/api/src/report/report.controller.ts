@@ -1,6 +1,7 @@
 import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import { ReportService } from "./report.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard)
 @Controller("reports")
@@ -9,7 +10,7 @@ export class ReportController {
 
   @Get("trial-balance")
   async trialBalance(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
   ) {
@@ -18,7 +19,7 @@ export class ReportController {
 
   @Get("income-statement")
   async incomeStatement(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
   ) {
@@ -27,7 +28,7 @@ export class ReportController {
 
   @Get("balance-sheet")
   async balanceSheet(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
   ) {
@@ -36,7 +37,7 @@ export class ReportController {
 
   @Get("daily-cash")
   async dailyCash(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
   ) {
@@ -45,7 +46,7 @@ export class ReportController {
 
   @Get("cash-flow")
   async cashFlow(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
   ) {
@@ -53,17 +54,17 @@ export class ReportController {
   }
 
   @Get("dashboard-kpi")
-  async dashboardKpi(@Query("tenantId") tenantId: string) {
+  async dashboardKpi(@CurrentTenant() tenantId: string) {
     return this.reportService.getDashboardKpi(tenantId);
   }
 
   @Get("dashboard-summary")
-  async dashboardSummary(@Query("tenantId") tenantId: string) {
+  async dashboardSummary(@CurrentTenant() tenantId: string) {
     return this.reportService.dashboardSummary(tenantId);
   }
 
   @Get("dashboard-alerts")
-  async dashboardAlerts(@Query("tenantId") tenantId: string) {
+  async dashboardAlerts(@CurrentTenant() tenantId: string) {
     return this.reportService.getDashboardAlerts(tenantId);
   }
 }

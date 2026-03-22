@@ -15,6 +15,7 @@ import { UpdateVendorDto } from "./dto/update-vendor.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("vendors")
@@ -22,13 +23,13 @@ export class VendorController {
   constructor(private readonly vendorService: VendorService) {}
 
   @Get()
-  async findAll(@Query("tenantId") tenantId: string) {
+  async findAll(@CurrentTenant() tenantId: string) {
     return this.vendorService.findAll(tenantId);
   }
 
   @Get("search")
   async searchByBizNo(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("bizNo") bizNo: string,
   ) {
     const vendor = await this.vendorService.findByBizNo(tenantId, bizNo);
@@ -38,7 +39,7 @@ export class VendorController {
   // 사업자번호 부분검색 (자동완성)
   @Get("autocomplete")
   async autocomplete(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("q") query: string,
   ) {
     if (!query || query.length < 1) return [];
@@ -46,14 +47,14 @@ export class VendorController {
   }
 
   @Get("balance-summary")
-  async balanceSummary(@Query("tenantId") tenantId: string) {
+  async balanceSummary(@CurrentTenant() tenantId: string) {
     return this.vendorService.getBalanceSummary(tenantId);
   }
 
   @Get(":id/ledger")
   async vendorLedger(
     @Param("id") id: string,
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
   ) {
@@ -67,13 +68,17 @@ export class VendorController {
 
   @Post("batch")
   @Roles("ADMIN", "ACCOUNTANT")
-  async batchCreate(@Body() body: { tenantId: string; items: { name: string; bizNo?: string }[] }) {
-    return this.vendorService.batchCreate(body.tenantId, body.items);
+  async batchCreate(
+    @CurrentTenant() tenantId: string,
+    @Body() body: { items: { name: string; bizNo?: string }[] },
+  ) {
+    return this.vendorService.batchCreate(tenantId, body.items);
   }
 
   @Post()
   @Roles("ADMIN", "ACCOUNTANT")
-  async create(@Body() dto: CreateVendorDto) {
+  async create(@CurrentTenant() tenantId: string, @Body() dto: CreateVendorDto) {
+    dto.tenantId = tenantId;
     return this.vendorService.create(dto);
   }
 

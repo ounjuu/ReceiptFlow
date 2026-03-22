@@ -3,6 +3,7 @@ import { AuditLogService } from "./audit-log.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("audit-logs")
@@ -12,7 +13,7 @@ export class AuditLogController {
   @Get()
   @Roles("ADMIN")
   async findAll(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("action") action?: string,
     @Query("entityType") entityType?: string,
     @Query("startDate") startDate?: string,

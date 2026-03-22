@@ -14,6 +14,7 @@ import { UpdateEmployeeDto } from "./dto/update-employee.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("payroll")
@@ -23,14 +24,14 @@ export class PayrollController {
   // --- 직원 ---
 
   @Get("employees")
-  async getEmployees(@Query("tenantId") tenantId: string) {
+  async getEmployees(@CurrentTenant() tenantId: string) {
     return this.service.getEmployees(tenantId);
   }
 
   // 급여 현황 (`:id` 라우트 충돌 방지 — 정적 경로 먼저)
   @Get("records")
   async getRecords(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("year") year: string,
     @Query("month") month: string,
   ) {
@@ -39,7 +40,7 @@ export class PayrollController {
 
   @Get("summary")
   async getSummary(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("year") year: string,
     @Query("month") month: string,
   ) {
@@ -53,7 +54,8 @@ export class PayrollController {
 
   @Post("employees")
   @Roles("ADMIN", "ACCOUNTANT")
-  async createEmployee(@Body() dto: CreateEmployeeDto) {
+  async createEmployee(@CurrentTenant() tenantId: string, @Body() dto: CreateEmployeeDto) {
+    dto.tenantId = tenantId;
     return this.service.createEmployee(dto);
   }
 
@@ -71,8 +73,9 @@ export class PayrollController {
   @Post("process")
   @Roles("ADMIN", "ACCOUNTANT")
   async runPayroll(
-    @Body() body: { tenantId: string; year: number; month: number },
+    @CurrentTenant() tenantId: string,
+    @Body() body: { year: number; month: number },
   ) {
-    return this.service.runMonthlyPayroll(body.tenantId, body.year, body.month);
+    return this.service.runMonthlyPayroll(tenantId, body.year, body.month);
   }
 }

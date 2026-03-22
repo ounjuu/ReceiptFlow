@@ -3,6 +3,7 @@ import { ExchangeRateService } from "./exchange-rate.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("exchange-rates")
@@ -10,13 +11,13 @@ export class ExchangeRateController {
   constructor(private readonly exchangeRateService: ExchangeRateService) {}
 
   @Get()
-  async findAll(@Query("tenantId") tenantId: string) {
+  async findAll(@CurrentTenant() tenantId: string) {
     return this.exchangeRateService.findAll(tenantId);
   }
 
   @Get("latest")
   async getLatest(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("currency") currency: string,
   ) {
     return this.exchangeRateService.getLatest(tenantId, currency);
@@ -25,9 +26,10 @@ export class ExchangeRateController {
   @Post()
   @Roles("ADMIN", "ACCOUNTANT")
   async create(
-    @Body() body: { tenantId: string; currency: string; rate: number; date: string },
+    @CurrentTenant() tenantId: string,
+    @Body() body: { currency: string; rate: number; date: string },
   ) {
-    return this.exchangeRateService.create(body);
+    return this.exchangeRateService.create({ tenantId, ...body });
   }
 
   @Delete(":id")

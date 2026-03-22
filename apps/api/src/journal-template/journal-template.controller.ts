@@ -5,7 +5,6 @@ import {
   Patch,
   Delete,
   Param,
-  Query,
   Body,
   Req,
   UseGuards,
@@ -14,6 +13,7 @@ import { JournalTemplateService } from "./journal-template.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @Controller("journal-templates")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -21,7 +21,7 @@ export class JournalTemplateController {
   constructor(private readonly service: JournalTemplateService) {}
 
   @Get()
-  findAll(@Query("tenantId") tenantId: string) {
+  findAll(@CurrentTenant() tenantId: string) {
     return this.service.findAll(tenantId);
   }
 
@@ -52,9 +52,10 @@ export class JournalTemplateController {
   @Roles("ADMIN", "ACCOUNTANT")
   apply(
     @Param("id") id: string,
-    @Body() body: { tenantId: string; date: string },
+    @CurrentTenant() tenantId: string,
+    @Body() body: { date: string },
     @Req() req: any,
   ) {
-    return this.service.apply(id, body.tenantId, body.date, req.user?.id);
+    return this.service.apply(id, tenantId, body.date, req.user?.id);
   }
 }

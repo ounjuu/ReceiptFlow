@@ -15,6 +15,7 @@ import { UpdateExpenseClaimDto } from "./dto/update-expense-claim.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("expense-claims")
@@ -23,13 +24,13 @@ export class ExpenseClaimController {
 
   // 정적 경로 먼저
   @Get("summary")
-  async getSummary(@Query("tenantId") tenantId: string) {
+  async getSummary(@CurrentTenant() tenantId: string) {
     return this.service.getSummary(tenantId);
   }
 
   @Get()
   async findAll(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("status") status?: string,
     @Query("employeeId") employeeId?: string,
     @Query("startDate") startDate?: string,
@@ -44,7 +45,11 @@ export class ExpenseClaimController {
   }
 
   @Post()
-  async create(@Body() dto: CreateExpenseClaimDto) {
+  async create(
+    @CurrentTenant() tenantId: string,
+    @Body() dto: CreateExpenseClaimDto,
+  ) {
+    dto.tenantId = tenantId;
     return this.service.create(dto);
   }
 

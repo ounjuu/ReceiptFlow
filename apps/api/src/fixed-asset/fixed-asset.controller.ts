@@ -4,7 +4,6 @@ import {
   Get,
   Patch,
   Param,
-  Query,
   Body,
   UseGuards,
 } from "@nestjs/common";
@@ -14,6 +13,7 @@ import { UpdateFixedAssetDto } from "./dto/update-fixed-asset.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("fixed-assets")
@@ -21,7 +21,7 @@ export class FixedAssetController {
   constructor(private readonly service: FixedAssetService) {}
 
   @Get()
-  async findAll(@Query("tenantId") tenantId: string) {
+  async findAll(@CurrentTenant() tenantId: string) {
     return this.service.findAll(tenantId);
   }
 
@@ -29,10 +29,11 @@ export class FixedAssetController {
   @Post("depreciation")
   @Roles("ADMIN", "ACCOUNTANT")
   async runDepreciation(
-    @Body() body: { tenantId: string; year: number; month: number },
+    @CurrentTenant() tenantId: string,
+    @Body() body: { year: number; month: number },
   ) {
     return this.service.runMonthlyDepreciation(
-      body.tenantId,
+      tenantId,
       body.year,
       body.month,
     );
@@ -50,7 +51,8 @@ export class FixedAssetController {
 
   @Post()
   @Roles("ADMIN", "ACCOUNTANT")
-  async create(@Body() dto: CreateFixedAssetDto) {
+  async create(@CurrentTenant() tenantId: string, @Body() dto: CreateFixedAssetDto) {
+    dto.tenantId = tenantId;
     return this.service.create(dto);
   }
 

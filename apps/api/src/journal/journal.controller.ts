@@ -12,6 +12,7 @@ import {
   UseInterceptors,
   UploadedFile,
 } from "@nestjs/common";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
 import { extname } from "path";
@@ -29,7 +30,8 @@ export class JournalController {
 
   @Post()
   @Roles("ADMIN", "ACCOUNTANT")
-  async create(@Body() dto: CreateJournalDto, @Req() req: { user: { sub: string } }) {
+  async create(@CurrentTenant() tenantId: string, @Body() dto: CreateJournalDto, @Req() req: { user: { sub: string } }) {
+    dto.tenantId = tenantId;
     return this.journalService.create(dto, req.user.sub);
   }
 
@@ -46,8 +48,8 @@ export class JournalController {
   @Post("batch")
   @Roles("ADMIN", "ACCOUNTANT")
   async batchCreate(
+    @CurrentTenant() tenantId: string,
     @Body() body: {
-      tenantId: string;
       journals: {
         date: string;
         description?: string;
@@ -57,7 +59,7 @@ export class JournalController {
     },
     @Req() req: { user: { sub: string } },
   ) {
-    return this.journalService.batchCreate(body.tenantId, body.journals, req.user.sub);
+    return this.journalService.batchCreate(tenantId, body.journals, req.user.sub);
   }
 
   // 일괄 상태 변경 (`:id` 라우트보다 먼저 선언)
@@ -69,7 +71,7 @@ export class JournalController {
 
   @Get()
   async findAll(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
   ) {

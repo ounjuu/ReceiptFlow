@@ -13,6 +13,7 @@ import { CreateBudgetDto } from "./dto/create-budget.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("budgets")
@@ -22,7 +23,7 @@ export class BudgetController {
   // 정적 경로 먼저
   @Get("vs-actual")
   async getVsActual(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("year") year: string,
     @Query("month") month?: string,
   ) {
@@ -35,7 +36,7 @@ export class BudgetController {
 
   @Get("annual-summary")
   async getAnnualSummary(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("year") year: string,
   ) {
     return this.service.getAnnualSummary(tenantId, Number(year));
@@ -43,7 +44,7 @@ export class BudgetController {
 
   @Get()
   async list(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("year") year: string,
   ) {
     return this.service.getBudgets(tenantId, Number(year));
@@ -51,7 +52,11 @@ export class BudgetController {
 
   @Post()
   @Roles("ADMIN", "ACCOUNTANT")
-  async upsert(@Body() dto: CreateBudgetDto) {
+  async upsert(
+    @CurrentTenant() tenantId: string,
+    @Body() dto: CreateBudgetDto,
+  ) {
+    dto.tenantId = tenantId;
     return this.service.upsertBudget(dto);
   }
 

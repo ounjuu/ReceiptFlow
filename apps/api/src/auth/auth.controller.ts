@@ -1,8 +1,9 @@
-import { Controller, Post, Get, Patch, Delete, Body, Param, Query, UseGuards, Request } from "@nestjs/common";
+import { Controller, Post, Get, Patch, Delete, Body, Param, UseGuards, Request } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { RolesGuard } from "./roles.guard";
 import { Roles } from "./roles.decorator";
+import { CurrentTenant } from "./current-tenant.decorator";
 
 @Controller("auth")
 export class AuthController {
@@ -51,7 +52,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("ADMIN")
   @Get("members")
-  async getMembers(@Query("tenantId") tenantId: string) {
+  async getMembers(@CurrentTenant() tenantId: string) {
     return this.authService.getMembers(tenantId);
   }
 
@@ -59,9 +60,10 @@ export class AuthController {
   @Roles("ADMIN")
   @Post("invite")
   async invite(
-    @Body() body: { email: string; role: string; tenantId: string },
+    @CurrentTenant() tenantId: string,
+    @Body() body: { email: string; role: string },
   ) {
-    return this.authService.invite(body.email, body.role, body.tenantId);
+    return this.authService.invite(body.email, body.role, tenantId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

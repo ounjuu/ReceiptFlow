@@ -5,112 +5,20 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload } from "@/lib/api";
 import { API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { exportToXlsx } from "@/lib/export-xlsx";
-import { parseXlsx, downloadTemplate } from "@/lib/import-xlsx";
+import { parseXlsx } from "@/lib/import-xlsx";
 import styles from "./Journals.module.css";
-
-interface Account {
-  id: string;
-  code: string;
-  name: string;
-  type: string;
-}
-
-interface Vendor {
-  id: string;
-  name: string;
-  bizNo: string | null;
-}
-
-interface ProjectOption {
-  id: string;
-  code: string;
-  name: string;
-}
-
-interface DepartmentOption {
-  id: string;
-  code: string;
-  name: string;
-}
-
-interface JournalLine {
-  debit: string;
-  credit: string;
-  account: { id: string; code: string; name: string };
-  vendor: { id: string; name: string; bizNo: string | null } | null;
-  project: { id: string; code: string; name: string } | null;
-  department: { id: string; code: string; name: string } | null;
-}
-
-interface JournalAttachment {
-  id: string;
-  filename: string;
-  url: string;
-  createdAt: string;
-}
-
-interface JournalEntry {
-  id: string;
-  date: string;
-  description: string | null;
-  status: string;
-  currency: string;
-  exchangeRate: string;
-  documentId: string | null;
-  lines: JournalLine[];
-  attachments?: JournalAttachment[];
-}
-
-interface LineInput {
-  accountId: string;
-  vendorBizNo: string;
-  vendorName: string;
-  vendorId: string; // 기존 거래처 매칭 시
-  projectId: string;
-  departmentId: string;
-  debit: number;
-  credit: number;
-}
-
-function statusLabel(status: string) {
-  switch (status) {
-    case "DRAFT": return { text: "임시", cls: styles.statusDraft };
-    case "PENDING_APPROVAL": return { text: "결재중", cls: styles.statusPending };
-    case "APPROVED": return { text: "승인", cls: styles.statusApproved };
-    case "POSTED": return { text: "확정", cls: styles.statusPosted };
-    default: return { text: status, cls: "" };
-  }
-}
-
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  KRW: "₩",
-  USD: "$",
-  EUR: "€",
-  JPY: "¥",
-  CNY: "¥",
-  GBP: "£",
-};
-
-const CURRENCY_OPTIONS = [
-  { code: "KRW", name: "원 (KRW)" },
-  { code: "USD", name: "달러 (USD)" },
-  { code: "EUR", name: "유로 (EUR)" },
-  { code: "JPY", name: "엔 (JPY)" },
-  { code: "CNY", name: "위안 (CNY)" },
-  { code: "GBP", name: "파운드 (GBP)" },
-];
-
-const emptyLine = (): LineInput => ({
-  accountId: "",
-  vendorBizNo: "",
-  vendorName: "",
-  vendorId: "",
-  projectId: "",
-  departmentId: "",
-  debit: 0,
-  credit: 0,
-});
+import {
+  Account,
+  Vendor,
+  ProjectOption,
+  DepartmentOption,
+  JournalEntry,
+  JournalAttachment,
+  LineInput,
+  emptyLine,
+} from "./types";
+import JournalForm from "./JournalForm";
+import JournalTable from "./JournalTable";
 
 export default function JournalsPage() {
   const { tenantId, canEdit, canDelete } = useAuth();
@@ -557,513 +465,76 @@ export default function JournalsPage() {
       </div>
 
       {formMode !== "none" && (
-        <div className={styles.formSection}>
-          <h2 className={styles.sectionTitle}>
-            {formMode === "edit" ? "전표 수정" : "수기 전표 입력"}
-          </h2>
-          <form onSubmit={handleSubmit}>
-            <div className={styles.formTop}>
-              <div className={styles.formRow}>
-                <label className={styles.label}>날짜</label>
-                <input
-                  className={styles.input}
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                />
-              </div>
-              <div className={styles.formRow} style={{ flex: 1 }}>
-                <label className={styles.label}>설명</label>
-                <input
-                  className={styles.input}
-                  type="text"
-                  placeholder="예: 사무용품 구매"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </div>
-              <div className={styles.formRow}>
-                <label className={styles.label}>통화</label>
-                <select
-                  className={styles.select}
-                  value={currency}
-                  onChange={(e) => handleCurrencyChange(e.target.value)}
-                >
-                  {CURRENCY_OPTIONS.map((c) => (
-                    <option key={c.code} value={c.code}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              {currency !== "KRW" && (
-                <div className={styles.formRow}>
-                  <label className={styles.label}>환율 (1 {currency} = KRW)</label>
-                  <input
-                    className={styles.input}
-                    type="number"
-                    step="0.000001"
-                    min="0"
-                    value={exchangeRate}
-                    onChange={(e) => setExchangeRate(e.target.value)}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className={styles.linesHeader}>
-              <span>사업자번호</span>
-              <span>거래처명</span>
-              <span>계정과목</span>
-              <span>프로젝트</span>
-              <span>부서</span>
-              <span>차변</span>
-              <span>대변</span>
-              <span></span>
-            </div>
-
-            <div ref={linesSuggestRef}>
-            {lines.map((line, i) => (
-              <div key={i} className={styles.lineRow}>
-                <div style={{ position: "relative" }}>
-                  <input
-                    className={`${styles.input} ${line.vendorId ? styles.inputMatched : ""}`}
-                    type="text"
-                    value={line.vendorBizNo}
-                    onChange={(e) => handleBizNoInput(i, e.target.value)}
-                    onBlur={() => handleBizNoBlur(i)}
-                    onFocus={() => { if (lineSuggestions[i]?.length > 0) setShowLineSuggestions((prev) => ({ ...prev, [i]: true })); }}
-                    placeholder="000-00-00000"
-                    autoComplete="off"
-                  />
-                  {showLineSuggestions[i] && lineSuggestions[i]?.length > 0 && (
-                    <ul className={styles.autocomplete}>
-                      {lineSuggestions[i].map((v) => (
-                        <li
-                          key={v.id}
-                          className={styles.autocompleteItem}
-                          onMouseDown={() => selectLineVendor(i, v)}
-                        >
-                          <span className={styles.autocompleteNo}>{v.bizNo}</span>
-                          <span className={styles.autocompleteName}>{v.name}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <input
-                  className={styles.input}
-                  type="text"
-                  value={line.vendorName}
-                  onChange={(e) => updateLine(i, "vendorName", e.target.value)}
-                  placeholder="상호명"
-                  readOnly={!!line.vendorId}
-                />
-                <select
-                  className={styles.select}
-                  value={line.accountId}
-                  onChange={(e) => updateLine(i, "accountId", e.target.value)}
-                >
-                  <option value="">계정 선택</option>
-                  {accounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.code} {acc.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className={styles.select}
-                  value={line.projectId}
-                  onChange={(e) => updateLine(i, "projectId", e.target.value)}
-                >
-                  <option value="">선택 안함</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.code} {p.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className={styles.select}
-                  value={line.departmentId}
-                  onChange={(e) => updateLine(i, "departmentId", e.target.value)}
-                >
-                  <option value="">선택 안함</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.code} {d.name}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  className={styles.input}
-                  type="number"
-                  value={line.debit || ""}
-                  onChange={(e) => updateLine(i, "debit", e.target.value)}
-                  placeholder="0"
-                  min={0}
-                />
-                <input
-                  className={styles.input}
-                  type="number"
-                  value={line.credit || ""}
-                  onChange={(e) => updateLine(i, "credit", e.target.value)}
-                  placeholder="0"
-                  min={0}
-                />
-                <button
-                  type="button"
-                  className={styles.removeBtn}
-                  onClick={() => removeLine(i)}
-                  disabled={lines.length <= 2}
-                >
-                  X
-                </button>
-              </div>
-            ))}
-            </div>
-
-            <div className={styles.lineFooter}>
-              <button
-                type="button"
-                className={styles.addLineBtn}
-                onClick={addLine}
-              >
-                + 라인 추가
-              </button>
-              <div className={styles.totals}>
-                <span>차변: {(CURRENCY_SYMBOLS[currency] || "")}{totalDebit.toLocaleString()}</span>
-                <span>대변: {(CURRENCY_SYMBOLS[currency] || "")}{totalCredit.toLocaleString()}</span>
-                <span className={isBalanced ? styles.balanced : styles.unbalanced}>
-                  {isBalanced ? "균형" : "불균형"}
-                </span>
-              </div>
-            </div>
-
-            {error && <p className={styles.error}>{error}</p>}
-
-            <div className={styles.formActions}>
-              <button
-                type="submit"
-                className={styles.submitBtn}
-                disabled={isPending || !isBalanced}
-              >
-                {isPending
-                  ? "저장 중..."
-                  : formMode === "edit"
-                    ? "수정 저장"
-                    : "전표 저장"}
-              </button>
-              <button
-                type="button"
-                className={styles.cancelFormBtn}
-                onClick={resetForm}
-              >
-                취소
-              </button>
-            </div>
-          </form>
-        </div>
+        <JournalForm
+          formMode={formMode}
+          editingId={editingId}
+          date={date}
+          setDate={setDate}
+          description={description}
+          setDescription={setDescription}
+          currency={currency}
+          exchangeRate={exchangeRate}
+          setExchangeRate={setExchangeRate}
+          lines={lines}
+          error={error}
+          isPending={isPending}
+          isBalanced={isBalanced}
+          totalDebit={totalDebit}
+          totalCredit={totalCredit}
+          accounts={accounts}
+          projects={projects}
+          departments={departments}
+          handleCurrencyChange={handleCurrencyChange}
+          handleBizNoInput={handleBizNoInput}
+          handleBizNoBlur={handleBizNoBlur}
+          selectLineVendor={selectLineVendor}
+          updateLine={updateLine}
+          addLine={addLine}
+          removeLine={removeLine}
+          handleSubmit={handleSubmit}
+          resetForm={resetForm}
+          lineSuggestions={lineSuggestions}
+          showLineSuggestions={showLineSuggestions}
+          setShowLineSuggestions={setShowLineSuggestions}
+          linesSuggestRef={linesSuggestRef}
+        />
       )}
 
-      <div className={styles.tableSection}>
-        <div className={styles.tableHeader}>
-          <h2 className={styles.sectionTitle}>전표 목록</h2>
-          <div className={styles.filterRow}>
-            <button className={styles.downloadBtn} onClick={() => downloadTemplate("전표_템플릿", ["전표번호", "날짜", "적요", "계정코드", "거래처명", "사업자번호", "차변", "대변"])}>템플릿</button>
-            <input type="file" ref={journalImportRef} accept=".xlsx,.xls,.csv" onChange={handleJournalImport} hidden />
-            <button className={styles.downloadBtn} onClick={() => journalImportRef.current?.click()} disabled={journalImportMutation.isPending}>
-              {journalImportMutation.isPending ? "업로드 중..." : "엑셀 업로드"}
-            </button>
-            <button
-              className={styles.downloadBtn}
-              onClick={() => {
-                const statusText = (s: string) => {
-                  switch (s) {
-                    case "DRAFT": return "임시";
-                    case "APPROVED": return "승인";
-                    case "POSTED": return "확정";
-                    default: return s;
-                  }
-                };
-                exportToXlsx("전표목록", "전표", ["날짜", "거래처", "설명", "상태", "차변합계", "대변합계"], journals.map((j) => [
-                  new Date(j.date).toLocaleDateString("ko-KR"),
-                  [...new Set(j.lines.map((l) => l.vendor?.name).filter(Boolean))].join(", ") || "",
-                  j.description || "",
-                  statusText(j.status),
-                  j.lines.reduce((s, l) => s + Number(l.debit), 0),
-                  j.lines.reduce((s, l) => s + Number(l.credit), 0),
-                ]));
-              }}
-              disabled={journals.length === 0}
-            >
-              엑셀 다운로드
-            </button>
-          </div>
-          <div className={styles.filterRow}>
-            <span className={styles.filterLabel}>전표일 기준</span>
-            <input
-              className={styles.filterInput}
-              type="date"
-              value={filterStart}
-              onChange={(e) => setFilterStart(e.target.value)}
-            />
-            <span className={styles.filterSep}>~</span>
-            <input
-              className={styles.filterInput}
-              type="date"
-              value={filterEnd}
-              onChange={(e) => setFilterEnd(e.target.value)}
-            />
-            {(filterStart || filterEnd) && (
-              <button
-                className={styles.filterClear}
-                onClick={() => { setFilterStart(""); setFilterEnd(""); }}
-              >
-                초기화
-              </button>
-            )}
-          </div>
-        </div>
-
-        {journalImportResult && (
-          <div style={{ marginBottom: "12px", padding: "12px", background: "var(--primary-light)", border: "1px solid var(--primary)", borderRadius: "var(--radius)" }}>
-            <div style={{ display: "flex", gap: "12px", alignItems: "center", fontSize: "0.85rem", fontWeight: 600 }}>
-              <span>총 {journalImportResult.total}건</span>
-              <span style={{ color: "#166534" }}>성공 {journalImportResult.success}건</span>
-              {journalImportResult.failed > 0 && <span style={{ color: "#dc2626" }}>실패 {journalImportResult.failed}건</span>}
-              <button className={styles.secondaryBtn} onClick={() => setJournalImportResult(null)}>닫기</button>
-            </div>
-            {journalImportResult.failed > 0 && (
-              <ul style={{ margin: "8px 0 0", paddingLeft: "20px", fontSize: "0.8rem", color: "#dc2626" }}>
-                {journalImportResult.results.filter((r) => r.status === "error").map((r) => (
-                  <li key={r.index}>{r.error}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-
-        {/* 일괄 처리 바 */}
-        {selectedIds.size > 0 && canEdit && (
-          <div className={styles.batchBar}>
-            <span className={styles.batchCount}>{selectedIds.size}건 선택됨</span>
-            {hasDraft && (
-              <button
-                className={styles.batchApproveBtn}
-                disabled={batchMutation.isPending}
-                onClick={() => {
-                  const draftIds = selectedJournals
-                    .filter((j) => j.status === "DRAFT")
-                    .map((j) => j.id);
-                  if (confirm(`${draftIds.length}건을 일괄 승인하시겠습니까?`)) {
-                    batchMutation.mutate({ ids: draftIds, status: "APPROVED" });
-                  }
-                }}
-              >
-                일괄 승인
-              </button>
-            )}
-            {hasApproved && (
-              <button
-                className={styles.batchPostBtn}
-                disabled={batchMutation.isPending}
-                onClick={() => {
-                  const approvedIds = selectedJournals
-                    .filter((j) => j.status === "APPROVED")
-                    .map((j) => j.id);
-                  if (confirm(`${approvedIds.length}건을 일괄 확정하시겠습니까?`)) {
-                    batchMutation.mutate({ ids: approvedIds, status: "POSTED" });
-                  }
-                }}
-              >
-                일괄 확정
-              </button>
-            )}
-            <button
-              className={styles.batchClearBtn}
-              onClick={() => setSelectedIds(new Set())}
-            >
-              선택 해제
-            </button>
-            {batchMutation.isError && (
-              <span className={styles.batchError}>
-                {(batchMutation.error as Error).message}
-              </span>
-            )}
-          </div>
-        )}
-
-        <table>
-          <thead>
-            <tr>
-              {canEdit && (
-                <th style={{ width: 36 }}>
-                  <input
-                    type="checkbox"
-                    checked={allSelectableChecked}
-                    onChange={toggleAll}
-                  />
-                </th>
-              )}
-              <th>날짜</th>
-              <th>거래처</th>
-              <th>설명</th>
-              <th>통화</th>
-              <th>상태</th>
-              <th>차변 합계</th>
-              <th>대변 합계</th>
-              <th>영수증</th>
-              <th>첨부</th>
-              <th>관리</th>
-            </tr>
-          </thead>
-          <tbody>
-            {journals.map((j) => {
-              const s = statusLabel(j.status);
-              const jTotalDebit = j.lines.reduce((sum, l) => sum + Number(l.debit), 0);
-              const jTotalCredit = j.lines.reduce((sum, l) => sum + Number(l.credit), 0);
-              const isPosted = j.status === "POSTED";
-              return (
-                <React.Fragment key={j.id}>
-                <tr className={selectedIds.has(j.id) ? styles.selectedRow : ""}>
-                  {canEdit && (
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(j.id)}
-                        disabled={isPosted}
-                        onChange={() => toggleOne(j.id)}
-                      />
-                    </td>
-                  )}
-                  <td>{new Date(j.date).toLocaleDateString("ko-KR")}</td>
-                  <td>
-                    {[...new Set(j.lines.map((l) => l.vendor?.name).filter(Boolean))].join(", ") || "-"}
-                  </td>
-                  <td>{j.description || "-"}</td>
-                  <td>{j.currency || "KRW"}</td>
-                  <td>
-                    <span className={`${styles.status} ${s.cls}`}>{s.text}</span>
-                  </td>
-                  <td>{(CURRENCY_SYMBOLS[j.currency] || "")}{jTotalDebit.toLocaleString()}</td>
-                  <td>{(CURRENCY_SYMBOLS[j.currency] || "")}{jTotalCredit.toLocaleString()}</td>
-                  <td>{j.documentId ? "O" : "-"}</td>
-                  <td>
-                    <button
-                      className={styles.attachToggle}
-                      onClick={() => setExpandedId(expandedId === j.id ? null : j.id)}
-                    >
-                      {(j.attachments?.length || 0)}건
-                    </button>
-                  </td>
-                  <td>
-                    <div className={styles.actions}>
-                      {canEdit && j.status === "DRAFT" && hasApprovalLine && (
-                        <button
-                          className={styles.statusBtn}
-                          onClick={() => submitApprovalMutation.mutate(j.id)}
-                          disabled={submitApprovalMutation.isPending}
-                        >
-                          결재요청
-                        </button>
-                      )}
-                      {canEdit && nextStatus(j.status) && !(j.status === "DRAFT" && hasApprovalLine) && (
-                        <button
-                          className={styles.statusBtn}
-                          onClick={() => {
-                            const ns = nextStatus(j.status)!;
-                            statusMutation.mutate({ id: j.id, status: ns.next });
-                          }}
-                          disabled={statusMutation.isPending}
-                        >
-                          {nextStatus(j.status)!.label}
-                        </button>
-                      )}
-                      {j.status !== "POSTED" && j.status !== "PENDING_APPROVAL" && canEdit && (
-                        <button
-                          className={styles.editBtn}
-                          onClick={() => startEdit(j)}
-                        >
-                          수정
-                        </button>
-                      )}
-                      {j.status !== "POSTED" && canDelete && (
-                        <button
-                          className={styles.deleteBtn}
-                          onClick={() => handleDelete(j.id)}
-                        >
-                          삭제
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-                {expandedId === j.id && (
-                  <tr>
-                    <td colSpan={canEdit ? 12 : 11} className={styles.attachmentRow}>
-                      <div className={styles.attachmentSection}>
-                        <div className={styles.attachmentList}>
-                          {(j.attachments || []).map((att) => (
-                            <div key={att.id} className={styles.attachmentItem}>
-                              <a
-                                href={`${API_BASE}${att.url}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={styles.attachmentLink}
-                              >
-                                {att.filename}
-                              </a>
-                              {canEdit && (
-                                <button
-                                  className={styles.attachmentDeleteBtn}
-                                  onClick={() => {
-                                    if (confirm(`${att.filename}을(를) 삭제하시겠습니까?`)) {
-                                      deleteAttachmentMut.mutate({ journalId: j.id, attachmentId: att.id });
-                                    }
-                                  }}
-                                >
-                                  X
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                          {(j.attachments || []).length === 0 && (
-                            <span className={styles.attachmentEmpty}>첨부파일 없음</span>
-                          )}
-                        </div>
-                        {canEdit && (
-                          <label className={styles.attachmentUploadBtn}>
-                            파일 첨부
-                            <input
-                              type="file"
-                              hidden
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  uploadAttachmentMut.mutate({ journalId: j.id, file });
-                                  e.target.value = "";
-                                }
-                              }}
-                            />
-                          </label>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )}
-                </React.Fragment>
-              );
-            })}
-            {journals.length === 0 && (
-              <tr>
-                <td colSpan={canEdit ? 12 : 11} style={{ textAlign: "center", color: "var(--text-muted)" }}>
-                  전표가 없습니다
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <JournalTable
+        journals={journals}
+        selectedIds={selectedIds}
+        expandedId={expandedId}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        hasApprovalLine={hasApprovalLine}
+        filterStart={filterStart}
+        filterEnd={filterEnd}
+        setFilterStart={setFilterStart}
+        setFilterEnd={setFilterEnd}
+        journalImportRef={journalImportRef}
+        journalImportResult={journalImportResult}
+        setJournalImportResult={setJournalImportResult}
+        handleJournalImport={handleJournalImport}
+        journalImportMutation={journalImportMutation}
+        toggleAll={toggleAll}
+        toggleOne={toggleOne}
+        allSelectableChecked={allSelectableChecked}
+        hasDraft={hasDraft}
+        hasApproved={hasApproved}
+        selectedJournals={selectedJournals}
+        statusMutation={statusMutation}
+        batchMutation={batchMutation}
+        submitApprovalMutation={submitApprovalMutation}
+        deleteMutation={deleteMutation}
+        uploadAttachmentMut={uploadAttachmentMut}
+        deleteAttachmentMut={deleteAttachmentMut}
+        startEdit={startEdit}
+        handleDelete={handleDelete}
+        nextStatus={nextStatus}
+        setExpandedId={setExpandedId}
+        onClearSelection={() => setSelectedIds(new Set())}
+        API_BASE={API_BASE}
+      />
     </div>
   );
 }

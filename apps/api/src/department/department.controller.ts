@@ -15,6 +15,7 @@ import { UpdateDepartmentDto } from "./dto/update-department.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("departments")
@@ -23,12 +24,12 @@ export class DepartmentController {
 
   // 정적 경로 먼저
   @Get("pnl/comparison")
-  async getComparison(@Query("tenantId") tenantId: string) {
+  async getComparison(@CurrentTenant() tenantId: string) {
     return this.service.getDepartmentComparison(tenantId);
   }
 
   @Get()
-  async list(@Query("tenantId") tenantId: string) {
+  async list(@CurrentTenant() tenantId: string) {
     return this.service.getDepartments(tenantId);
   }
 
@@ -40,7 +41,7 @@ export class DepartmentController {
   @Get(":id/pnl")
   async getPnL(
     @Param("id") id: string,
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
   ) {
@@ -49,7 +50,11 @@ export class DepartmentController {
 
   @Post()
   @Roles("ADMIN", "ACCOUNTANT")
-  async create(@Body() dto: CreateDepartmentDto) {
+  async create(
+    @CurrentTenant() tenantId: string,
+    @Body() dto: CreateDepartmentDto,
+  ) {
+    dto.tenantId = tenantId;
     return this.service.createDepartment(dto);
   }
 

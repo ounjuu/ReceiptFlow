@@ -4,193 +4,16 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { exportToXlsx } from "@/lib/export-xlsx";
 import styles from "./Documents.module.css";
-
-interface Vendor {
-  id: string;
-  name: string;
-  bizNo: string | null;
-}
-
-type InputTab = "upload" | "manual";
-
-interface JournalLine {
-  debit: string;
-  credit: string;
-  account: { code: string; name: string };
-}
-
-interface JournalEntry {
-  id: string;
-  lines: JournalLine[];
-}
-
-interface Document {
-  id: string;
-  vendorName: string | null;
-  transactionAt: string | null;
-  totalAmount: string | null;
-  currency: string;
-  status: string;
-  imageUrl: string | null;
-  createdAt: string;
-  journalEntry: JournalEntry | null;
-}
-
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  KRW: "₩", USD: "$", EUR: "€", JPY: "¥", CNY: "¥", GBP: "£",
-};
-
-const CURRENCY_OPTIONS = [
-  { code: "KRW", name: "원 (KRW)" },
-  { code: "USD", name: "달러 (USD)" },
-  { code: "EUR", name: "유로 (EUR)" },
-  { code: "JPY", name: "엔 (JPY)" },
-  { code: "CNY", name: "위안 (CNY)" },
-  { code: "GBP", name: "파운드 (GBP)" },
-];
-
-interface OcrData {
-  raw_text: string;
-  vendor_name: string | null;
-  total_amount: number | null;
-  transaction_date: string | null;
-  confidence: number;
-}
-
-interface CreateResult {
-  document: Document;
-  journalEntry: JournalEntry | null;
-  classification: {
-    accountCode: string;
-    accountName: string;
-    confidence: number;
-  } | null;
-  ocr?: OcrData;
-}
-
-interface BatchItem {
-  index: number;
-  filename: string;
-  status: "success" | "error";
-  document?: Document;
-  ocr?: OcrData;
-  error?: string;
-}
-
-interface BatchResult {
-  total: number;
-  success: number;
-  failed: number;
-  results: BatchItem[];
-}
-
-function statusLabel(status: string) {
-  switch (status) {
-    case "PENDING": return { text: "대기", cls: styles.statusPending };
-    case "OCR_DONE": return { text: "OCR 완료", cls: styles.statusOcr };
-    case "JOURNAL_CREATED": return { text: "전표 생성", cls: styles.statusJournal };
-    default: return { text: status, cls: "" };
-  }
-}
-
-function BatchCard({
-  item,
-  tenantId,
-  onJournalCreated,
-}: {
-  item: BatchItem;
-  tenantId: string;
-  onJournalCreated: () => void;
-}) {
-  const [bizNo, setBizNo] = useState("");
-  const [vName, setVName] = useState("");
-  const [done, setDone] = useState(false);
-  const [pending, setPending] = useState(false);
-
-  const handleCreate = async () => {
-    if (!bizNo || !vName || !item.ocr?.total_amount) return;
-    setPending(true);
-    try {
-      await apiPost("/documents", {
-        tenantId,
-        vendorName: vName,
-        vendorBizNo: bizNo,
-        totalAmount: item.ocr.total_amount,
-        transactionAt: item.ocr.transaction_date || new Date().toISOString().slice(0, 10),
-      });
-      setDone(true);
-      onJournalCreated();
-    } catch { /* ignore */ }
-    setPending(false);
-  };
-
-  if (item.status === "error") {
-    return (
-      <div className={`${styles.batchCard} ${styles.batchCardError}`}>
-        <div className={styles.batchCardHeader}>
-          <span className={styles.batchCardFilename}>{item.filename}</span>
-          <span className={`${styles.status} ${styles.statusPending}`}>실패</span>
-        </div>
-        <div className={styles.batchCardBody}>{item.error}</div>
-      </div>
-    );
-  }
-
-  const ocr = item.ocr!;
-  return (
-    <div className={`${styles.batchCard} ${styles.batchCardSuccess}`}>
-      <div className={styles.batchCardHeader}>
-        <span className={styles.batchCardFilename}>{item.filename}</span>
-        <span className={`${styles.status} ${done ? styles.statusJournal : styles.statusOcr}`}>
-          {done ? "전표 생성" : "OCR 완료"}
-        </span>
-      </div>
-      <div className={styles.batchCardGrid}>
-        <div>
-          <span className={styles.resultLabel}>거래처</span>
-          <span className={styles.resultValue}>{ocr.vendor_name || "-"}</span>
-        </div>
-        <div>
-          <span className={styles.resultLabel}>금액</span>
-          <span className={styles.resultValue}>
-            {ocr.total_amount ? `${ocr.total_amount.toLocaleString()}원` : "-"}
-          </span>
-        </div>
-        <div>
-          <span className={styles.resultLabel}>날짜</span>
-          <span className={styles.resultValue}>{ocr.transaction_date || "-"}</span>
-        </div>
-        <div>
-          <span className={styles.resultLabel}>신뢰도</span>
-          <span className={styles.resultValue}>{Math.round(ocr.confidence * 100)}%</span>
-        </div>
-      </div>
-      {!done && ocr.total_amount && (
-        <div className={styles.batchJournalForm}>
-          <input
-            placeholder="사업자번호"
-            value={bizNo}
-            onChange={(e) => setBizNo(e.target.value)}
-          />
-          <input
-            placeholder="거래처명"
-            value={vName}
-            onChange={(e) => setVName(e.target.value)}
-          />
-          <button
-            className={styles.batchJournalBtn}
-            onClick={handleCreate}
-            disabled={!bizNo || !vName || pending}
-          >
-            {pending ? "..." : "전표"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
+import DocumentForm from "./DocumentForm";
+import DocumentTable from "./DocumentTable";
+import type {
+  Vendor,
+  InputTab,
+  Document,
+  CreateResult,
+  BatchResult,
+} from "./types";
 
 export default function DocumentsPage() {
   const { tenantId, canEdit, canDelete } = useAuth();
@@ -497,497 +320,90 @@ export default function DocumentsPage() {
     });
   };
 
-  const isPending = uploadMutation.isPending || createMutation.isPending;
+  const onJournalCreated = () => {
+    queryClient.invalidateQueries({ queryKey: ["documents"] });
+    queryClient.invalidateQueries({ queryKey: ["journals"] });
+    queryClient.invalidateQueries({ queryKey: ["vendors"] });
+  };
 
   return (
     <div>
       <h1 className={styles.title}>영수증 관리</h1>
 
-      {canEdit && <div className={styles.formSection}>
-        <div className={styles.inputTabs}>
-          <button
-            className={`${styles.inputTab} ${inputTab === "upload" ? styles.inputTabActive : ""}`}
-            onClick={() => { setInputTab("upload"); setResult(null); setBatchResult(null); }}
-          >
-            이미지 업로드
-          </button>
-          <button
-            className={`${styles.inputTab} ${inputTab === "manual" ? styles.inputTabActive : ""}`}
-            onClick={() => { setInputTab("manual"); setResult(null); setBatchResult(null); }}
-          >
-            직접 입력
-          </button>
-        </div>
+      {canEdit && (
+        <DocumentForm
+          inputTab={inputTab}
+          setInputTab={setInputTab}
+          fileRef={fileRef}
+          selectedFiles={selectedFiles}
+          handleFileSelect={handleFileSelect}
+          removeFile={removeFile}
+          handleUpload={handleUpload}
+          uploadIsPending={uploadMutation.isPending}
+          vendorBizNo={vendorBizNo}
+          vendorName={vendorName}
+          vendorMatched={vendorMatched}
+          totalAmount={totalAmount}
+          docCurrency={docCurrency}
+          transactionAt={transactionAt}
+          setVendorName={setVendorName}
+          setTotalAmount={setTotalAmount}
+          setDocCurrency={setDocCurrency}
+          setTransactionAt={setTransactionAt}
+          handleBizNoChange={handleBizNoChange}
+          handleBizNoBlur={handleBizNoBlur}
+          selectVendor={selectVendor}
+          suggestions={suggestions}
+          showSuggestions={showSuggestions}
+          setShowSuggestions={setShowSuggestions}
+          suggestRef={suggestRef}
+          handleManualSubmit={handleManualSubmit}
+          createIsPending={createMutation.isPending}
+          result={result}
+          setResult={setResult}
+          batchResult={batchResult}
+          setBatchResult={setBatchResult}
+          ocrBizNoInput={ocrBizNoInput}
+          ocrVendorInput={ocrVendorInput}
+          ocrVendorMatched={ocrVendorMatched}
+          ocrSuggestions={ocrSuggestions}
+          showOcrSuggestions={showOcrSuggestions}
+          setShowOcrSuggestions={setShowOcrSuggestions}
+          ocrSuggestRef={ocrSuggestRef}
+          handleOcrBizNoChange={handleOcrBizNoChange}
+          handleOcrBizNoBlur={handleOcrBizNoBlur}
+          selectOcrVendor={selectOcrVendor}
+          setOcrVendorInput={setOcrVendorInput}
+          handleOcrComplete={handleOcrComplete}
+          completeOcrIsPending={completeOcrMutation.isPending}
+          tenantId={tenantId!}
+          onJournalCreated={onJournalCreated}
+        />
+      )}
 
-        {inputTab === "upload" && (
-          <div>
-            <div className={styles.uploadArea}>
-              <input
-                type="file"
-                ref={fileRef}
-                accept="image/*"
-                multiple
-                className={styles.fileInput}
-                onChange={handleFileSelect}
-              />
-              <button
-                className={styles.submitBtn}
-                onClick={handleUpload}
-                disabled={uploadMutation.isPending || selectedFiles.length === 0}
-              >
-                {uploadMutation.isPending
-                  ? `OCR 처리 중... (${selectedFiles.length}장)`
-                  : selectedFiles.length > 0
-                    ? `업로드 + OCR (${selectedFiles.length}장)`
-                    : "업로드 + OCR"}
-              </button>
-            </div>
-            {selectedFiles.length > 0 && !uploadMutation.isPending && (
-              <div className={styles.fileList}>
-                {selectedFiles.map((f, i) => (
-                  <span key={i} className={styles.fileChip}>
-                    {f.name}
-                    <button className={styles.fileChipRemove} onClick={() => removeFile(i)}>x</button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {inputTab === "manual" && (
-          <form onSubmit={handleManualSubmit} className={styles.form}>
-            <div className={styles.formRow} ref={suggestRef} style={{ position: "relative" }}>
-              <label className={styles.label}>사업자등록번호</label>
-              <input
-                className={`${styles.input} ${vendorMatched ? styles.inputMatched : ""}`}
-                type="text"
-                placeholder="000-00-00000"
-                value={vendorBizNo}
-                onChange={(e) => handleBizNoChange(e.target.value)}
-                onBlur={handleBizNoBlur}
-                onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
-                required
-                autoComplete="off"
-              />
-              {showSuggestions && suggestions.length > 0 && (
-                <ul className={styles.autocomplete}>
-                  {suggestions.map((v) => (
-                    <li
-                      key={v.id}
-                      className={styles.autocompleteItem}
-                      onMouseDown={() => selectVendor(v)}
-                    >
-                      <span className={styles.autocompleteNo}>{v.bizNo}</span>
-                      <span className={styles.autocompleteName}>{v.name}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className={styles.formRow}>
-              <label className={styles.label}>
-                거래처명
-                {vendorMatched && <span className={styles.matchBadge}>기존 거래처</span>}
-              </label>
-              <input
-                className={`${styles.input} ${vendorMatched ? styles.inputMatched : ""}`}
-                type="text"
-                placeholder={vendorMatched ? "" : "새 거래처명 입력"}
-                value={vendorName}
-                onChange={(e) => setVendorName(e.target.value)}
-                readOnly={vendorMatched}
-                required
-              />
-            </div>
-            <div className={styles.formRow}>
-              <label className={styles.label}>금액</label>
-              <input
-                className={styles.input}
-                type="number"
-                placeholder="예: 45000"
-                value={totalAmount}
-                onChange={(e) => setTotalAmount(e.target.value)}
-                required
-                min={1}
-              />
-            </div>
-            <div className={styles.formRow}>
-              <label className={styles.label}>통화</label>
-              <select
-                className={styles.input}
-                value={docCurrency}
-                onChange={(e) => setDocCurrency(e.target.value)}
-              >
-                {CURRENCY_OPTIONS.map((c) => (
-                  <option key={c.code} value={c.code}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className={styles.formRow}>
-              <label className={styles.label}>거래일</label>
-              <input
-                className={styles.input}
-                type="date"
-                value={transactionAt}
-                onChange={(e) => setTransactionAt(e.target.value)}
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              className={styles.submitBtn}
-              disabled={createMutation.isPending}
-            >
-              {createMutation.isPending ? "처리 중..." : "등록"}
-            </button>
-          </form>
-        )}
-
-        {/* 단건 결과 (수기 입력) */}
-        {result && (
-          <div className={styles.resultBox}>
-            {result.ocr && (
-              <div className={styles.ocrSection}>
-                <h3 className={styles.resultTitle}>OCR 추출 결과</h3>
-                <div className={styles.resultGrid}>
-                  <div>
-                    <span className={styles.resultLabel}>거래처명</span>
-                    <span className={styles.resultValue}>
-                      {result.ocr.vendor_name || "추출 실패"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className={styles.resultLabel}>금액</span>
-                    <span className={styles.resultValue}>
-                      {result.ocr.total_amount
-                        ? `${result.ocr.total_amount.toLocaleString()}원`
-                        : "추출 실패"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className={styles.resultLabel}>날짜</span>
-                    <span className={styles.resultValue}>
-                      {result.ocr.transaction_date || "추출 실패"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className={styles.resultLabel}>OCR 신뢰도</span>
-                    <span className={styles.resultValue}>
-                      {Math.round(result.ocr.confidence * 100)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-            {result.classification && (
-              <div className={styles.classifySection}>
-                <h3 className={styles.resultTitle}>AI 분류 결과</h3>
-                <div className={styles.resultGrid}>
-                  <div>
-                    <span className={styles.resultLabel}>추천 계정</span>
-                    <span className={styles.resultValue}>
-                      {result.classification.accountCode}{" "}
-                      {result.classification.accountName}
-                    </span>
-                  </div>
-                  <div>
-                    <span className={styles.resultLabel}>신뢰도</span>
-                    <span className={styles.resultValue}>
-                      {Math.round(result.classification.confidence * 100)}%
-                    </span>
-                  </div>
-                  <div>
-                    <span className={styles.resultLabel}>전표 상태</span>
-                    <span className={`${styles.status} ${styles.statusJournal}`}>
-                      자동 생성 완료
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-            {!result.classification && result.ocr && (
-              <div className={styles.ocrCompleteSection}>
-                {result.ocr.total_amount ? (
-                  <>
-                    <p className={styles.ocrWarning}>
-                      사업자등록번호와 거래처명을 입력하면 전표가 자동 생성됩니다.
-                    </p>
-                    <div className={styles.ocrCompleteForm}>
-                      <div ref={ocrSuggestRef} style={{ position: "relative" }}>
-                        <input
-                          className={`${styles.input} ${ocrVendorMatched ? styles.inputMatched : ""}`}
-                          type="text"
-                          placeholder="사업자등록번호"
-                          value={ocrBizNoInput}
-                          onChange={(e) => handleOcrBizNoChange(e.target.value)}
-                          onBlur={handleOcrBizNoBlur}
-                          onFocus={() => { if (ocrSuggestions.length > 0) setShowOcrSuggestions(true); }}
-                          autoComplete="off"
-                        />
-                        {showOcrSuggestions && ocrSuggestions.length > 0 && (
-                          <ul className={styles.autocomplete}>
-                            {ocrSuggestions.map((v) => (
-                              <li
-                                key={v.id}
-                                className={styles.autocompleteItem}
-                                onMouseDown={() => selectOcrVendor(v)}
-                              >
-                                <span className={styles.autocompleteNo}>{v.bizNo}</span>
-                                <span className={styles.autocompleteName}>{v.name}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                      <input
-                        className={`${styles.input} ${ocrVendorMatched ? styles.inputMatched : ""}`}
-                        type="text"
-                        placeholder={ocrVendorMatched ? "" : "새 거래처명 입력"}
-                        value={ocrVendorInput}
-                        onChange={(e) => setOcrVendorInput(e.target.value)}
-                        readOnly={ocrVendorMatched}
-                      />
-                      <button
-                        className={styles.submitBtn}
-                        onClick={handleOcrComplete}
-                        disabled={!ocrBizNoInput || !ocrVendorInput || completeOcrMutation.isPending}
-                      >
-                        {completeOcrMutation.isPending ? "처리 중..." : "전표 생성"}
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <p className={styles.ocrWarning}>
-                    금액을 추출하지 못해 전표를 자동 생성하지 못했습니다. 수동으로 입력해주세요.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 일괄 업로드 결과 */}
-        {batchResult && (
-          <div className={styles.resultBox}>
-            <div className={styles.batchSummary}>
-              <span>총 {batchResult.total}장</span>
-              <span className={styles.batchSuccess}>성공 {batchResult.success}장</span>
-              {batchResult.failed > 0 && (
-                <span className={styles.batchFailed}>실패 {batchResult.failed}장</span>
-              )}
-            </div>
-            <div className={styles.batchResults}>
-              {batchResult.results.map((item) => (
-                <BatchCard
-                  key={item.index}
-                  item={item}
-                  tenantId={tenantId!}
-                  onJournalCreated={() => {
-                    queryClient.invalidateQueries({ queryKey: ["documents"] });
-                    queryClient.invalidateQueries({ queryKey: ["journals"] });
-                    queryClient.invalidateQueries({ queryKey: ["vendors"] });
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>}
-
-      <div className={styles.tableSection}>
-        <div className={styles.tableHeader}>
-          <h2 className={styles.sectionTitle}>영수증 목록</h2>
-          <div className={styles.filterRow}>
-            <button
-              className={styles.downloadBtn}
-              onClick={() => {
-                const statusText = (s: string) => {
-                  switch (s) {
-                    case "PENDING": return "대기";
-                    case "OCR_DONE": return "OCR 완료";
-                    case "JOURNAL_CREATED": return "전표 생성";
-                    default: return s;
-                  }
-                };
-                exportToXlsx("영수증목록", "영수증", ["거래처", "거래일", "금액", "상태", "등록일"], documents.map((d) => [
-                  d.vendorName || "",
-                  d.transactionAt ? new Date(d.transactionAt).toLocaleDateString("ko-KR") : "",
-                  d.totalAmount ? Number(d.totalAmount) : 0,
-                  statusText(d.status),
-                  new Date(d.createdAt).toLocaleDateString("ko-KR"),
-                ]));
-              }}
-              disabled={documents.length === 0}
-            >
-              엑셀 다운로드
-            </button>
-          </div>
-          <div className={styles.filterRow}>
-            <span className={styles.filterLabel}>거래일 기준</span>
-            <input
-              className={styles.filterInput}
-              type="date"
-              value={filterStart}
-              onChange={(e) => setFilterStart(e.target.value)}
-            />
-            <span className={styles.filterSep}>~</span>
-            <input
-              className={styles.filterInput}
-              type="date"
-              value={filterEnd}
-              onChange={(e) => setFilterEnd(e.target.value)}
-            />
-            {(filterStart || filterEnd) && (
-              <button
-                className={styles.filterClear}
-                onClick={() => { setFilterStart(""); setFilterEnd(""); }}
-              >
-                초기화
-              </button>
-            )}
-          </div>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>영수증</th>
-              <th>거래처</th>
-              <th>거래일</th>
-              <th>금액</th>
-              <th>상태</th>
-              <th>등록일</th>
-              <th>관리</th>
-            </tr>
-          </thead>
-          <tbody>
-            {documents.map((doc) => {
-              const s = statusLabel(doc.status);
-              const isEditing = editingId === doc.id;
-
-              if (isEditing) {
-                return (
-                  <tr key={doc.id}>
-                    <td>
-                      {doc.imageUrl ? (
-                        <img
-                          src={`${API_BASE}${doc.imageUrl}`}
-                          alt="영수증"
-                          className={styles.thumbnail}
-                          onClick={() => setPreviewUrl(`${API_BASE}${doc.imageUrl}`)}
-                        />
-                      ) : "-"}
-                    </td>
-                    <td>
-                      <input
-                        className={styles.editInput}
-                        value={editVendor}
-                        onChange={(e) => setEditVendor(e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        className={styles.editInput}
-                        type="date"
-                        value={editDate}
-                        onChange={(e) => setEditDate(e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        className={styles.editInput}
-                        type="number"
-                        value={editAmount}
-                        onChange={(e) => setEditAmount(e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <span className={`${styles.status} ${s.cls}`}>{s.text}</span>
-                    </td>
-                    <td>{new Date(doc.createdAt).toLocaleDateString("ko-KR")}</td>
-                    <td>
-                      <div className={styles.actions}>
-                        <button
-                          className={styles.saveBtn}
-                          onClick={() => handleUpdate(doc.id)}
-                          disabled={updateMutation.isPending}
-                        >
-                          저장
-                        </button>
-                        <button
-                          className={styles.cancelBtn}
-                          onClick={() => setEditingId(null)}
-                        >
-                          취소
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              }
-
-              return (
-                <tr key={doc.id}>
-                  <td>
-                    {doc.imageUrl ? (
-                      <img
-                        src={`${API_BASE}${doc.imageUrl}`}
-                        alt="영수증"
-                        className={styles.thumbnail}
-                        onClick={() => setPreviewUrl(`${API_BASE}${doc.imageUrl}`)}
-                      />
-                    ) : "-"}
-                  </td>
-                  <td>{doc.vendorName || "-"}</td>
-                  <td>
-                    {doc.transactionAt
-                      ? new Date(doc.transactionAt).toLocaleDateString("ko-KR")
-                      : "-"}
-                  </td>
-                  <td>
-                    {doc.totalAmount
-                      ? `${CURRENCY_SYMBOLS[doc.currency] || ""}${Number(doc.totalAmount).toLocaleString()}`
-                      : "-"}
-                  </td>
-                  <td>
-                    <span className={`${styles.status} ${s.cls}`}>{s.text}</span>
-                  </td>
-                  <td>{new Date(doc.createdAt).toLocaleDateString("ko-KR")}</td>
-                  <td>
-                    {(canEdit || canDelete) && (
-                      <div className={styles.actions}>
-                        {canEdit && (
-                          <button
-                            className={styles.editBtn}
-                            onClick={() => startEdit(doc)}
-                          >
-                            수정
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button
-                            className={styles.deleteBtn}
-                            onClick={() => handleDelete(doc.id)}
-                          >
-                            삭제
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-            {documents.length === 0 && (
-              <tr>
-                <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)" }}>
-                  영수증이 없습니다
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DocumentTable
+        documents={documents}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        editingId={editingId}
+        editVendor={editVendor}
+        editAmount={editAmount}
+        editDate={editDate}
+        setEditVendor={setEditVendor}
+        setEditAmount={setEditAmount}
+        setEditDate={setEditDate}
+        startEdit={startEdit}
+        handleUpdate={handleUpdate}
+        handleDelete={handleDelete}
+        setEditingId={setEditingId}
+        updateMutation={updateMutation}
+        filterStart={filterStart}
+        filterEnd={filterEnd}
+        setFilterStart={setFilterStart}
+        setFilterEnd={setFilterEnd}
+        setPreviewUrl={setPreviewUrl}
+        API_BASE={API_BASE}
+      />
 
       {previewUrl && (
         <div className={styles.modalOverlay} onClick={() => setPreviewUrl(null)}>

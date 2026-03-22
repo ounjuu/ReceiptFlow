@@ -6,13 +6,13 @@ import {
   Delete,
   Param,
   Query,
-  Req,
   UploadedFile,
   UploadedFiles,
   UseInterceptors,
   UseGuards,
   Body,
 } from "@nestjs/common";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
 import { extname } from "path";
@@ -45,11 +45,9 @@ export class DocumentController {
   async upload(
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: UploadDocumentDto,
-    @Req() req: any,
+    @CurrentTenant() tenantId: string,
   ) {
-    if (!dto.tenantId && req.user?.memberships?.length) {
-      dto.tenantId = req.user.memberships[0].tenantId;
-    }
+    dto.tenantId = tenantId;
     return this.documentService.uploadWithOcr(dto, file);
   }
 
@@ -69,23 +67,22 @@ export class DocumentController {
   async uploadBatch(
     @UploadedFiles() files: Express.Multer.File[],
     @Body() dto: UploadDocumentDto,
-    @Req() req: any,
+    @CurrentTenant() tenantId: string,
   ) {
-    if (!dto.tenantId && req.user?.memberships?.length) {
-      dto.tenantId = req.user.memberships[0].tenantId;
-    }
+    dto.tenantId = tenantId;
     return this.documentService.batchUploadWithOcr(dto, files);
   }
 
   @Post()
   @Roles("ADMIN", "ACCOUNTANT")
-  async createWithAutoJournal(@Body() dto: CreateDocumentDto) {
+  async createWithAutoJournal(@CurrentTenant() tenantId: string, @Body() dto: CreateDocumentDto) {
+    dto.tenantId = tenantId;
     return this.documentService.createWithAutoJournal(dto);
   }
 
   @Get()
   async findAll(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
   ) {

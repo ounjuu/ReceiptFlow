@@ -1,6 +1,7 @@
 import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import { SearchService } from "./search.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard)
 @Controller("search")
@@ -9,7 +10,7 @@ export class SearchController {
 
   @Get()
   async search(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("q") q: string,
     @Query("limit") limit?: string,
   ) {

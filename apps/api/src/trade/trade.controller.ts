@@ -16,6 +16,7 @@ import { CreatePaymentDto } from "./dto/create-payment.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("trades")
@@ -25,7 +26,7 @@ export class TradeController {
   // 정적 경로 먼저
   @Get("summary")
   async getSummary(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
   ) {
@@ -34,7 +35,7 @@ export class TradeController {
 
   @Get("aging")
   async getAging(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("tradeType") tradeType: string,
   ) {
     return this.service.getAgingReport(tenantId, tradeType);
@@ -42,7 +43,7 @@ export class TradeController {
 
   @Get()
   async list(
-    @Query("tenantId") tenantId: string,
+    @CurrentTenant() tenantId: string,
     @Query("tradeType") tradeType?: string,
     @Query("status") status?: string,
     @Query("startDate") startDate?: string,
@@ -64,7 +65,11 @@ export class TradeController {
 
   @Post()
   @Roles("ADMIN", "ACCOUNTANT")
-  async create(@Body() dto: CreateTradeDto) {
+  async create(
+    @CurrentTenant() tenantId: string,
+    @Body() dto: CreateTradeDto,
+  ) {
+    dto.tenantId = tenantId;
     return this.service.createTrade(dto);
   }
 

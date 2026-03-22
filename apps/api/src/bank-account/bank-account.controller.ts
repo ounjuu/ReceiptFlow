@@ -15,6 +15,7 @@ import { UpdateBankAccountDto } from "./dto/update-bank-account.dto";
 import { CreateBankTxDto } from "./dto/create-bank-tx.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
+import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("bank-accounts")
@@ -23,12 +24,12 @@ export class BankAccountController {
 
   // 정적 경로 먼저
   @Get("summary")
-  async getSummary(@Query("tenantId") tenantId: string) {
+  async getSummary(@CurrentTenant() tenantId: string) {
     return this.service.getSummary(tenantId);
   }
 
   @Get()
-  async findAll(@Query("tenantId") tenantId: string) {
+  async findAll(@CurrentTenant() tenantId: string) {
     return this.service.findAll(tenantId);
   }
 
@@ -38,7 +39,11 @@ export class BankAccountController {
   }
 
   @Post()
-  async create(@Body() dto: CreateBankAccountDto) {
+  async create(
+    @CurrentTenant() tenantId: string,
+    @Body() dto: CreateBankAccountDto,
+  ) {
+    dto.tenantId = tenantId;
     return this.service.create(dto);
   }
 
@@ -65,8 +70,10 @@ export class BankAccountController {
   @Post(":id/transactions")
   async createTransaction(
     @Param("id") id: string,
+    @CurrentTenant() tenantId: string,
     @Body() dto: CreateBankTxDto,
   ) {
+    dto.tenantId = tenantId;
     return this.service.createTransaction(id, dto);
   }
 
