@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { apiGet } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useLocale } from "@/lib/locale";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -78,16 +79,16 @@ const COLORS = {
   muted: "#8578a0",
 };
 
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  PENDING: { label: "대기", color: COLORS.warning },
-  OCR_DONE: { label: "OCR 완료", color: COLORS.primary },
-  JOURNAL_CREATED: { label: "전표 생성", color: COLORS.success },
+const STATUS_MAP_KEYS: Record<string, { labelKey: "docStatus_PENDING" | "docStatus_OCR_DONE" | "docStatus_JOURNAL_CREATED"; color: string }> = {
+  PENDING: { labelKey: "docStatus_PENDING", color: COLORS.warning },
+  OCR_DONE: { labelKey: "docStatus_OCR_DONE", color: COLORS.primary },
+  JOURNAL_CREATED: { labelKey: "docStatus_JOURNAL_CREATED", color: COLORS.success },
 };
 
-const JOURNAL_STATUS: Record<string, string> = {
-  DRAFT: "작성",
-  APPROVED: "승인",
-  POSTED: "전기",
+const JOURNAL_STATUS_KEYS: Record<string, "status_DRAFT" | "status_APPROVED" | "status_POSTED"> = {
+  DRAFT: "status_DRAFT",
+  APPROVED: "status_APPROVED",
+  POSTED: "status_POSTED",
 };
 
 const DOC_TYPE_LABEL: Record<string, string> = {
@@ -120,6 +121,7 @@ function timeAgo(dateStr: string) {
 
 export default function DashboardPage() {
   const { tenantId } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
   const currentYear = new Date().getFullYear();
 
@@ -162,9 +164,9 @@ export default function DashboardPage() {
 
   // 파이 차트
   const pieData = (summary?.statusCounts || []).map((s) => ({
-    name: STATUS_MAP[s.status]?.label || s.status,
+    name: STATUS_MAP_KEYS[s.status] ? t(STATUS_MAP_KEYS[s.status].labelKey) : s.status,
     value: s.count,
-    color: STATUS_MAP[s.status]?.color || COLORS.muted,
+    color: STATUS_MAP_KEYS[s.status]?.color || COLORS.muted,
   }));
 
   const totalDocs = pieData.reduce((s, p) => s + p.value, 0);
@@ -210,7 +212,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className={styles.title}>대시보드</h1>
+      <h1 className={styles.title}>{t("dash_title")}</h1>
 
       {/* 알림 배너 */}
       {alertItems.length > 0 && (
@@ -232,19 +234,19 @@ export default function DashboardPage() {
       {/* KPI 카드 Row 1 — 재무 */}
       <div className={styles.cards}>
         <div className={styles.card}>
-          <div className={styles.cardLabel}>당월 매출</div>
+          <div className={styles.cardLabel}>{t("dash_monthlySales")}</div>
           <div className={styles.cardValue} style={{ color: COLORS.primary }}>
             ₩{fmt(kpi?.trades.salesTotal || 0)}
           </div>
         </div>
         <div className={styles.card}>
-          <div className={styles.cardLabel}>당월 매입</div>
+          <div className={styles.cardLabel}>{t("dash_monthlyPurchase")}</div>
           <div className={styles.cardValue} style={{ color: COLORS.warning }}>
             ₩{fmt(kpi?.trades.purchaseTotal || 0)}
           </div>
         </div>
         <div className={styles.card}>
-          <div className={styles.cardLabel}>당기순이익</div>
+          <div className={styles.cardLabel}>{t("dash_netIncome")}</div>
           <div
             className={styles.cardValue}
             style={{ color: summary && summary.netIncome >= 0 ? COLORS.success : COLORS.danger }}
@@ -253,7 +255,7 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className={styles.card}>
-          <div className={styles.cardLabel}>은행 잔고</div>
+          <div className={styles.cardLabel}>{t("dash_bankBalance")}</div>
           <div className={styles.cardValue} style={{ color: COLORS.primary }}>
             ₩{fmt(kpi?.bankBalance || 0)}
           </div>
@@ -263,7 +265,7 @@ export default function DashboardPage() {
       {/* KPI 카드 Row 2 — 운영 */}
       <div className={styles.cards}>
         <div className={styles.card}>
-          <div className={styles.cardLabel}>미수금</div>
+          <div className={styles.cardLabel}>{t("dash_receivable")}</div>
           <div
             className={styles.cardValue}
             style={{ color: (kpi?.trades.salesRemaining || 0) > 0 ? COLORS.danger : COLORS.success }}
@@ -272,7 +274,7 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className={styles.card}>
-          <div className={styles.cardLabel}>미지급금</div>
+          <div className={styles.cardLabel}>{t("dash_payable")}</div>
           <div
             className={styles.cardValue}
             style={{ color: (kpi?.trades.purchaseRemaining || 0) > 0 ? COLORS.warning : COLORS.success }}
@@ -281,21 +283,18 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className={styles.card}>
-          <div className={styles.cardLabel}>경비 정산 대기</div>
+          <div className={styles.cardLabel}>{t("dash_pendingExpense")}</div>
           <div className={styles.cardValue}>
-            {kpi?.expenseClaims.pendingCount || 0}건
+            {t("dash_count", { count: kpi?.expenseClaims.pendingCount || 0 })}
           </div>
           {kpi && kpi.expenseClaims.pendingAmount > 0 && (
-            <div className={styles.cardSub}>₩{fmt(kpi.expenseClaims.pendingAmount)}</div>
+            <div className={styles.cardSub}>{t("dash_amount", { amount: fmt(kpi.expenseClaims.pendingAmount) })}</div>
           )}
         </div>
         <div className={styles.card}>
-          <div className={styles.cardLabel}>재고 부족</div>
-          <div
-            className={styles.cardValue}
-            style={{ color: (kpi?.inventory.lowStockCount || 0) > 0 ? COLORS.danger : COLORS.success }}
-          >
-            {kpi?.inventory.lowStockCount || 0}건
+          <div className={styles.cardLabel}>{t("dash_pendingApproval")}</div>
+          <div className={styles.cardValue}>
+            {t("dash_count", { count: kpi?.approvals.pendingCount || 0 })}
           </div>
         </div>
       </div>
@@ -353,11 +352,11 @@ export default function DashboardPage() {
       {budgetChartData.length > 0 && (
         <div className={styles.section}>
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>예산 vs 실적 ({currentYear}년)</h2>
+            <h2 className={styles.sectionTitle}>{t("dash_budgetVsActual")} ({currentYear})</h2>
             {budgetData && (
               <div className={styles.budgetSummary}>
-                <span>예산 ₩{fmt(budgetData.totalBudget)}</span>
-                <span>실적 ₩{fmt(budgetData.totalActual)}</span>
+                <span>{t("dash_budget")} ₩{fmt(budgetData.totalBudget)}</span>
+                <span>{t("dash_actual")} ₩{fmt(budgetData.totalActual)}</span>
                 <span className={styles.budgetRate}>{budgetData.totalRate.toFixed(1)}%</span>
               </div>
             )}
@@ -403,7 +402,7 @@ export default function DashboardPage() {
       <div className={styles.bottomGrid}>
         {/* 최근 전표 */}
         <div className={styles.section} style={{ marginBottom: 0 }}>
-          <h2 className={styles.sectionTitle}>최근 전표</h2>
+          <h2 className={styles.sectionTitle}>{t("dash_recentJournals")}</h2>
           <table>
             <thead>
               <tr>
@@ -420,7 +419,7 @@ export default function DashboardPage() {
                   <td>{j.description || "-"}</td>
                   <td>
                     <span className={styles.statusBadge} data-status={j.status}>
-                      {JOURNAL_STATUS[j.status] || j.status}
+                      {JOURNAL_STATUS_KEYS[j.status] ? t(JOURNAL_STATUS_KEYS[j.status]) : j.status}
                     </span>
                   </td>
                   <td>₩{j.lines.reduce((s, l) => s + Number(l.debit), 0).toLocaleString()}</td>
@@ -429,7 +428,7 @@ export default function DashboardPage() {
               {recentJournals.length === 0 && (
                 <tr>
                   <td colSpan={4} style={{ textAlign: "center", color: "var(--text-muted)" }}>
-                    전표가 없습니다
+                    {t("dash_noJournals")}
                   </td>
                 </tr>
               )}
@@ -439,7 +438,7 @@ export default function DashboardPage() {
 
         {/* 결재 대기 */}
         <div className={styles.section} style={{ marginBottom: 0 }}>
-          <h2 className={styles.sectionTitle}>결재 대기</h2>
+          <h2 className={styles.sectionTitle}>{t("dash_pendingApprovals")}</h2>
           {pendingApprovals.length > 0 ? (
             <div className={styles.approvalList}>
               {pendingApprovals.slice(0, 8).map((a) => (
@@ -457,13 +456,13 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : (
-            <p className={styles.empty}>대기 중인 결재가 없습니다</p>
+            <p className={styles.empty}>{t("dash_noApprovals")}</p>
           )}
         </div>
 
         {/* 최근 활동 */}
         <div className={styles.section} style={{ marginBottom: 0 }}>
-          <h2 className={styles.sectionTitle}>최근 활동</h2>
+          <h2 className={styles.sectionTitle}>{t("dash_recentActivity")}</h2>
           {alerts && alerts.recentLogs.length > 0 ? (
             <div className={styles.activityFeed}>
               {alerts.recentLogs.map((log) => (
@@ -485,7 +484,7 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : (
-            <p className={styles.empty}>활동 내역이 없습니다</p>
+            <p className={styles.empty}>{t("dash_noActivity")}</p>
           )}
         </div>
       </div>

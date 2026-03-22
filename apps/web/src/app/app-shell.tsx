@@ -6,41 +6,43 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
+import { useLocale } from "@/lib/locale";
 import { apiGet } from "@/lib/api";
 import styles from "./layout.module.css";
+import type { TranslationKey } from "@/lib/translations";
 
-const navItems = [
-  { href: "/dashboard", label: "대시보드" },
-  { href: "/documents", label: "영수증 관리" },
-  { href: "/journals", label: "전표 관리" },
-  { href: "/reports", label: "재무제표" },
-  { href: "/accounts", label: "계정과목" },
-  { href: "/vendors", label: "거래처" },
-  { href: "/vendor-ledger", label: "거래처 원장" },
-  { href: "/closings", label: "결산" },
-  { href: "/cash-flow", label: "자금 관리" },
-  { href: "/tax-invoices", label: "세금계산서" },
-  { href: "/approvals", label: "전자결재" },
-  { href: "/fixed-assets", label: "고정자산" },
-  { href: "/payroll", label: "급여 관리" },
-  { href: "/budgets", label: "예산 관리" },
-  { href: "/projects", label: "프로젝트 손익" },
-  { href: "/departments", label: "부서별 손익" },
-  { href: "/trades", label: "매출/매입" },
-  { href: "/cost-management", label: "원가 관리" },
-  { href: "/inventory", label: "재고 관리" },
-  { href: "/expense-claims", label: "경비 정산" },
-  { href: "/bank-accounts", label: "은행/계좌" },
-  { href: "/vat-returns", label: "부가세 신고" },
-  { href: "/exchange-rates", label: "환율 관리" },
-  { href: "/journal-templates", label: "반복 전표" },
-  { href: "/journal-rules", label: "자동 전표 규칙" },
+const navItems: { href: string; labelKey: TranslationKey }[] = [
+  { href: "/dashboard", labelKey: "nav_dashboard" },
+  { href: "/documents", labelKey: "nav_documents" },
+  { href: "/journals", labelKey: "nav_journals" },
+  { href: "/reports", labelKey: "nav_reports" },
+  { href: "/accounts", labelKey: "nav_accounts" },
+  { href: "/vendors", labelKey: "nav_vendors" },
+  { href: "/vendor-ledger", labelKey: "nav_vendorLedger" },
+  { href: "/closings", labelKey: "nav_closings" },
+  { href: "/cash-flow", labelKey: "nav_cashFlow" },
+  { href: "/tax-invoices", labelKey: "nav_taxInvoices" },
+  { href: "/approvals", labelKey: "nav_approvals" },
+  { href: "/fixed-assets", labelKey: "nav_fixedAssets" },
+  { href: "/payroll", labelKey: "nav_payroll" },
+  { href: "/budgets", labelKey: "nav_budgets" },
+  { href: "/projects", labelKey: "nav_projects" },
+  { href: "/departments", labelKey: "nav_departments" },
+  { href: "/trades", labelKey: "nav_trades" },
+  { href: "/cost-management", labelKey: "nav_costManagement" },
+  { href: "/inventory", labelKey: "nav_inventory" },
+  { href: "/expense-claims", labelKey: "nav_expenseClaims" },
+  { href: "/bank-accounts", labelKey: "nav_bankAccounts" },
+  { href: "/vat-returns", labelKey: "nav_vatReturns" },
+  { href: "/exchange-rates", labelKey: "nav_exchangeRates" },
+  { href: "/journal-templates", labelKey: "nav_journalTemplates" },
+  { href: "/journal-rules", labelKey: "nav_journalRules" },
 ];
 
-const ROLE_LABEL: Record<string, string> = {
-  ADMIN: "관리자",
-  ACCOUNTANT: "회계담당",
-  VIEWER: "열람자",
+const ROLE_KEYS: Record<string, TranslationKey> = {
+  ADMIN: "role_ADMIN",
+  ACCOUNTANT: "role_ACCOUNTANT",
+  VIEWER: "role_VIEWER",
 };
 
 interface SearchItem {
@@ -81,7 +83,8 @@ interface NotifItem {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading, logout, isAdmin, role, tenantId } = useAuth();
-  const { isDark, setTheme, theme } = useTheme();
+  const { isDark, setTheme } = useTheme();
+  const { t } = useLocale();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -118,26 +121,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const items: NotifItem[] = [];
     if (alertsData) {
       if (alertsData.draftCount > 0)
-        items.push({ type: "warning", message: `${alertsData.draftCount}건의 전표가 승인 대기 중`, href: "/journals" });
+        items.push({ type: "warning", message: t("notif_draftPending", { count: alertsData.draftCount }), href: "/journals" });
       if (alertsData.approvedCount > 0)
-        items.push({ type: "info", message: `${alertsData.approvedCount}건의 전표가 전기 대기 중`, href: "/journals" });
+        items.push({ type: "info", message: t("notif_approvedPending", { count: alertsData.approvedCount }), href: "/journals" });
       if (!alertsData.closing.isClosed && alertsData.closing.daysUntilMonthEnd <= 5)
-        items.push({ type: "danger", message: `${alertsData.closing.month}월 마감 ${alertsData.closing.daysUntilMonthEnd}일 남음`, href: "/closings" });
+        items.push({ type: "danger", message: t("notif_closingDays", { month: alertsData.closing.month, days: alertsData.closing.daysUntilMonthEnd }), href: "/closings" });
       if (alertsData.pendingDocCount > 0)
-        items.push({ type: "muted", message: `${alertsData.pendingDocCount}건의 영수증 처리 대기`, href: "/documents" });
+        items.push({ type: "muted", message: t("notif_pendingDocs", { count: alertsData.pendingDocCount }), href: "/documents" });
     }
     if (kpiData) {
       if (kpiData.approvals.pendingCount > 0)
-        items.push({ type: "info", message: `${kpiData.approvals.pendingCount}건의 결재 대기`, href: "/approvals" });
+        items.push({ type: "info", message: t("notif_pendingApprovals", { count: kpiData.approvals.pendingCount }), href: "/approvals" });
       if (kpiData.inventory.lowStockCount > 0)
-        items.push({ type: "danger", message: `${kpiData.inventory.lowStockCount}개 품목 재고 부족`, href: "/inventory" });
+        items.push({ type: "danger", message: t("notif_lowStock", { count: kpiData.inventory.lowStockCount }), href: "/inventory" });
       if (kpiData.expenseClaims.pendingCount > 0)
-        items.push({ type: "warning", message: `${kpiData.expenseClaims.pendingCount}건 경비 정산 대기`, href: "/expense-claims" });
+        items.push({ type: "warning", message: t("notif_pendingExpense", { count: kpiData.expenseClaims.pendingCount }), href: "/expense-claims" });
       if (kpiData.trades.salesRemaining > 0)
-        items.push({ type: "warning", message: `미수금 ₩${kpiData.trades.salesRemaining.toLocaleString()}`, href: "/trades" });
+        items.push({ type: "warning", message: t("notif_outstanding", { amount: kpiData.trades.salesRemaining.toLocaleString() }), href: "/trades" });
     }
     return items;
-  }, [alertsData, kpiData]);
+  }, [alertsData, kpiData, t]);
 
   // 미로그인 시 로그인 페이지로 리다이렉트
   useEffect(() => {
@@ -215,7 +218,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className={styles.loadingWrapper}>
-        <span className={styles.loadingText}>로딩 중...</span>
+        <span className={styles.loadingText}>{t("header_loading")}</span>
       </div>
     );
   }
@@ -232,21 +235,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <nav className={styles.nav}>
           {navItems.map((item) => (
             <Link key={item.href} href={item.href} className={styles.navLink}>
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           ))}
           {isAdmin && (
             <>
               <Link href="/members" className={styles.navLink}>
-                멤버 관리
+                {t("nav_members")}
               </Link>
               <Link href="/audit-logs" className={styles.navLink}>
-                감사 로그
+                {t("nav_auditLogs")}
               </Link>
             </>
           )}
           <Link href="/settings" className={styles.navLink}>
-            설정
+            {t("nav_settings")}
           </Link>
         </nav>
       </aside>
@@ -257,13 +260,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <input
               className={styles.searchInput}
               type="text"
-              placeholder="통합 검색 (거래처, 전표, 계정과목...)"
+              placeholder={t("header_search")}
               value={searchQuery}
               onChange={handleSearchChange}
               onKeyDown={handleSearchKeyDown}
               onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
             />
-            {searching && <span className={styles.searchSpinner}>검색 중...</span>}
+            {searching && <span className={styles.searchSpinner}>{t("header_searching")}</span>}
             {showDropdown && searchResults.length > 0 && (
               <div className={styles.searchDropdown}>
                 {searchResults.map((group) => (
@@ -290,7 +293,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
                   }}
                 >
-                  전체 결과 보기
+                  {t("header_viewAll")}
                 </div>
               </div>
             )}
@@ -310,9 +313,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
             {showNotif && (
               <div className={styles.notifDropdown}>
-                <div className={styles.notifHeader}>알림</div>
+                <div className={styles.notifHeader}>{t("header_notifications")}</div>
                 {notifications.length === 0 ? (
-                  <div className={styles.notifEmpty}>새로운 알림이 없습니다</div>
+                  <div className={styles.notifEmpty}>{t("header_noNotifications")}</div>
                 ) : (
                   notifications.map((n, i) => (
                     <div
@@ -335,7 +338,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button
             className={styles.themeBtn}
             onClick={() => setTheme(isDark ? "light" : "dark")}
-            title={isDark ? "라이트 모드" : "다크 모드"}
+            title={isDark ? t("header_lightMode") : t("header_darkMode")}
           >
             {isDark ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -354,12 +357,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className={styles.userArea}>
             {role && (
               <span className={styles.roleBadge}>
-                {ROLE_LABEL[role] || role}
+                {ROLE_KEYS[role] ? t(ROLE_KEYS[role]) : role}
               </span>
             )}
             <span className={styles.userName}>{user.name}</span>
             <button className={styles.logoutBtn} onClick={logout}>
-              로그아웃
+              {t("header_logout")}
             </button>
           </div>
         </header>

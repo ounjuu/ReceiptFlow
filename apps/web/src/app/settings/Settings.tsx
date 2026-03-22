@@ -3,34 +3,40 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
+import { useLocale } from "@/lib/locale";
+import type { Locale } from "@/lib/locale";
 import { apiPatch } from "@/lib/api";
 import styles from "./Settings.module.css";
 
-const ROLE_LABEL: Record<string, string> = {
-  ADMIN: "관리자",
-  ACCOUNTANT: "회계담당",
-  VIEWER: "열람자",
-};
+const LANG_OPTIONS: { value: Locale; label: string }[] = [
+  { value: "ko", label: "한국어" },
+  { value: "en", label: "English" },
+];
 
 type Tab = "profile" | "password" | "notifications";
 
-const NOTIF_KEYS = [
-  { key: "notif_journal", label: "전표 승인 알림", desc: "전표가 승인 대기/전기 대기일 때 알림" },
-  { key: "notif_closing", label: "마감 임박 알림", desc: "월말 마감일이 가까울 때 알림" },
-  { key: "notif_document", label: "영수증 처리 알림", desc: "처리 대기 중인 영수증이 있을 때 알림" },
-  { key: "notif_inventory", label: "재고 부족 알림", desc: "재고가 안전재고 이하일 때 알림" },
-  { key: "notif_expense", label: "경비 정산 알림", desc: "경비 정산 대기 건이 있을 때 알림" },
+type NotifKeyDef = { key: string; labelKey: "settings_notifJournal" | "settings_notifClosing" | "settings_notifDocument" | "settings_notifInventory" | "settings_notifExpense"; descKey: "settings_notifJournalDesc" | "settings_notifClosingDesc" | "settings_notifDocumentDesc" | "settings_notifInventoryDesc" | "settings_notifExpenseDesc" };
+
+const NOTIF_KEYS: NotifKeyDef[] = [
+  { key: "notif_journal", labelKey: "settings_notifJournal", descKey: "settings_notifJournalDesc" },
+  { key: "notif_closing", labelKey: "settings_notifClosing", descKey: "settings_notifClosingDesc" },
+  { key: "notif_document", labelKey: "settings_notifDocument", descKey: "settings_notifDocumentDesc" },
+  { key: "notif_inventory", labelKey: "settings_notifInventory", descKey: "settings_notifInventoryDesc" },
+  { key: "notif_expense", labelKey: "settings_notifExpense", descKey: "settings_notifExpenseDesc" },
 ];
 
-const THEME_OPTIONS = [
-  { value: "light", label: "라이트", desc: "밝은 테마" },
-  { value: "dark", label: "다크", desc: "어두운 테마" },
-  { value: "system", label: "시스템", desc: "OS 설정에 따라 자동 전환" },
-] as const;
+type ThemeOptDef = { value: "light" | "dark" | "system"; labelKey: "settings_themeLight" | "settings_themeDark" | "settings_themeSystem"; descKey: "settings_themeLightDesc" | "settings_themeDarkDesc" | "settings_themeSystemDesc" };
+
+const THEME_OPTIONS: ThemeOptDef[] = [
+  { value: "light", labelKey: "settings_themeLight", descKey: "settings_themeLightDesc" },
+  { value: "dark", labelKey: "settings_themeDark", descKey: "settings_themeDarkDesc" },
+  { value: "system", labelKey: "settings_themeSystem", descKey: "settings_themeSystemDesc" },
+];
 
 export default function Settings() {
   const { user, role, refreshUser } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { locale, setLocale, t } = useLocale();
   const [tab, setTab] = useState<Tab>("profile");
 
   // 프로필 탭
@@ -71,9 +77,9 @@ export default function Settings() {
     try {
       await apiPatch("/auth/me", { name: name.trim() });
       await refreshUser();
-      setProfileMsg({ type: "success", text: "프로필이 저장되었습니다" });
+      setProfileMsg({ type: "success", text: t("settings_saved") });
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "저장에 실패했습니다";
+      const msg = e instanceof Error ? e.message : t("settings_saveFailed");
       setProfileMsg({ type: "error", text: msg });
     } finally {
       setProfileSaving(false);
@@ -83,22 +89,22 @@ export default function Settings() {
   const handlePasswordChange = async () => {
     setPwMsg(null);
     if (newPw.length < 6) {
-      setPwMsg({ type: "error", text: "새 비밀번호는 6자 이상이어야 합니다" });
+      setPwMsg({ type: "error", text: t("settings_passwordMin") });
       return;
     }
     if (newPw !== confirmPw) {
-      setPwMsg({ type: "error", text: "새 비밀번호가 일치하지 않습니다" });
+      setPwMsg({ type: "error", text: t("settings_passwordMismatch") });
       return;
     }
     setPwSaving(true);
     try {
       await apiPatch("/auth/me/password", { currentPassword: currentPw, newPassword: newPw });
-      setPwMsg({ type: "success", text: "비밀번호가 변경되었습니다" });
+      setPwMsg({ type: "success", text: t("settings_passwordChanged") });
       setCurrentPw("");
       setNewPw("");
       setConfirmPw("");
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "비밀번호 변경에 실패했습니다";
+      const msg = e instanceof Error ? e.message : t("settings_passwordFailed");
       setPwMsg({ type: "error", text: msg });
     } finally {
       setPwSaving(false);
@@ -115,55 +121,55 @@ export default function Settings() {
 
   return (
     <div>
-      <h1 className={styles.title}>설정</h1>
+      <h1 className={styles.title}>{t("settings_title")}</h1>
 
       <div className={styles.tabs}>
         <button
           className={`${styles.tab} ${tab === "profile" ? styles.tabActive : ""}`}
           onClick={() => setTab("profile")}
         >
-          프로필
+          {t("settings_profile")}
         </button>
         <button
           className={`${styles.tab} ${tab === "password" ? styles.tabActive : ""}`}
           onClick={() => setTab("password")}
         >
-          비밀번호 변경
+          {t("settings_password")}
         </button>
         <button
           className={`${styles.tab} ${tab === "notifications" ? styles.tabActive : ""}`}
           onClick={() => setTab("notifications")}
         >
-          알림 설정
+          {t("settings_notifications")}
         </button>
       </div>
 
       {tab === "profile" && (
         <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>프로필 정보</h2>
+          <h2 className={styles.sectionTitle}>{t("settings_profileTitle")}</h2>
           <div className={styles.field}>
-            <label className={styles.label}>이메일</label>
+            <label className={styles.label}>{t("settings_email")}</label>
             <input className={styles.input} value={user.email} disabled />
           </div>
           <div className={styles.field}>
-            <label className={styles.label}>이름</label>
+            <label className={styles.label}>{t("settings_name")}</label>
             <input
               className={styles.input}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="이름을 입력하세요"
+              placeholder={t("settings_namePlaceholder")}
             />
           </div>
           <div className={styles.field}>
-            <label className={styles.label}>역할</label>
-            <div className={styles.readonlyValue}>{ROLE_LABEL[role ?? ""] ?? role}</div>
+            <label className={styles.label}>{t("settings_role")}</label>
+            <div className={styles.readonlyValue}>{t(`role_${role}` as "role_ADMIN" | "role_ACCOUNTANT" | "role_VIEWER")}</div>
           </div>
           <button
             className={`${styles.btn} ${styles.btnPrimary}`}
             onClick={handleProfileSave}
             disabled={profileSaving || !name.trim()}
           >
-            {profileSaving ? "저장 중..." : "저장"}
+            {profileSaving ? t("settings_saving") : t("settings_save")}
           </button>
           {profileMsg && (
             <div className={`${styles.msg} ${profileMsg.type === "success" ? styles.msgSuccess : styles.msgError}`}>
@@ -175,9 +181,9 @@ export default function Settings() {
 
       {tab === "password" && (
         <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>비밀번호 변경</h2>
+          <h2 className={styles.sectionTitle}>{t("settings_passwordTitle")}</h2>
           <div className={styles.field}>
-            <label className={styles.label}>현재 비밀번호</label>
+            <label className={styles.label}>{t("settings_currentPassword")}</label>
             <input
               className={styles.input}
               type="password"
@@ -186,17 +192,17 @@ export default function Settings() {
             />
           </div>
           <div className={styles.field}>
-            <label className={styles.label}>새 비밀번호</label>
+            <label className={styles.label}>{t("settings_newPassword")}</label>
             <input
               className={styles.input}
               type="password"
               value={newPw}
               onChange={(e) => setNewPw(e.target.value)}
-              placeholder="6자 이상"
+              placeholder={t("settings_newPasswordPlaceholder")}
             />
           </div>
           <div className={styles.field}>
-            <label className={styles.label}>새 비밀번호 확인</label>
+            <label className={styles.label}>{t("settings_confirmPassword")}</label>
             <input
               className={styles.input}
               type="password"
@@ -209,7 +215,7 @@ export default function Settings() {
             onClick={handlePasswordChange}
             disabled={pwSaving || !currentPw || !newPw || !confirmPw}
           >
-            {pwSaving ? "변경 중..." : "비밀번호 변경"}
+            {pwSaving ? t("settings_changingPassword") : t("settings_changePassword")}
           </button>
           {pwMsg && (
             <div className={`${styles.msg} ${pwMsg.type === "success" ? styles.msgSuccess : styles.msgError}`}>
@@ -221,7 +227,7 @@ export default function Settings() {
 
       {tab === "notifications" && (
         <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>테마</h2>
+          <h2 className={styles.sectionTitle}>{t("settings_theme")}</h2>
           <div className={styles.radioGroup}>
             {THEME_OPTIONS.map((opt) => (
               <label key={opt.value} className={`${styles.radioItem} ${theme === opt.value ? styles.radioActive : ""}`}>
@@ -234,20 +240,39 @@ export default function Settings() {
                   className={styles.radioInput}
                 />
                 <div>
-                  <div className={styles.toggleLabel}>{opt.label}</div>
-                  <div className={styles.toggleDesc}>{opt.desc}</div>
+                  <div className={styles.toggleLabel}>{t(opt.labelKey)}</div>
+                  <div className={styles.toggleDesc}>{t(opt.descKey)}</div>
                 </div>
               </label>
             ))}
           </div>
 
-          <h2 className={styles.sectionTitle} style={{ marginTop: 24 }}>알림</h2>
+          <h2 className={styles.sectionTitle} style={{ marginTop: 24 }}>{t("settings_language")}</h2>
+          <div className={styles.radioGroup}>
+            {LANG_OPTIONS.map((opt) => (
+              <label key={opt.value} className={`${styles.radioItem} ${locale === opt.value ? styles.radioActive : ""}`}>
+                <input
+                  type="radio"
+                  name="locale"
+                  value={opt.value}
+                  checked={locale === opt.value}
+                  onChange={() => setLocale(opt.value)}
+                  className={styles.radioInput}
+                />
+                <div>
+                  <div className={styles.toggleLabel}>{opt.label}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+
+          <h2 className={styles.sectionTitle} style={{ marginTop: 24 }}>{t("settings_notifTitle")}</h2>
           <div className={styles.toggleList}>
             {NOTIF_KEYS.map((n) => (
               <div key={n.key} className={styles.toggleItem}>
                 <div>
-                  <div className={styles.toggleLabel}>{n.label}</div>
-                  <div className={styles.toggleDesc}>{n.desc}</div>
+                  <div className={styles.toggleLabel}>{t(n.labelKey)}</div>
+                  <div className={styles.toggleDesc}>{t(n.descKey)}</div>
                 </div>
                 <label className={styles.switch}>
                   <input
