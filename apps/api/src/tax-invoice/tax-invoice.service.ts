@@ -2,10 +2,14 @@ import { Injectable, NotFoundException, BadRequestException } from "@nestjs/comm
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateTaxInvoiceDto } from "./dto/create-tax-invoice.dto";
 import { UpdateTaxInvoiceDto } from "./dto/update-tax-invoice.dto";
+import { HometaxXmlService } from "./hometax-xml.service";
 
 @Injectable()
 export class TaxInvoiceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly hometaxXmlService: HometaxXmlService,
+  ) {}
 
   async create(dto: CreateTaxInvoiceDto) {
     // 거래처 자동 매칭 (사업자등록번호 기준)
@@ -66,7 +70,7 @@ export class TaxInvoiceService {
 
     return this.prisma.taxInvoice.findMany({
       where,
-      include: { vendor: true },
+      include: { vendor: true, items: true },
       orderBy: { invoiceDate: "desc" },
     });
   }
@@ -74,7 +78,7 @@ export class TaxInvoiceService {
   async findOne(id: string) {
     const invoice = await this.prisma.taxInvoice.findUnique({
       where: { id },
-      include: { vendor: true, journalEntry: true },
+      include: { vendor: true, journalEntry: true, items: true },
     });
     if (!invoice) throw new NotFoundException("세금계산서를 찾을 수 없습니다");
     return invoice;
@@ -285,5 +289,134 @@ export class TaxInvoiceService {
         isMatched,
       },
     };
+  }
+
+  // ─── 홈택스 XML 가져오기/내보내기 ───────────────────
+
+  /**
+   * 단일 홈택스 XML을 파싱하여 세금계산서 생성
+   */
+  async importFromXml(tenantId: string, xmlString: string, invoiceType: string) {
+    const parsed = this.hometaxXmlService.parseXml(xmlString);
+
+    // 거래처 매칭 또는 생성
+    const bizNo = invoiceType === "PURCHASE" ? parsed.issuerBizNo : parsed.recipientBizNo;
+    const bizName = invoiceType === "PURCHASE" ? parsed.issuerName : parsed.recipientName;
+
+    let vendor = await this.prisma.vendor.findFirst({
+      where: { tenantId, bizNo },
+    });
+    if (!vendor) {
+      vendor = await this.prisma.vendor.create({
+        data: { tenantId, bizNo, name: bizName },
+      });
+    }
+
+    // 세금계산서 + 품목 생성
+    const invoice = await this.prisma.taxInvoice.create({
+      data: {
+        tenantId,
+        invoiceType,
+        invoiceDate: new Date(parsed.invoiceDate),
+        issuerBizNo: parsed.issuerBizNo,
+        issuerName: parsed.issuerName,
+        recipientBizNo: parsed.recipientBizNo,
+        recipientName: parsed.recipientName,
+        supplyAmount: parsed.supplyAmount,
+        taxAmount: parsed.taxAmount,
+        totalAmount: parsed.totalAmount,
+        approvalNo: parsed.approvalNo || undefined,
+        vendorId: vendor.id,
+        hometaxSyncStatus: "IMPORTED",
+        hometaxImportedAt: new Date(),
+        xmlRaw: xmlString,
+        items: {
+          create: parsed.items.map((item) => ({
+            sequenceNo: item.sequenceNo,
+            itemDate: item.itemDate ? new Date(item.itemDate) : null,
+            itemName: item.itemName,
+            specification: item.specification,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            supplyAmount: item.supplyAmount,
+            taxAmount: item.taxAmount,
+            remark: item.remark,
+          })),
+        },
+      },
+      include: { vendor: true, items: true },
+    });
+
+    return invoice;
+  }
+
+  /**
+   * 복수 홈택스 XML 일괄 가져오기
+   */
+  async importBatch(tenantId: string, xmlStrings: string[], invoiceType: string) {
+    const results: Array<{ success: boolean; data?: unknown; error?: string }> = [];
+    let success = 0;
+    let failed = 0;
+
+    for (const xmlString of xmlStrings) {
+      try {
+        const invoice = await this.importFromXml(tenantId, xmlString, invoiceType);
+        results.push({ success: true, data: invoice });
+        success++;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "알 수 없는 오류";
+        results.push({ success: false, error: message });
+        failed++;
+      }
+    }
+
+    return {
+      total: xmlStrings.length,
+      success,
+      failed,
+      results,
+    };
+  }
+
+  /**
+   * 세금계산서를 홈택스 표준 XML로 내보내기
+   */
+  async exportXml(id: string): Promise<string> {
+    const invoice = await this.prisma.taxInvoice.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+    if (!invoice) throw new NotFoundException("세금계산서를 찾을 수 없습니다");
+
+    const xml = this.hometaxXmlService.generateXml({
+      approvalNo: invoice.approvalNo,
+      invoiceDate: invoice.invoiceDate,
+      issuerBizNo: invoice.issuerBizNo,
+      issuerName: invoice.issuerName,
+      recipientBizNo: invoice.recipientBizNo,
+      recipientName: invoice.recipientName,
+      supplyAmount: invoice.supplyAmount,
+      taxAmount: invoice.taxAmount,
+      totalAmount: invoice.totalAmount,
+      items: invoice.items.map((item) => ({
+        sequenceNo: item.sequenceNo,
+        itemDate: item.itemDate,
+        itemName: item.itemName,
+        specification: item.specification,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        supplyAmount: item.supplyAmount,
+        taxAmount: item.taxAmount,
+        remark: item.remark,
+      })),
+    });
+
+    // 동기 상태 업데이트
+    await this.prisma.taxInvoice.update({
+      where: { id },
+      data: { hometaxSyncStatus: "EXPORTED" },
+    });
+
+    return xml;
   }
 }

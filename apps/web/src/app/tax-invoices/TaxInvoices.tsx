@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
+import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { exportToXlsx } from "@/lib/export-xlsx";
 import styles from "./TaxInvoices.module.css";
@@ -29,6 +29,7 @@ interface TaxInvoice {
   approvalNo: string | null;
   description: string | null;
   vendor: Vendor | null;
+  hometaxSyncStatus: "IMPORTED" | "EXPORTED" | "VERIFIED" | null;
 }
 
 interface TaxSummary {
@@ -55,6 +56,31 @@ function typeLabel(type: string) {
     : { text: "매출", cls: styles.typeSales };
 }
 
+// 홈택스 동기화 상태 뱃지
+function hometaxBadge(status: string | null) {
+  switch (status) {
+    case "IMPORTED": return { text: "가져옴", cls: styles.hometaxImported };
+    case "EXPORTED": return { text: "내보냄", cls: styles.hometaxExported };
+    case "VERIFIED": return { text: "검증됨", cls: styles.hometaxVerified };
+    default: return null;
+  }
+}
+
+/** 인증 헤더 포함 파일 다운로드 */
+async function downloadFileWithAuth(url: string, filename: string) {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_BASE}${url}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("다운로드 실패");
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 export default function TaxInvoicesPage() {
   const { tenantId, canEdit, canDelete } = useAuth();
   const queryClient = useQueryClient();
@@ -77,6 +103,12 @@ export default function TaxInvoicesPage() {
   const [approvalNo, setApprovalNo] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
+
+  // 홈택스 XML 가져오기 모달 상태
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importType, setImportType] = useState("PURCHASE");
+  const [importResult, setImportResult] = useState<string>("");
 
   // 필터
   const [filterStart, setFilterStart] = useState("");
@@ -283,6 +315,38 @@ export default function TaxInvoicesPage() {
 
   const hasApprovalLine = approvalLines.length > 0;
 
+  // 홈택스 XML 가져오기
+  const importMutation = useMutation({
+    mutationFn: (formData: FormData) =>
+      apiUpload<{ imported: number }>("/tax-invoices/import/hometax-xml", formData),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["taxInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["taxSummary"] });
+      setImportResult(`${data.imported}건 가져오기 완료`);
+      setImportFile(null);
+    },
+    onError: (err: Error) => {
+      setImportResult(`오류: ${err.message}`);
+    },
+  });
+
+  const handleImportSubmit = () => {
+    if (!importFile) return;
+    const formData = new FormData();
+    formData.append("file", importFile);
+    formData.append("invoiceType", importType);
+    formData.append("tenantId", tenantId || "");
+    setImportResult("");
+    importMutation.mutate(formData);
+  };
+
+  const closeImportModal = () => {
+    setShowImportModal(false);
+    setImportFile(null);
+    setImportType("PURCHASE");
+    setImportResult("");
+  };
+
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   // 엑셀 내보내기
@@ -323,12 +387,77 @@ export default function TaxInvoicesPage() {
     <div>
       <div className={styles.header}>
         <h1 className={styles.title}>세금계산서 관리</h1>
-        {formMode === "none" && canEdit && (
-          <button className={styles.addBtn} onClick={() => setFormMode("create")}>
-            세금계산서 등록
-          </button>
-        )}
+        <div style={{ display: "flex", gap: 8 }}>
+          {canEdit && (
+            <button
+              className={styles.downloadBtn}
+              onClick={() => setShowImportModal(true)}
+            >
+              홈택스 XML 가져오기
+            </button>
+          )}
+          {formMode === "none" && canEdit && (
+            <button className={styles.addBtn} onClick={() => setFormMode("create")}>
+              세금계산서 등록
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* 홈택스 XML 가져오기 모달 */}
+      {showImportModal && (
+        <div className={styles.modalOverlay} onClick={closeImportModal}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 className={styles.sectionTitle}>홈택스 XML 가져오기</h2>
+            <div className={styles.formGrid}>
+              <div className={styles.formRow}>
+                <label className={styles.label}>유형</label>
+                <select
+                  className={styles.select}
+                  value={importType}
+                  onChange={(e) => setImportType(e.target.value)}
+                >
+                  <option value="PURCHASE">매입</option>
+                  <option value="SALES">매출</option>
+                </select>
+              </div>
+              <div className={styles.formRow}>
+                <label className={styles.label}>XML 파일</label>
+                <input
+                  className={styles.input}
+                  type="file"
+                  accept=".xml"
+                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                />
+              </div>
+            </div>
+            {importResult && (
+              <p
+                style={{
+                  fontSize: "0.85rem",
+                  marginBottom: 12,
+                  color: importResult.startsWith("오류") ? "var(--danger)" : "#166534",
+                  fontWeight: 600,
+                }}
+              >
+                {importResult}
+              </p>
+            )}
+            <div className={styles.formActions}>
+              <button
+                className={styles.submitBtn}
+                onClick={handleImportSubmit}
+                disabled={!importFile || importMutation.isPending}
+              >
+                {importMutation.isPending ? "가져오는 중..." : "가져오기"}
+              </button>
+              <button className={styles.cancelFormBtn} onClick={closeImportModal}>
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 부가세 신고 요약 */}
       <div className={styles.summaryControls}>
@@ -631,6 +760,7 @@ export default function TaxInvoicesPage() {
               <th>공급가액</th>
               <th>세액</th>
               <th>합계</th>
+              <th>홈택스</th>
               <th>상태</th>
               <th>관리</th>
             </tr>
@@ -652,10 +782,31 @@ export default function TaxInvoicesPage() {
                   <td>₩{Number(inv.taxAmount).toLocaleString()}</td>
                   <td>₩{Number(inv.totalAmount).toLocaleString()}</td>
                   <td>
+                    {(() => {
+                      const hb = hometaxBadge(inv.hometaxSyncStatus);
+                      return hb ? (
+                        <span className={`${styles.status} ${hb.cls}`}>{hb.text}</span>
+                      ) : "-";
+                    })()}
+                  </td>
+                  <td>
                     <span className={`${styles.status} ${s.cls}`}>{s.text}</span>
                   </td>
                   <td>
                     <div className={styles.actions}>
+                      <button
+                        className={styles.editBtn}
+                        style={{ fontSize: "0.75rem" }}
+                        onClick={() =>
+                          downloadFileWithAuth(
+                            `/tax-invoices/${inv.id}/export-xml`,
+                            `세금계산서_${inv.invoiceNo || inv.id}.xml`,
+                          )
+                        }
+                        title="XML 내보내기"
+                      >
+                        XML
+                      </button>
                       {canEdit && inv.status === "DRAFT" && hasApprovalLine && (
                         <button
                           className={styles.statusBtn}
@@ -700,7 +851,7 @@ export default function TaxInvoicesPage() {
             })}
             {invoices.length === 0 && (
               <tr>
-                <td colSpan={10} style={{ textAlign: "center", color: "var(--text-muted)" }}>
+                <td colSpan={11} style={{ textAlign: "center", color: "var(--text-muted)" }}>
                   세금계산서가 없습니다
                 </td>
               </tr>

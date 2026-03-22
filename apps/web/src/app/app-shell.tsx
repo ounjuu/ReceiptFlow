@@ -37,6 +37,8 @@ const navItems: { href: string; labelKey: TranslationKey }[] = [
   { href: "/exchange-rates", labelKey: "nav_exchangeRates" },
   { href: "/journal-templates", labelKey: "nav_journalTemplates" },
   { href: "/journal-rules", labelKey: "nav_journalRules" },
+  { href: "/year-end-settlement", labelKey: "nav_yearEndSettlement" },
+  { href: "/tax-filing", labelKey: "nav_taxFiling" },
 ];
 
 const ROLE_KEYS: Record<string, TranslationKey> = {

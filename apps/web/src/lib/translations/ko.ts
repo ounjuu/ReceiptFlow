@@ -25,6 +25,8 @@ const ko = {
   nav_exchangeRates: "환율 관리",
   nav_journalTemplates: "반복 전표",
   nav_journalRules: "자동 전표 규칙",
+  nav_yearEndSettlement: "연말정산",
+  nav_taxFiling: "전자신고",
   nav_members: "멤버 관리",
   nav_auditLogs: "감사 로그",
   nav_settings: "설정",

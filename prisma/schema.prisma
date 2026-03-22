@@ -43,6 +43,7 @@ model Tenant {
   bankAccounts         BankAccount[]
   bankTransactions     BankTransaction[]
   journalRules         JournalRule[]
+  taxFilings           TaxFiling[]
 }
 
 model User {
@@ -363,7 +364,15 @@ model TaxInvoice {
   journalEntryId  String?   @unique
   journalEntry    JournalEntry? @relation(fields: [journalEntryId], references: [id])
 
-  description     String?
+  description        String?
+
+  // 홈택스 연동
+  hometaxSyncStatus  String?    // IMPORTED, EXPORTED, VERIFIED
+  hometaxImportedAt  DateTime?
+  xmlRaw             String?    // 원본 XML 저장
+
+  items              TaxInvoiceItem[]
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -503,8 +512,9 @@ model Employee {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  payrollRecords PayrollRecord[]
-  expenseClaims  ExpenseClaim[]
+  payrollRecords      PayrollRecord[]
+  expenseClaims       ExpenseClaim[]
+  yearEndSettlements  YearEndSettlement[]
 
   @@unique([tenantId, employeeNo])
   @@index([tenantId])
@@ -826,4 +836,124 @@ model BankTransaction {
   @@index([tenantId])
   @@index([bankAccountId])
   @@index([txDate])
+}
+
+// ──────────────────────────────────
+// 전자세금계산서 품목
+// ──────────────────────────────────
+
+model TaxInvoiceItem {
+  id              String     @id @default(uuid())
+  taxInvoiceId    String
+  taxInvoice      TaxInvoice @relation(fields: [taxInvoiceId], references: [id], onDelete: Cascade)
+  sequenceNo      Int        // 일련번호
+  itemDate        DateTime?  // 거래일
+  itemName        String?    // 품목명
+  specification   String?    // 규격
+  quantity        Decimal?   @db.Decimal(18, 4)
+  unitPrice       Decimal?   @db.Decimal(18, 2)
+  supplyAmount    Decimal    @db.Decimal(18, 2) // 공급가액
+  taxAmount       Decimal    @db.Decimal(18, 2) // 세액
+  remark          String?
+
+  @@index([taxInvoiceId])
+}
+
+// ──────────────────────────────────
+// 연말정산
+// ──────────────────────────────────
+
+model YearEndSettlement {
+  id                String   @id @default(uuid())
+  employeeId        String
+  employee          Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  year              Int
+
+  // 총급여 (PayrollRecord 집계)
+  annualGrossPay    Decimal  @db.Decimal(18, 2)
+
+  // 인적공제
+  dependents        Int      @default(1)        // 부양가족 수 (본인 포함)
+  dependentsUnder20 Int      @default(0)        // 20세 이하 자녀
+  dependentsOver70  Int      @default(0)        // 70세 이상 경로우대
+
+  // 보험료
+  insurancePremium       Decimal @default(0) @db.Decimal(18, 2)
+
+  // 의료비
+  medicalExpense         Decimal @default(0) @db.Decimal(18, 2)
+  medicalExpenseSevere   Decimal @default(0) @db.Decimal(18, 2) // 난임/중증
+
+  // 교육비
+  educationExpense       Decimal @default(0) @db.Decimal(18, 2) // 본인
+  educationExpenseChild  Decimal @default(0) @db.Decimal(18, 2) // 자녀
+
+  // 기부금
+  donationPolitical      Decimal @default(0) @db.Decimal(18, 2)
+  donationLegal          Decimal @default(0) @db.Decimal(18, 2)
+  donationDesignated     Decimal @default(0) @db.Decimal(18, 2)
+
+  // 신용카드 등
+  creditCardUsage        Decimal @default(0) @db.Decimal(18, 2)
+  debitCardUsage         Decimal @default(0) @db.Decimal(18, 2)
+  cashReceiptUsage       Decimal @default(0) @db.Decimal(18, 2)
+  traditionalMarket      Decimal @default(0) @db.Decimal(18, 2) // 전통시장
+  publicTransport        Decimal @default(0) @db.Decimal(18, 2) // 대중교통
+
+  // 주택/연금
+  housingLoanInterest    Decimal @default(0) @db.Decimal(18, 2)
+  housingRent            Decimal @default(0) @db.Decimal(18, 2)
+  pensionSaving          Decimal @default(0) @db.Decimal(18, 2)
+
+  // 계산 결과
+  earnedIncomeDeduction   Decimal @default(0) @db.Decimal(18, 2) // 근로소득공제
+  earnedIncome            Decimal @default(0) @db.Decimal(18, 2) // 근로소득금액
+  personalDeduction       Decimal @default(0) @db.Decimal(18, 2) // 인적공제
+  specialDeduction        Decimal @default(0) @db.Decimal(18, 2) // 특별소득공제
+  otherDeduction          Decimal @default(0) @db.Decimal(18, 2) // 그 외 소득공제
+  taxableIncome           Decimal @default(0) @db.Decimal(18, 2) // 과세표준
+  calculatedTax           Decimal @default(0) @db.Decimal(18, 2) // 산출세액
+  taxCredit               Decimal @default(0) @db.Decimal(18, 2) // 세액공제
+  determinedTax           Decimal @default(0) @db.Decimal(18, 2) // 결정세액
+  alreadyPaidTax          Decimal @default(0) @db.Decimal(18, 2) // 기납부세액
+  finalTax                Decimal @default(0) @db.Decimal(18, 2) // 환급(-) / 납부(+)
+
+  status             String   @default("DRAFT") // DRAFT, CALCULATED, FINALIZED
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([employeeId, year])
+  @@index([employeeId])
+}
+
+// ──────────────────────────────────
+// 전자신고
+// ──────────────────────────────────
+
+model TaxFiling {
+  id              String   @id @default(uuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  filingType      String   // VAT, CORPORATE, WITHHOLDING
+  year            Int
+  period          String   // Q1~Q4 (부가세), ANNUAL (법인세), YYYY-MM (원천세)
+
+  filingData      Json     // 신고서 데이터
+
+  status          String   @default("DRAFT") // DRAFT, GENERATED, EXPORTED, FILED, ACCEPTED, REJECTED
+  generatedAt     DateTime?
+  exportedAt      DateTime?
+  filedAt         DateTime?
+  filingReference String?  // 홈택스 접수번호
+
+  taxableAmount   Decimal  @default(0) @db.Decimal(18, 2)
+  taxAmount       Decimal  @default(0) @db.Decimal(18, 2)
+
+  note            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tenantId, filingType, year, period])
+  @@index([tenantId])
+  @@index([filingType])
 }
