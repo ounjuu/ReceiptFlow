@@ -799,6 +799,19 @@ export default function TaxInvoicesPage() {
                         style={{ fontSize: "0.75rem" }}
                         onClick={() =>
                           downloadFileWithAuth(
+                            `/tax-invoices/${inv.id}/export-pdf`,
+                            `세금계산서-${inv.invoiceNo || inv.id}.pdf`,
+                          )
+                        }
+                        title="PDF 다운로드"
+                      >
+                        PDF
+                      </button>
+                      <button
+                        className={styles.editBtn}
+                        style={{ fontSize: "0.75rem" }}
+                        onClick={() =>
+                          downloadFileWithAuth(
                             `/tax-invoices/${inv.id}/export-xml`,
                             `세금계산서_${inv.invoiceNo || inv.id}.xml`,
                           )

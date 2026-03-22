@@ -9,6 +9,7 @@ import { extname } from "path";
 import { Response } from "express";
 import { readFileSync } from "fs";
 import { TaxInvoiceService } from "./tax-invoice.service";
+import { TaxInvoicePdfService } from "./tax-invoice-pdf.service";
 import { HometaxXmlService } from "./hometax-xml.service";
 import { CreateTaxInvoiceDto } from "./dto/create-tax-invoice.dto";
 import { UpdateTaxInvoiceDto } from "./dto/update-tax-invoice.dto";
@@ -32,6 +33,7 @@ const xmlStorageOptions = {
 export class TaxInvoiceController {
   constructor(
     private readonly taxInvoiceService: TaxInvoiceService,
+    private readonly taxInvoicePdfService: TaxInvoicePdfService,
     private readonly hometaxXmlService: HometaxXmlService,
   ) {}
 
@@ -117,6 +119,17 @@ export class TaxInvoiceController {
   @Get(":id")
   async findOne(@Param("id") id: string) {
     return this.taxInvoiceService.findOne(id);
+  }
+
+  @Get(":id/export-pdf")
+  async exportPdf(@Param("id") id: string, @Res() res: Response) {
+    const invoice = await this.taxInvoiceService.findOne(id);
+    const buffer = await this.taxInvoicePdfService.generatePdf(invoice);
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="tax-invoice-${invoice.invoiceNo || id}.pdf"`,
+    });
+    res.end(buffer);
   }
 
   @Get(":id/export-xml")

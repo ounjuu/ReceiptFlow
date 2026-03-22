@@ -7,9 +7,12 @@ import {
   Param,
   Query,
   Body,
+  Res,
   UseGuards,
 } from "@nestjs/common";
+import { Response } from "express";
 import { TradeService } from "./trade.service";
+import { TradePdfService } from "./trade-pdf.service";
 import { CreateTradeDto } from "./dto/create-trade.dto";
 import { UpdateTradeDto } from "./dto/update-trade.dto";
 import { CreatePaymentDto } from "./dto/create-payment.dto";
@@ -21,7 +24,10 @@ import { CurrentTenant } from "../auth/current-tenant.decorator";
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("trades")
 export class TradeController {
-  constructor(private readonly service: TradeService) {}
+  constructor(
+    private readonly service: TradeService,
+    private readonly tradePdfService: TradePdfService,
+  ) {}
 
   // 정적 경로 먼저
   @Get("summary")
@@ -56,6 +62,17 @@ export class TradeController {
       startDate,
       endDate,
     );
+  }
+
+  @Get(":id/export-pdf")
+  async exportPdf(@Param("id") id: string, @Res() res: Response) {
+    const trade = await this.service.getTrade(id);
+    const buffer = await this.tradePdfService.generatePdf(trade);
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="trade-${trade.tradeNo}.pdf"`,
+    });
+    res.end(buffer);
   }
 
   @Get(":id")

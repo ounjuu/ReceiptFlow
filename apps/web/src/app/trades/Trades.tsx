@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
+import { apiGet, apiPost, apiPatch, apiDelete, API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { exportToXlsx } from "@/lib/export-xlsx";
 import styles from "./Trades.module.css";
@@ -109,6 +109,19 @@ const emptyItem = (): ItemInput => ({
   quantity: 1,
   unitPrice: 0,
 });
+
+const downloadPdf = async (url: string, filename: string) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_BASE}${url}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
 
 export default function TradesPage() {
   const { tenantId, canEdit, canDelete } = useAuth();
@@ -345,6 +358,19 @@ export default function TradesPage() {
               {(canEdit || canDelete) && (
                 <td>
                   <div className={styles.actions}>
+                    <button
+                      className={styles.confirmBtn}
+                      style={{ fontSize: "0.75rem" }}
+                      onClick={() =>
+                        downloadPdf(
+                          `/trades/${t.id}/export-pdf`,
+                          `거래명세서-${t.tradeNo}.pdf`,
+                        )
+                      }
+                      title="PDF 다운로드"
+                    >
+                      PDF
+                    </button>
                     {canEdit && t.status === "DRAFT" && (
                       <button
                         className={styles.confirmBtn}
