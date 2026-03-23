@@ -5,47 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import * as XLSX from "xlsx";
+import type { VatReturn } from "./types";
+import VatReturnsTable from "./VatReturnsTable";
 import styles from "./VatReturns.module.css";
-
-interface InvoiceItem {
-  id: string;
-  invoiceNo: string | null;
-  invoiceDate: string;
-  bizNo: string;
-  name: string;
-  supplyAmount: number;
-  taxAmount: number;
-  totalAmount: number;
-  status: string;
-}
-
-interface VatReturn {
-  year: number;
-  quarter: number;
-  periodStart: string;
-  periodEnd: string;
-  sales: {
-    invoiceCount: number;
-    supplyAmount: number;
-    taxAmount: number;
-    invoices: InvoiceItem[];
-  };
-  purchase: {
-    invoiceCount: number;
-    supplyAmount: number;
-    taxAmount: number;
-    invoices: InvoiceItem[];
-  };
-  outputTax: number;
-  inputTax: number;
-  netTax: number;
-  isRefund: boolean;
-  journalValidation: {
-    vatPayable: number;
-    vatReceivable: number;
-    isMatched: boolean;
-  };
-}
 
 function statusLabel(status: string) {
   switch (status) {
@@ -140,74 +102,6 @@ export default function VatReturnsPage() {
 
     XLSX.writeFile(wb, `부가세신고서_${data.year}_${data.quarter}Q.xlsx`);
   };
-
-  const renderInvoiceTable = (
-    title: string,
-    subtitle: string,
-    invoices: InvoiceItem[],
-    totalSupply: number,
-    totalTax: number,
-  ) => (
-    <div className={styles.tableSection}>
-      <div className={styles.tableHeader}>
-        <div>
-          <div className={styles.tableTitle}>{title}</div>
-          <div className={styles.tableSubtitle}>{subtitle}</div>
-        </div>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>No.</th>
-            <th>세금계산서번호</th>
-            <th>일자</th>
-            <th>사업자번호</th>
-            <th>거래처</th>
-            <th>공급가액</th>
-            <th>세액</th>
-            <th>합계</th>
-            <th>상태</th>
-          </tr>
-        </thead>
-        <tbody>
-          {invoices.map((inv, i) => {
-            const s = statusLabel(inv.status);
-            return (
-              <tr key={inv.id}>
-                <td>{i + 1}</td>
-                <td>{inv.invoiceNo || "-"}</td>
-                <td>{new Date(inv.invoiceDate).toLocaleDateString("ko-KR")}</td>
-                <td>{inv.bizNo}</td>
-                <td>{inv.name}</td>
-                <td>{fmt(inv.supplyAmount)}</td>
-                <td>{fmt(inv.taxAmount)}</td>
-                <td>{fmt(inv.totalAmount)}</td>
-                <td>
-                  <span className={`${styles.status} ${s.cls}`}>{s.text}</span>
-                </td>
-              </tr>
-            );
-          })}
-          {invoices.length === 0 && (
-            <tr>
-              <td colSpan={9} className={styles.emptyRow}>
-                해당 분기 세금계산서가 없습니다
-              </td>
-            </tr>
-          )}
-          {invoices.length > 0 && (
-            <tr className={styles.totalRow}>
-              <td colSpan={5}>합계 ({invoices.length}건)</td>
-              <td>{fmt(totalSupply)}</td>
-              <td>{fmt(totalTax)}</td>
-              <td>{fmt(totalSupply + totalTax)}</td>
-              <td></td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
 
   return (
     <div>
@@ -329,22 +223,22 @@ export default function VatReturnsPage() {
           </div>
 
           {/* 매출 세금계산서 목록 */}
-          {renderInvoiceTable(
-            "매출 세금계산서",
-            `${data.year}년 ${data.quarter}분기 매출 세금계산서 목록`,
-            data.sales.invoices,
-            data.sales.supplyAmount,
-            data.sales.taxAmount,
-          )}
+          <VatReturnsTable
+            title="매출 세금계산서"
+            subtitle={`${data.year}년 ${data.quarter}분기 매출 세금계산서 목록`}
+            invoices={data.sales.invoices}
+            totalSupply={data.sales.supplyAmount}
+            totalTax={data.sales.taxAmount}
+          />
 
           {/* 매입 세금계산서 목록 */}
-          {renderInvoiceTable(
-            "매입 세금계산서",
-            `${data.year}년 ${data.quarter}분기 매입 세금계산서 목록`,
-            data.purchase.invoices,
-            data.purchase.supplyAmount,
-            data.purchase.taxAmount,
-          )}
+          <VatReturnsTable
+            title="매입 세금계산서"
+            subtitle={`${data.year}년 ${data.quarter}분기 매입 세금계산서 목록`}
+            invoices={data.purchase.invoices}
+            totalSupply={data.purchase.supplyAmount}
+            totalTax={data.purchase.taxAmount}
+          />
         </>
       )}
     </div>

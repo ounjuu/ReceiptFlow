@@ -6,46 +6,10 @@ import { apiGet, apiPost, apiDelete } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { exportToXlsx } from "@/lib/export-xlsx";
 import styles from "./Budgets.module.css";
-
-interface BudgetItem {
-  id: string;
-  accountId: string;
-  accountCode: string;
-  accountName: string;
-  accountType: string;
-  year: number;
-  month: number;
-  amount: number;
-  note: string | null;
-}
-
-interface AccountOption {
-  id: string;
-  code: string;
-  name: string;
-  type: string;
-}
-
-interface VsActualRow {
-  accountId: string;
-  accountCode: string;
-  accountName: string;
-  budget: number;
-  actual: number;
-  variance: number;
-  rate: number;
-}
-
-interface VsActualData {
-  rows: VsActualRow[];
-  totalBudget: number;
-  totalActual: number;
-  totalVariance: number;
-  totalRate: number;
-}
-
-const fmt = (n: number) => n.toLocaleString();
-const now = new Date();
+import type { BudgetItem, AccountOption, VsActualData, BudgetGridRow } from "./types";
+import { fmt, now } from "./types";
+import BudgetForm from "./BudgetForm";
+import { BudgetSettingTable, BudgetComparisonTable } from "./BudgetTable";
 
 export default function BudgetsPage() {
   const { tenantId, canEdit, canDelete } = useAuth();
@@ -155,10 +119,7 @@ export default function BudgetsPage() {
   };
 
   // 계정별 월별 그리드 데이터 구성
-  const accountBudgetMap = new Map<
-    string,
-    { accountId: string; code: string; name: string; months: Record<number, { id: string; amount: number }> }
-  >();
+  const accountBudgetMap = new Map<string, BudgetGridRow>();
   for (const b of budgets) {
     if (!accountBudgetMap.has(b.accountId)) {
       accountBudgetMap.set(b.accountId, {
@@ -180,18 +141,6 @@ export default function BudgetsPage() {
   // 요약
   const totalBudget = budgets.reduce((s, b) => s + b.amount, 0);
 
-  const getRateColor = (rate: number) => {
-    if (rate > 100) return styles.rateDanger;
-    if (rate > 80) return styles.rateWarning;
-    return styles.rateNormal;
-  };
-
-  const getProgressColor = (rate: number) => {
-    if (rate > 100) return "#ef4444";
-    if (rate > 80) return "#f59e0b";
-    return "#22c55e";
-  };
-
   // 엑셀 내보내기
   const exportComparison = () => {
     if (!vsActual || vsActual.rows.length === 0) return;
@@ -211,6 +160,10 @@ export default function BudgetsPage() {
         r.rate,
       ]),
     );
+  };
+
+  const handleDeleteRow = (months: Record<number, { id: string; amount: number }>) => {
+    Object.values(months).forEach((m) => deleteMutation.mutate(m.id));
   };
 
   return (
@@ -264,336 +217,48 @@ export default function BudgetsPage() {
 
       {/* 예산 설정 탭 */}
       {tab === "setting" && (
-        <div className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>
-              {year}년 예산 설정
-            </h2>
-            <div className={styles.sectionHeaderRight}>
-              <select
-                className={styles.controlSelect}
-                value={year}
-                onChange={(e) => setYear(Number(e.target.value))}
-              >
-                {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(
-                  (y) => (
-                    <option key={y} value={y}>
-                      {y}년
-                    </option>
-                  ),
-                )}
-              </select>
-              {canEdit && (
-                <button
-                  className={styles.primaryBtn}
-                  onClick={() => setShowForm(!showForm)}
-                >
-                  {showForm ? "취소" : "예산 등록"}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* 등록 폼 */}
-          {showForm && (
-            <div className={styles.form}>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>계정과목 *</label>
-                <select
-                  className={styles.formSelect}
-                  value={formAccountId}
-                  onChange={(e) => setFormAccountId(e.target.value)}
-                >
-                  <option value="">선택</option>
-                  {expenseAccounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.code} {a.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>
-                  <input
-                    type="checkbox"
-                    checked={bulkMode}
-                    onChange={(e) => setBulkMode(e.target.checked)}
-                    style={{ marginRight: 6 }}
-                  />
-                  12개월 동일 금액
-                </label>
-                {!bulkMode && (
-                  <select
-                    className={styles.formSelect}
-                    value={formMonth}
-                    onChange={(e) => setFormMonth(Number(e.target.value))}
-                  >
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                      <option key={m} value={m}>
-                        {m}월
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>금액 *</label>
-                <input
-                  className={styles.formInput}
-                  type="number"
-                  value={formAmount}
-                  onChange={(e) => setFormAmount(e.target.value)}
-                  placeholder="0"
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>비고</label>
-                <input
-                  className={styles.formInput}
-                  value={formNote}
-                  onChange={(e) => setFormNote(e.target.value)}
-                  placeholder="선택사항"
-                />
-              </div>
-              <div className={styles.formActions}>
-                <button
-                  className={styles.secondaryBtn}
-                  onClick={() => {
-                    resetForm();
-                    setShowForm(false);
-                  }}
-                >
-                  취소
-                </button>
-                <button
-                  className={styles.primaryBtn}
-                  onClick={handleUpsert}
-                  disabled={upsertMutation.isPending}
-                >
-                  {upsertMutation.isPending ? "저장 중..." : "저장"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* 계정별 월별 예산 테이블 */}
-          <div style={{ overflowX: "auto" }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>계정</th>
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <th key={i} style={{ textAlign: "right" }}>
-                      {i + 1}월
-                    </th>
-                  ))}
-                  <th style={{ textAlign: "right" }}>합계</th>
-                  {canDelete && <th></th>}
-                </tr>
-              </thead>
-              <tbody>
-                {budgetGrid.map((row) => {
-                  const total = Object.values(row.months).reduce(
-                    (s, m) => s + m.amount,
-                    0,
-                  );
-                  return (
-                    <tr key={row.accountId}>
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        {row.code} {row.name}
-                      </td>
-                      {Array.from({ length: 12 }, (_, i) => {
-                        const m = row.months[i + 1];
-                        return (
-                          <td
-                            key={i}
-                            style={{
-                              textAlign: "right",
-                              color: m ? "inherit" : "var(--text-muted)",
-                            }}
-                          >
-                            {m ? fmt(m.amount) : "-"}
-                          </td>
-                        );
-                      })}
-                      <td style={{ textAlign: "right", fontWeight: 600 }}>
-                        {fmt(total)}
-                      </td>
-                      {canDelete && (
-                        <td>
-                          <button
-                            className={styles.dangerBtn}
-                            onClick={() => {
-                              Object.values(row.months).forEach((m) =>
-                                deleteMutation.mutate(m.id),
-                              );
-                            }}
-                          >
-                            삭제
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-                {budgetGrid.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={canDelete ? 15 : 14}
-                      style={{ textAlign: "center", color: "var(--text-muted)" }}
-                    >
-                      등록된 예산이 없습니다
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <BudgetSettingTable
+          year={year}
+          setYear={setYear}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          showForm={showForm}
+          setShowForm={setShowForm}
+          budgetGrid={budgetGrid}
+          onDeleteRow={handleDeleteRow}
+        >
+          <BudgetForm
+            formAccountId={formAccountId}
+            setFormAccountId={setFormAccountId}
+            formMonth={formMonth}
+            setFormMonth={setFormMonth}
+            formAmount={formAmount}
+            setFormAmount={setFormAmount}
+            formNote={formNote}
+            setFormNote={setFormNote}
+            bulkMode={bulkMode}
+            setBulkMode={setBulkMode}
+            expenseAccounts={expenseAccounts}
+            isPending={upsertMutation.isPending}
+            onSubmit={handleUpsert}
+            onCancel={() => {
+              resetForm();
+              setShowForm(false);
+            }}
+          />
+        </BudgetSettingTable>
       )}
 
       {/* 예산 vs 실적 탭 */}
       {tab === "comparison" && (
-        <div className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>예산 vs 실적</h2>
-            <div className={styles.sectionHeaderRight}>
-              <select
-                className={styles.controlSelect}
-                value={compYear}
-                onChange={(e) => setCompYear(Number(e.target.value))}
-              >
-                {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(
-                  (y) => (
-                    <option key={y} value={y}>
-                      {y}년
-                    </option>
-                  ),
-                )}
-              </select>
-              <select
-                className={styles.controlSelect}
-                value={compMonth ?? ""}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setCompMonth(v ? Number(v) : undefined);
-                }}
-              >
-                <option value="">연간</option>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <option key={m} value={m}>
-                    {m}월
-                  </option>
-                ))}
-              </select>
-              <span className={styles.unit}>(단위: 원)</span>
-              <button
-                className={styles.downloadBtn}
-                onClick={exportComparison}
-                disabled={!vsActual || vsActual.rows.length === 0}
-              >
-                엑셀 다운로드
-              </button>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>계정코드</th>
-                <th>계정명</th>
-                <th style={{ textAlign: "right" }}>예산</th>
-                <th style={{ textAlign: "right" }}>실적</th>
-                <th style={{ textAlign: "right" }}>차이</th>
-                <th style={{ textAlign: "right", minWidth: 180 }}>소진율</th>
-              </tr>
-            </thead>
-            <tbody>
-              {vsActual?.rows.map((r) => (
-                <tr key={r.accountId}>
-                  <td>{r.accountCode}</td>
-                  <td>{r.accountName}</td>
-                  <td style={{ textAlign: "right" }}>{fmt(r.budget)}</td>
-                  <td style={{ textAlign: "right" }}>{fmt(r.actual)}</td>
-                  <td
-                    style={{
-                      textAlign: "right",
-                      color: r.variance < 0 ? "var(--danger)" : "inherit",
-                    }}
-                  >
-                    {fmt(r.variance)}
-                  </td>
-                  <td style={{ textAlign: "right" }}>
-                    <div className={styles.rateCell}>
-                      <div className={styles.progressBar}>
-                        <div
-                          className={styles.progressFill}
-                          style={{
-                            width: `${Math.min(r.rate, 100)}%`,
-                            backgroundColor: getProgressColor(r.rate),
-                          }}
-                        />
-                      </div>
-                      <span className={getRateColor(r.rate)}>
-                        {r.rate}%
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {vsActual && vsActual.rows.length > 0 && (
-                <tr style={{ fontWeight: 700 }}>
-                  <td colSpan={2}>합계</td>
-                  <td style={{ textAlign: "right" }}>
-                    {fmt(vsActual.totalBudget)}
-                  </td>
-                  <td style={{ textAlign: "right" }}>
-                    {fmt(vsActual.totalActual)}
-                  </td>
-                  <td
-                    style={{
-                      textAlign: "right",
-                      color:
-                        vsActual.totalVariance < 0
-                          ? "var(--danger)"
-                          : "inherit",
-                    }}
-                  >
-                    {fmt(vsActual.totalVariance)}
-                  </td>
-                  <td style={{ textAlign: "right" }}>
-                    <div className={styles.rateCell}>
-                      <div className={styles.progressBar}>
-                        <div
-                          className={styles.progressFill}
-                          style={{
-                            width: `${Math.min(vsActual.totalRate, 100)}%`,
-                            backgroundColor: getProgressColor(
-                              vsActual.totalRate,
-                            ),
-                          }}
-                        />
-                      </div>
-                      <span className={getRateColor(vsActual.totalRate)}>
-                        {vsActual.totalRate}%
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              )}
-              {(!vsActual || vsActual.rows.length === 0) && (
-                <tr>
-                  <td
-                    colSpan={6}
-                    style={{ textAlign: "center", color: "var(--text-muted)" }}
-                  >
-                    해당 기간의 예산/실적 데이터가 없습니다
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <BudgetComparisonTable
+          compYear={compYear}
+          setCompYear={setCompYear}
+          compMonth={compMonth}
+          setCompMonth={setCompMonth}
+          vsActual={vsActual}
+          onExport={exportComparison}
+        />
       )}
     </div>
   );

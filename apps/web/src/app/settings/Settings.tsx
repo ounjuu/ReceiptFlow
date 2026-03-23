@@ -4,34 +4,11 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { useLocale } from "@/lib/locale";
-import type { Locale } from "@/lib/locale";
 import { apiPatch } from "@/lib/api";
+import type { Tab } from "./types";
+import { NOTIF_KEYS } from "./types";
+import SettingsForm from "./SettingsForm";
 import styles from "./Settings.module.css";
-
-const LANG_OPTIONS: { value: Locale; label: string }[] = [
-  { value: "ko", label: "한국어" },
-  { value: "en", label: "English" },
-];
-
-type Tab = "profile" | "password" | "notifications";
-
-type NotifKeyDef = { key: string; labelKey: "settings_notifJournal" | "settings_notifClosing" | "settings_notifDocument" | "settings_notifInventory" | "settings_notifExpense"; descKey: "settings_notifJournalDesc" | "settings_notifClosingDesc" | "settings_notifDocumentDesc" | "settings_notifInventoryDesc" | "settings_notifExpenseDesc" };
-
-const NOTIF_KEYS: NotifKeyDef[] = [
-  { key: "notif_journal", labelKey: "settings_notifJournal", descKey: "settings_notifJournalDesc" },
-  { key: "notif_closing", labelKey: "settings_notifClosing", descKey: "settings_notifClosingDesc" },
-  { key: "notif_document", labelKey: "settings_notifDocument", descKey: "settings_notifDocumentDesc" },
-  { key: "notif_inventory", labelKey: "settings_notifInventory", descKey: "settings_notifInventoryDesc" },
-  { key: "notif_expense", labelKey: "settings_notifExpense", descKey: "settings_notifExpenseDesc" },
-];
-
-type ThemeOptDef = { value: "light" | "dark" | "system"; labelKey: "settings_themeLight" | "settings_themeDark" | "settings_themeSystem"; descKey: "settings_themeLightDesc" | "settings_themeDarkDesc" | "settings_themeSystemDesc" };
-
-const THEME_OPTIONS: ThemeOptDef[] = [
-  { value: "light", labelKey: "settings_themeLight", descKey: "settings_themeLightDesc" },
-  { value: "dark", labelKey: "settings_themeDark", descKey: "settings_themeDarkDesc" },
-  { value: "system", labelKey: "settings_themeSystem", descKey: "settings_themeSystemDesc" },
-];
 
 export default function Settings() {
   const { user, role, refreshUser } = useAuth();
@@ -145,148 +122,46 @@ export default function Settings() {
       </div>
 
       {tab === "profile" && (
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>{t("settings_profileTitle")}</h2>
-          <div className={styles.field}>
-            <label className={styles.label}>{t("settings_email")}</label>
-            <input className={styles.input} value={user.email} disabled />
-          </div>
-          <div className={styles.field}>
-            <label className={styles.label}>{t("settings_name")}</label>
-            <input
-              className={styles.input}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("settings_namePlaceholder")}
-            />
-          </div>
-          <div className={styles.field}>
-            <label className={styles.label}>{t("settings_role")}</label>
-            <div className={styles.readonlyValue}>{t(`role_${role}` as "role_ADMIN" | "role_ACCOUNTANT" | "role_VIEWER")}</div>
-          </div>
-          <button
-            className={`${styles.btn} ${styles.btnPrimary}`}
-            onClick={handleProfileSave}
-            disabled={profileSaving || !name.trim()}
-          >
-            {profileSaving ? t("settings_saving") : t("settings_save")}
-          </button>
-          {profileMsg && (
-            <div className={`${styles.msg} ${profileMsg.type === "success" ? styles.msgSuccess : styles.msgError}`}>
-              {profileMsg.text}
-            </div>
-          )}
-        </div>
+        <SettingsForm
+          tab="profile"
+          user={user}
+          name={name}
+          role={role || ""}
+          onNameChange={setName}
+          onSave={handleProfileSave}
+          saving={profileSaving}
+          message={profileMsg}
+          t={t}
+        />
       )}
 
       {tab === "password" && (
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>{t("settings_passwordTitle")}</h2>
-          <div className={styles.field}>
-            <label className={styles.label}>{t("settings_currentPassword")}</label>
-            <input
-              className={styles.input}
-              type="password"
-              value={currentPw}
-              onChange={(e) => setCurrentPw(e.target.value)}
-            />
-          </div>
-          <div className={styles.field}>
-            <label className={styles.label}>{t("settings_newPassword")}</label>
-            <input
-              className={styles.input}
-              type="password"
-              value={newPw}
-              onChange={(e) => setNewPw(e.target.value)}
-              placeholder={t("settings_newPasswordPlaceholder")}
-            />
-          </div>
-          <div className={styles.field}>
-            <label className={styles.label}>{t("settings_confirmPassword")}</label>
-            <input
-              className={styles.input}
-              type="password"
-              value={confirmPw}
-              onChange={(e) => setConfirmPw(e.target.value)}
-            />
-          </div>
-          <button
-            className={`${styles.btn} ${styles.btnPrimary}`}
-            onClick={handlePasswordChange}
-            disabled={pwSaving || !currentPw || !newPw || !confirmPw}
-          >
-            {pwSaving ? t("settings_changingPassword") : t("settings_changePassword")}
-          </button>
-          {pwMsg && (
-            <div className={`${styles.msg} ${pwMsg.type === "success" ? styles.msgSuccess : styles.msgError}`}>
-              {pwMsg.text}
-            </div>
-          )}
-        </div>
+        <SettingsForm
+          tab="password"
+          currentPw={currentPw}
+          newPw={newPw}
+          confirmPw={confirmPw}
+          onCurrentPwChange={setCurrentPw}
+          onNewPwChange={setNewPw}
+          onConfirmPwChange={setConfirmPw}
+          onSave={handlePasswordChange}
+          saving={pwSaving}
+          message={pwMsg}
+          t={t}
+        />
       )}
 
       {tab === "notifications" && (
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>{t("settings_theme")}</h2>
-          <div className={styles.radioGroup}>
-            {THEME_OPTIONS.map((opt) => (
-              <label key={opt.value} className={`${styles.radioItem} ${theme === opt.value ? styles.radioActive : ""}`}>
-                <input
-                  type="radio"
-                  name="theme"
-                  value={opt.value}
-                  checked={theme === opt.value}
-                  onChange={() => setTheme(opt.value)}
-                  className={styles.radioInput}
-                />
-                <div>
-                  <div className={styles.toggleLabel}>{t(opt.labelKey)}</div>
-                  <div className={styles.toggleDesc}>{t(opt.descKey)}</div>
-                </div>
-              </label>
-            ))}
-          </div>
-
-          <h2 className={styles.sectionTitle} style={{ marginTop: 24 }}>{t("settings_language")}</h2>
-          <div className={styles.radioGroup}>
-            {LANG_OPTIONS.map((opt) => (
-              <label key={opt.value} className={`${styles.radioItem} ${locale === opt.value ? styles.radioActive : ""}`}>
-                <input
-                  type="radio"
-                  name="locale"
-                  value={opt.value}
-                  checked={locale === opt.value}
-                  onChange={() => setLocale(opt.value)}
-                  className={styles.radioInput}
-                />
-                <div>
-                  <div className={styles.toggleLabel}>{opt.label}</div>
-                </div>
-              </label>
-            ))}
-          </div>
-
-          <h2 className={styles.sectionTitle} style={{ marginTop: 24 }}>{t("settings_notifTitle")}</h2>
-          <div className={styles.toggleList}>
-            {NOTIF_KEYS.map((n) => (
-              <div key={n.key} className={styles.toggleItem}>
-                <div>
-                  <div className={styles.toggleLabel}>{t(n.labelKey)}</div>
-                  <div className={styles.toggleDesc}>{t(n.descKey)}</div>
-                </div>
-                <label className={styles.switch}>
-                  <input
-                    className={styles.switchInput}
-                    type="checkbox"
-                    checked={notifSettings[n.key] ?? true}
-                    onChange={() => toggleNotif(n.key)}
-                  />
-                  <span className={styles.switchSlider} />
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
+        <SettingsForm
+          tab="notifications"
+          theme={theme}
+          locale={locale}
+          notifSettings={notifSettings}
+          onThemeChange={setTheme}
+          onLocaleChange={setLocale}
+          onToggleNotif={toggleNotif}
+          t={t}
+        />
       )}
     </div>
   );

@@ -2,84 +2,14 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, API_BASE } from "@/lib/api";
+import { apiGet, apiPost, apiPatch, apiDelete, apiUpload } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { exportToXlsx } from "@/lib/export-xlsx";
 import styles from "./TaxInvoices.module.css";
-
-interface Vendor {
-  id: string;
-  name: string;
-  bizNo: string | null;
-}
-
-interface TaxInvoice {
-  id: string;
-  invoiceType: string;
-  invoiceNo: string | null;
-  invoiceDate: string;
-  status: string;
-  issuerBizNo: string;
-  issuerName: string;
-  recipientBizNo: string;
-  recipientName: string;
-  supplyAmount: string;
-  taxAmount: string;
-  totalAmount: string;
-  approvalNo: string | null;
-  description: string | null;
-  vendor: Vendor | null;
-  hometaxSyncStatus: "IMPORTED" | "EXPORTED" | "VERIFIED" | null;
-}
-
-interface TaxSummary {
-  year: number;
-  quarter: number;
-  purchase: { count: number; supplyAmount: number; taxAmount: number };
-  sales: { count: number; supplyAmount: number; taxAmount: number };
-  netTaxAmount: number;
-}
-
-function statusLabel(status: string) {
-  switch (status) {
-    case "DRAFT": return { text: "임시", cls: styles.statusDraft };
-    case "PENDING_APPROVAL": return { text: "결재중", cls: styles.statusPending };
-    case "APPROVED": return { text: "승인", cls: styles.statusApproved };
-    case "FINALIZED": return { text: "확정", cls: styles.statusFinalized };
-    default: return { text: status, cls: "" };
-  }
-}
-
-function typeLabel(type: string) {
-  return type === "PURCHASE"
-    ? { text: "매입", cls: styles.typePurchase }
-    : { text: "매출", cls: styles.typeSales };
-}
-
-// 홈택스 동기화 상태 뱃지
-function hometaxBadge(status: string | null) {
-  switch (status) {
-    case "IMPORTED": return { text: "가져옴", cls: styles.hometaxImported };
-    case "EXPORTED": return { text: "내보냄", cls: styles.hometaxExported };
-    case "VERIFIED": return { text: "검증됨", cls: styles.hometaxVerified };
-    default: return null;
-  }
-}
-
-/** 인증 헤더 포함 파일 다운로드 */
-async function downloadFileWithAuth(url: string, filename: string) {
-  const token = localStorage.getItem("token");
-  const res = await fetch(`${API_BASE}${url}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) throw new Error("다운로드 실패");
-  const blob = await res.blob();
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
+import { TaxInvoice, TaxSummary } from "./types";
+import TaxInvoiceForm from "./TaxInvoiceForm";
+import TaxInvoiceTable from "./TaxInvoiceTable";
+import HometaxImportModal from "./HometaxImportModal";
 
 export default function TaxInvoicesPage() {
   const { tenantId, canEdit, canDelete } = useAuth();
@@ -282,14 +212,6 @@ export default function TaxInvoicesPage() {
     }
   };
 
-  const nextStatus = (current: string): { label: string; next: string } | null => {
-    switch (current) {
-      case "DRAFT": return { label: "승인", next: "APPROVED" };
-      case "APPROVED": return { label: "확정", next: "FINALIZED" };
-      default: return null;
-    }
-  };
-
   // 결재 요청
   const submitApprovalMutation = useMutation({
     mutationFn: (documentId: string) =>
@@ -406,472 +328,78 @@ export default function TaxInvoicesPage() {
 
       {/* 홈택스 XML 가져오기 모달 */}
       {showImportModal && (
-        <div className={styles.modalOverlay} onClick={closeImportModal}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 className={styles.sectionTitle}>홈택스 XML 가져오기</h2>
-            <div className={styles.formGrid}>
-              <div className={styles.formRow}>
-                <label className={styles.label}>유형</label>
-                <select
-                  className={styles.select}
-                  value={importType}
-                  onChange={(e) => setImportType(e.target.value)}
-                >
-                  <option value="PURCHASE">매입</option>
-                  <option value="SALES">매출</option>
-                </select>
-              </div>
-              <div className={styles.formRow}>
-                <label className={styles.label}>XML 파일</label>
-                <input
-                  className={styles.input}
-                  type="file"
-                  accept=".xml"
-                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                />
-              </div>
-            </div>
-            {importResult && (
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  marginBottom: 12,
-                  color: importResult.startsWith("오류") ? "var(--danger)" : "#166534",
-                  fontWeight: 600,
-                }}
-              >
-                {importResult}
-              </p>
-            )}
-            <div className={styles.formActions}>
-              <button
-                className={styles.submitBtn}
-                onClick={handleImportSubmit}
-                disabled={!importFile || importMutation.isPending}
-              >
-                {importMutation.isPending ? "가져오는 중..." : "가져오기"}
-              </button>
-              <button className={styles.cancelFormBtn} onClick={closeImportModal}>
-                닫기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 부가세 신고 요약 */}
-      <div className={styles.summaryControls}>
-        <span className={styles.summaryTitle}>부가세 신고 요약</span>
-        <select
-          className={styles.summarySelect}
-          value={summaryYear}
-          onChange={(e) => setSummaryYear(Number(e.target.value))}
-        >
-          {years.map((y) => (
-            <option key={y} value={y}>{y}년</option>
-          ))}
-        </select>
-        <select
-          className={styles.summarySelect}
-          value={summaryQuarter}
-          onChange={(e) => setSummaryQuarter(Number(e.target.value))}
-        >
-          <option value={1}>1분기 (1~3월)</option>
-          <option value={2}>2분기 (4~6월)</option>
-          <option value={3}>3분기 (7~9월)</option>
-          <option value={4}>4분기 (10~12월)</option>
-        </select>
-      </div>
-
-      {summary && (
-        <div className={styles.summarySection}>
-          <div className={styles.summaryCard}>
-            <div className={styles.summaryLabel}>매출 공급가액</div>
-            <div className={styles.summaryValue}>
-              ₩{summary.sales.supplyAmount.toLocaleString()}
-            </div>
-            <div className={styles.summaryCount}>세액: ₩{summary.sales.taxAmount.toLocaleString()} / {summary.sales.count}건</div>
-          </div>
-          <div className={styles.summaryCard}>
-            <div className={styles.summaryLabel}>매입 공급가액</div>
-            <div className={styles.summaryValue}>
-              ₩{summary.purchase.supplyAmount.toLocaleString()}
-            </div>
-            <div className={styles.summaryCount}>세액: ₩{summary.purchase.taxAmount.toLocaleString()} / {summary.purchase.count}건</div>
-          </div>
-          <div className={styles.summaryCard}>
-            <div className={styles.summaryLabel}>매출세액</div>
-            <div className={styles.summaryValue}>
-              ₩{summary.sales.taxAmount.toLocaleString()}
-            </div>
-          </div>
-          <div className={styles.summaryCard}>
-            <div className={styles.summaryLabel}>납부(환급)세액</div>
-            <div className={`${styles.summaryValue} ${summary.netTaxAmount >= 0 ? styles.summaryPositive : styles.summaryNegative}`}>
-              {summary.netTaxAmount >= 0 ? "" : "-"}₩{Math.abs(summary.netTaxAmount).toLocaleString()}
-            </div>
-            <div className={styles.summaryCount}>
-              {summary.netTaxAmount >= 0 ? "납부" : "환급"}
-            </div>
-          </div>
-        </div>
+        <HometaxImportModal
+          importType={importType}
+          setImportType={setImportType}
+          importFile={importFile}
+          setImportFile={setImportFile}
+          importResult={importResult}
+          importIsPending={importMutation.isPending}
+          handleImportSubmit={handleImportSubmit}
+          closeImportModal={closeImportModal}
+        />
       )}
 
       {/* 등록/수정 폼 */}
       {formMode !== "none" && (
-        <div className={styles.formSection}>
-          <h2 className={styles.sectionTitle}>
-            {formMode === "edit" ? "세금계산서 수정" : "세금계산서 등록"}
-          </h2>
-          <form onSubmit={handleSubmit}>
-            <div className={styles.formGrid}>
-              <div className={styles.formRow}>
-                <label className={styles.label}>유형</label>
-                <select
-                  className={styles.select}
-                  value={invoiceType}
-                  onChange={(e) => setInvoiceType(e.target.value)}
-                  disabled={formMode === "edit"}
-                >
-                  <option value="PURCHASE">매입</option>
-                  <option value="SALES">매출</option>
-                </select>
-              </div>
-              <div className={styles.formRow}>
-                <label className={styles.label}>세금계산서 번호</label>
-                <input
-                  className={styles.input}
-                  type="text"
-                  value={invoiceNo}
-                  onChange={(e) => setInvoiceNo(e.target.value)}
-                  placeholder="선택 입력"
-                />
-              </div>
-              <div className={styles.formRow}>
-                <label className={styles.label}>발행일</label>
-                <input
-                  className={styles.input}
-                  type="date"
-                  value={invoiceDate}
-                  onChange={(e) => setInvoiceDate(e.target.value)}
-                  required
-                />
-              </div>
-              <div className={styles.formRow}>
-                <label className={styles.label}>승인번호</label>
-                <input
-                  className={styles.input}
-                  type="text"
-                  value={approvalNo}
-                  onChange={(e) => setApprovalNo(e.target.value)}
-                  placeholder="선택 입력"
-                />
-              </div>
-            </div>
-
-            <div className={styles.formGrid}>
-              <div className={styles.formRow}>
-                <label className={styles.label}>공급자 사업자등록번호</label>
-                <input
-                  className={styles.input}
-                  type="text"
-                  value={issuerBizNo}
-                  onChange={(e) => setIssuerBizNo(e.target.value)}
-                  placeholder="000-00-00000"
-                  required
-                />
-              </div>
-              <div className={styles.formRow}>
-                <label className={styles.label}>공급자 상호</label>
-                <input
-                  className={styles.input}
-                  type="text"
-                  value={issuerName}
-                  onChange={(e) => setIssuerName(e.target.value)}
-                  placeholder="상호명"
-                  required
-                />
-              </div>
-              <div className={styles.formRow}>
-                <label className={styles.label}>공급받는자 사업자등록번호</label>
-                <input
-                  className={styles.input}
-                  type="text"
-                  value={recipientBizNo}
-                  onChange={(e) => setRecipientBizNo(e.target.value)}
-                  placeholder="000-00-00000"
-                  required
-                />
-              </div>
-              <div className={styles.formRow}>
-                <label className={styles.label}>공급받는자 상호</label>
-                <input
-                  className={styles.input}
-                  type="text"
-                  value={recipientName}
-                  onChange={(e) => setRecipientName(e.target.value)}
-                  placeholder="상호명"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className={styles.amountRow}>
-              <div className={styles.formRow}>
-                <label className={styles.label}>공급가액</label>
-                <input
-                  className={styles.input}
-                  type="number"
-                  value={supplyAmount}
-                  onChange={(e) => handleSupplyChange(e.target.value)}
-                  placeholder="0"
-                  min={0}
-                  required
-                />
-              </div>
-              <div className={styles.formRow}>
-                <label className={styles.label}>세액 (자동 10%)</label>
-                <input
-                  className={styles.input}
-                  type="number"
-                  value={taxAmount}
-                  onChange={(e) => handleTaxChange(e.target.value)}
-                  placeholder="0"
-                  min={0}
-                />
-              </div>
-              <div className={styles.formRow}>
-                <label className={styles.label}>합계</label>
-                <input
-                  className={styles.input}
-                  type="number"
-                  value={totalAmount}
-                  readOnly
-                  placeholder="0"
-                />
-              </div>
-            </div>
-
-            <div className={styles.formGrid}>
-              <div className={styles.formRowFull}>
-                <label className={styles.label}>비고</label>
-                <textarea
-                  className={styles.textarea}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="메모 (선택)"
-                />
-              </div>
-            </div>
-
-            {error && <p className={styles.error}>{error}</p>}
-
-            <div className={styles.formActions}>
-              <button
-                type="submit"
-                className={styles.submitBtn}
-                disabled={isPending}
-              >
-                {isPending ? "저장 중..." : formMode === "edit" ? "수정 저장" : "등록"}
-              </button>
-              <button
-                type="button"
-                className={styles.cancelFormBtn}
-                onClick={resetForm}
-              >
-                취소
-              </button>
-            </div>
-          </form>
-        </div>
+        <TaxInvoiceForm
+          formMode={formMode}
+          invoiceType={invoiceType}
+          setInvoiceType={setInvoiceType}
+          invoiceNo={invoiceNo}
+          setInvoiceNo={setInvoiceNo}
+          invoiceDate={invoiceDate}
+          setInvoiceDate={setInvoiceDate}
+          issuerBizNo={issuerBizNo}
+          setIssuerBizNo={setIssuerBizNo}
+          issuerName={issuerName}
+          setIssuerName={setIssuerName}
+          recipientBizNo={recipientBizNo}
+          setRecipientBizNo={setRecipientBizNo}
+          recipientName={recipientName}
+          setRecipientName={setRecipientName}
+          supplyAmount={supplyAmount}
+          taxAmount={taxAmount}
+          totalAmount={totalAmount}
+          approvalNo={approvalNo}
+          setApprovalNo={setApprovalNo}
+          description={description}
+          setDescription={setDescription}
+          error={error}
+          isPending={isPending}
+          handleSupplyChange={handleSupplyChange}
+          handleTaxChange={handleTaxChange}
+          handleSubmit={handleSubmit}
+          resetForm={resetForm}
+        />
       )}
 
-      {/* 탭 */}
-      <div className={styles.tabs}>
-        {(["ALL", "PURCHASE", "SALES"] as const).map((tab) => (
-          <button
-            key={tab}
-            className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ""}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab === "ALL" ? "전체" : tab === "PURCHASE" ? "매입" : "매출"}
-          </button>
-        ))}
-      </div>
-
-      {/* 목록 */}
-      <div className={styles.tableSection}>
-        <div className={styles.tableHeader}>
-          <h2 className={styles.sectionTitle}>세금계산서 목록</h2>
-          <div className={styles.filterRow}>
-            <button
-              className={styles.downloadBtn}
-              onClick={handleExport}
-              disabled={invoices.length === 0}
-            >
-              엑셀 다운로드
-            </button>
-          </div>
-          <div className={styles.filterRow}>
-            <span className={styles.filterLabel}>상태</span>
-            <select
-              className={styles.filterInput}
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="">전체</option>
-              <option value="DRAFT">임시</option>
-              <option value="APPROVED">승인</option>
-              <option value="FINALIZED">확정</option>
-            </select>
-            <span className={styles.filterLabel}>기간</span>
-            <input
-              className={styles.filterInput}
-              type="date"
-              value={filterStart}
-              onChange={(e) => setFilterStart(e.target.value)}
-            />
-            <span className={styles.filterSep}>~</span>
-            <input
-              className={styles.filterInput}
-              type="date"
-              value={filterEnd}
-              onChange={(e) => setFilterEnd(e.target.value)}
-            />
-            {(filterStart || filterEnd || filterStatus) && (
-              <button
-                className={styles.filterClear}
-                onClick={() => { setFilterStart(""); setFilterEnd(""); setFilterStatus(""); }}
-              >
-                초기화
-              </button>
-            )}
-          </div>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>유형</th>
-              <th>번호</th>
-              <th>일자</th>
-              <th>공급자</th>
-              <th>공급받는자</th>
-              <th>공급가액</th>
-              <th>세액</th>
-              <th>합계</th>
-              <th>홈택스</th>
-              <th>상태</th>
-              <th>관리</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv) => {
-              const s = statusLabel(inv.status);
-              const t = typeLabel(inv.invoiceType);
-              return (
-                <tr key={inv.id}>
-                  <td>
-                    <span className={`${styles.status} ${t.cls}`}>{t.text}</span>
-                  </td>
-                  <td>{inv.invoiceNo || "-"}</td>
-                  <td>{new Date(inv.invoiceDate).toLocaleDateString("ko-KR")}</td>
-                  <td title={inv.issuerBizNo}>{inv.issuerName}</td>
-                  <td title={inv.recipientBizNo}>{inv.recipientName}</td>
-                  <td>₩{Number(inv.supplyAmount).toLocaleString()}</td>
-                  <td>₩{Number(inv.taxAmount).toLocaleString()}</td>
-                  <td>₩{Number(inv.totalAmount).toLocaleString()}</td>
-                  <td>
-                    {(() => {
-                      const hb = hometaxBadge(inv.hometaxSyncStatus);
-                      return hb ? (
-                        <span className={`${styles.status} ${hb.cls}`}>{hb.text}</span>
-                      ) : "-";
-                    })()}
-                  </td>
-                  <td>
-                    <span className={`${styles.status} ${s.cls}`}>{s.text}</span>
-                  </td>
-                  <td>
-                    <div className={styles.actions}>
-                      <button
-                        className={styles.editBtn}
-                        style={{ fontSize: "0.75rem" }}
-                        onClick={() =>
-                          downloadFileWithAuth(
-                            `/tax-invoices/${inv.id}/export-pdf`,
-                            `세금계산서-${inv.invoiceNo || inv.id}.pdf`,
-                          )
-                        }
-                        title="PDF 다운로드"
-                      >
-                        PDF
-                      </button>
-                      <button
-                        className={styles.editBtn}
-                        style={{ fontSize: "0.75rem" }}
-                        onClick={() =>
-                          downloadFileWithAuth(
-                            `/tax-invoices/${inv.id}/export-xml`,
-                            `세금계산서_${inv.invoiceNo || inv.id}.xml`,
-                          )
-                        }
-                        title="XML 내보내기"
-                      >
-                        XML
-                      </button>
-                      {canEdit && inv.status === "DRAFT" && hasApprovalLine && (
-                        <button
-                          className={styles.statusBtn}
-                          onClick={() => submitApprovalMutation.mutate(inv.id)}
-                          disabled={submitApprovalMutation.isPending}
-                        >
-                          결재요청
-                        </button>
-                      )}
-                      {canEdit && nextStatus(inv.status) && !(inv.status === "DRAFT" && hasApprovalLine) && (
-                        <button
-                          className={styles.statusBtn}
-                          onClick={() => {
-                            const ns = nextStatus(inv.status)!;
-                            statusMutation.mutate({ id: inv.id, status: ns.next });
-                          }}
-                          disabled={statusMutation.isPending}
-                        >
-                          {nextStatus(inv.status)!.label}
-                        </button>
-                      )}
-                      {inv.status !== "FINALIZED" && inv.status !== "PENDING_APPROVAL" && canEdit && (
-                        <button
-                          className={styles.editBtn}
-                          onClick={() => startEdit(inv)}
-                        >
-                          수정
-                        </button>
-                      )}
-                      {inv.status !== "FINALIZED" && canDelete && (
-                        <button
-                          className={styles.deleteBtn}
-                          onClick={() => handleDelete(inv.id)}
-                        >
-                          삭제
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {invoices.length === 0 && (
-              <tr>
-                <td colSpan={11} style={{ textAlign: "center", color: "var(--text-muted)" }}>
-                  세금계산서가 없습니다
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {/* 요약 + 탭 + 테이블 */}
+      <TaxInvoiceTable
+        invoices={invoices}
+        summary={summary}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        filterStart={filterStart}
+        setFilterStart={setFilterStart}
+        filterEnd={filterEnd}
+        setFilterEnd={setFilterEnd}
+        filterStatus={filterStatus}
+        setFilterStatus={setFilterStatus}
+        summaryYear={summaryYear}
+        setSummaryYear={setSummaryYear}
+        summaryQuarter={summaryQuarter}
+        setSummaryQuarter={setSummaryQuarter}
+        years={years}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        hasApprovalLine={hasApprovalLine}
+        handleExport={handleExport}
+        startEdit={startEdit}
+        handleDelete={handleDelete}
+        submitApprovalMutation={submitApprovalMutation}
+        statusMutation={statusMutation}
+      />
     </div>
   );
 }

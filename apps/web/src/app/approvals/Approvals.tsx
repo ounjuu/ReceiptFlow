@@ -5,70 +5,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import styles from "./Approvals.module.css";
-
-interface ApprovalLine {
-  id: string;
-  documentType: string;
-  step: number;
-  approverId: string;
-  approver: { id: string; name: string; email: string };
-}
-
-interface ApprovalActionItem {
-  id: string;
-  step: number;
-  approverId: string;
-  approver: { id: string; name: string };
-  action: string;
-  comment: string | null;
-  createdAt: string;
-}
-
-interface PendingApproval {
-  id: string;
-  documentType: string;
-  documentId: string;
-  currentStep: number;
-  totalSteps: number;
-  status: string;
-  submittedBy: string;
-  submitterName: string;
-  createdAt: string;
-  documentInfo: { description: string; date: string };
-  actions: ApprovalActionItem[];
-}
-
-interface Submission {
-  id: string;
-  documentType: string;
-  documentId: string;
-  currentStep: number;
-  totalSteps: number;
-  status: string;
-  createdAt: string;
-  documentInfo: { description: string; date: string };
-  actions: ApprovalActionItem[];
-}
-
-interface Member {
-  id: string;
-  userId: string;
-  email: string;
-  name: string;
-  role: string;
-}
-
-const DOC_TYPE_LABEL: Record<string, string> = {
-  JOURNAL: "전표",
-  TAX_INVOICE: "세금계산서",
-  EXPENSE_CLAIM: "경비 정산",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  PENDING: "진행중",
-  APPROVED: "승인완료",
-  REJECTED: "반려",
-};
+import type { PendingApproval, Submission, ApprovalLine, Member } from "./types";
+import { PendingTable, SubmissionsTable } from "./ApprovalTable";
+import { ApprovalForm } from "./ApprovalForm";
 
 export default function ApprovalsPage() {
   const { tenantId, user, isAdmin } = useAuth();
@@ -148,6 +87,10 @@ export default function ApprovalsPage() {
       action,
       comment: comments[requestId] || undefined,
     });
+  };
+
+  const handleCommentChange = (id: string, value: string) => {
+    setComments((prev) => ({ ...prev, [id]: value }));
   };
 
   const filteredLines = approvalLines.filter(
@@ -239,277 +182,33 @@ export default function ApprovalsPage() {
 
       {/* 결재 대기 */}
       {tab === "pending" && (
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>결재 대기 목록</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>문서유형</th>
-                <th>내용</th>
-                <th>요청자</th>
-                <th>요청일</th>
-                <th>결재 단계</th>
-                <th>처리</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pendingApprovals.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    <span
-                      className={`${styles.badge} ${
-                        a.documentType === "JOURNAL"
-                          ? styles.badgeJournal
-                          : styles.badgeTaxInvoice
-                      }`}
-                    >
-                      {DOC_TYPE_LABEL[a.documentType] || a.documentType}
-                    </span>
-                  </td>
-                  <td>
-                    {a.documentInfo.description ||
-                      (a.documentInfo.date
-                        ? new Date(a.documentInfo.date).toLocaleDateString(
-                            "ko-KR",
-                          )
-                        : "-")}
-                  </td>
-                  <td>{a.submitterName}</td>
-                  <td>
-                    {new Date(a.createdAt).toLocaleDateString("ko-KR")}
-                  </td>
-                  <td>
-                    {a.currentStep}/{a.totalSteps}단계
-                  </td>
-                  <td>
-                    <div className={styles.actionArea}>
-                      <input
-                        className={styles.commentInput}
-                        placeholder="의견 (선택)"
-                        value={comments[a.id] || ""}
-                        onChange={(e) =>
-                          setComments((prev) => ({
-                            ...prev,
-                            [a.id]: e.target.value,
-                          }))
-                        }
-                      />
-                      <button
-                        className={styles.approveBtn}
-                        onClick={() => handleProcess(a.id, "APPROVED")}
-                        disabled={processMutation.isPending}
-                      >
-                        승인
-                      </button>
-                      <button
-                        className={styles.rejectBtn}
-                        onClick={() => handleProcess(a.id, "REJECTED")}
-                        disabled={processMutation.isPending}
-                      >
-                        반려
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {pendingApprovals.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={6}
-                    style={{ textAlign: "center", color: "var(--text-muted)" }}
-                  >
-                    결재 대기 건이 없습니다
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <PendingTable
+          pendingApprovals={pendingApprovals}
+          comments={comments}
+          onCommentChange={handleCommentChange}
+          onProcess={handleProcess}
+          isProcessing={processMutation.isPending}
+        />
       )}
 
       {/* 내 결재 현황 */}
       {tab === "submissions" && (
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>내 결재 요청 현황</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>문서유형</th>
-                <th>내용</th>
-                <th>요청일</th>
-                <th>진행 상태</th>
-                <th>결재 흐름</th>
-              </tr>
-            </thead>
-            <tbody>
-              {submissions.map((s) => (
-                <tr key={s.id}>
-                  <td>
-                    <span
-                      className={`${styles.badge} ${
-                        s.documentType === "JOURNAL"
-                          ? styles.badgeJournal
-                          : styles.badgeTaxInvoice
-                      }`}
-                    >
-                      {DOC_TYPE_LABEL[s.documentType] || s.documentType}
-                    </span>
-                  </td>
-                  <td>
-                    {s.documentInfo.description ||
-                      (s.documentInfo.date
-                        ? new Date(s.documentInfo.date).toLocaleDateString(
-                            "ko-KR",
-                          )
-                        : "-")}
-                  </td>
-                  <td>
-                    {new Date(s.createdAt).toLocaleDateString("ko-KR")}
-                  </td>
-                  <td>
-                    <span
-                      className={`${styles.badge} ${
-                        s.status === "PENDING"
-                          ? styles.badgePending
-                          : s.status === "APPROVED"
-                            ? styles.badgeApproved
-                            : styles.badgeRejected
-                      }`}
-                    >
-                      {STATUS_LABEL[s.status] || s.status}
-                    </span>
-                    {s.status === "PENDING" && (
-                      <span
-                        style={{
-                          marginLeft: "8px",
-                          fontSize: "0.8rem",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        ({s.currentStep}/{s.totalSteps}단계)
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    <div className={styles.flowSteps}>
-                      {Array.from({ length: s.totalSteps }, (_, i) => {
-                        const step = i + 1;
-                        const actionForStep = s.actions.find(
-                          (a) => a.step === step,
-                        );
-                        let cls = styles.flowStepWaiting;
-                        let label = `${step}단계`;
-
-                        if (actionForStep) {
-                          if (actionForStep.action === "APPROVED") {
-                            cls = styles.flowStepDone;
-                            label = `${actionForStep.approver.name} ✓`;
-                          } else {
-                            cls = styles.flowStepWaiting;
-                            label = `${actionForStep.approver.name} ✗`;
-                          }
-                        } else if (step === s.currentStep && s.status === "PENDING") {
-                          cls = styles.flowStepCurrent;
-                        }
-
-                        return (
-                          <span key={step}>
-                            {step > 1 && (
-                              <span className={styles.flowArrow}> → </span>
-                            )}
-                            <span className={`${styles.flowStep} ${cls}`}>
-                              {label}
-                            </span>
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {submissions.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={5}
-                    style={{ textAlign: "center", color: "var(--text-muted)" }}
-                  >
-                    결재 요청 내역이 없습니다
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <SubmissionsTable submissions={submissions} />
       )}
 
       {/* 결재선 설정 */}
       {tab === "settings" && isAdmin && (
-        <div className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>결재선 설정</h2>
-          </div>
-
-          <div className={styles.formRow} style={{ marginBottom: "16px" }}>
-            <span className={styles.formLabel}>문서 유형</span>
-            <select
-              className={styles.formSelect}
-              value={lineDocType}
-              onChange={(e) => setLineDocType(e.target.value)}
-            >
-              <option value="JOURNAL">전표</option>
-              <option value="TAX_INVOICE">세금계산서</option>
-              <option value="EXPENSE_CLAIM">경비 정산</option>
-            </select>
-          </div>
-
-          <div className={styles.lineList}>
-            {filteredLines.map((l) => (
-              <div key={l.id} className={styles.lineItem}>
-                <span className={styles.lineStep}>{l.step}단계</span>
-                <span className={styles.lineName}>
-                  {l.approver.name} ({l.approver.email})
-                </span>
-                <button
-                  className={styles.lineRemove}
-                  onClick={() => handleRemoveLine(l.step)}
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-            {filteredLines.length === 0 && (
-              <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-                결재선이 설정되지 않았습니다. 결재선이 없으면 기존 방식(직접
-                상태 변경)으로 동작합니다.
-              </p>
-            )}
-          </div>
-
-          <div className={styles.formRow}>
-            <span className={styles.formLabel}>결재자 추가</span>
-            <select
-              className={styles.formSelect}
-              value={newApproverId}
-              onChange={(e) => setNewApproverId(e.target.value)}
-            >
-              <option value="">선택</option>
-              {members
-                .filter((m) => m.role !== "VIEWER")
-                .map((m) => (
-                  <option key={m.userId} value={m.userId}>
-                    {m.name} ({m.email}) - {m.role}
-                  </option>
-                ))}
-            </select>
-            <button
-              className={styles.primaryBtn}
-              onClick={handleAddLine}
-              disabled={!newApproverId || setLinesMutation.isPending}
-            >
-              추가
-            </button>
-          </div>
-        </div>
+        <ApprovalForm
+          lineDocType={lineDocType}
+          onLineDocTypeChange={setLineDocType}
+          filteredLines={filteredLines}
+          members={members}
+          newApproverId={newApproverId}
+          onNewApproverIdChange={setNewApproverId}
+          onAddLine={handleAddLine}
+          onRemoveLine={handleRemoveLine}
+          isSaving={setLinesMutation.isPending}
+        />
       )}
     </div>
   );

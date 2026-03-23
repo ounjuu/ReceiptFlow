@@ -4,24 +4,9 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPatch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import type { PeriodSummary, AccountingPeriod } from "./types";
+import ClosingsTable from "./ClosingsTable";
 import styles from "./Closings.module.css";
-
-interface PeriodSummary {
-  total: number;
-  posted: number;
-  draft: number;
-  approved: number;
-  unposted: number;
-}
-
-interface AccountingPeriod {
-  id: string;
-  year: number;
-  month: number;
-  status: string;
-  closedAt: string | null;
-  closedBy: string | null;
-}
 
 const now = new Date();
 
@@ -206,43 +191,7 @@ export default function ClosingsPage() {
       {/* 마감 이력 */}
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>마감 이력</h2>
-        {periods.length > 0 ? (
-          <table>
-            <thead>
-              <tr>
-                <th>기간</th>
-                <th>상태</th>
-                <th>마감일</th>
-              </tr>
-            </thead>
-            <tbody>
-              {periods.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    {p.year}년 {p.month}월
-                  </td>
-                  <td>
-                    <span
-                      style={{
-                        color: p.status === "CLOSED" ? "#d95454" : "#7c5cbf",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {p.status === "CLOSED" ? "🔒 마감" : "🔓 미마감"}
-                    </span>
-                  </td>
-                  <td>
-                    {p.closedAt
-                      ? new Date(p.closedAt).toLocaleDateString("ko-KR")
-                      : "-"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p className={styles.empty}>마감 이력이 없습니다</p>
-        )}
+        <ClosingsTable periods={periods} />
       </div>
     </div>
   );

@@ -6,14 +6,10 @@ import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { exportToXlsx } from "@/lib/export-xlsx";
 import { parseXlsx, downloadTemplate } from "@/lib/import-xlsx";
+import type { Vendor, ImportResult } from "./types";
+import VendorForm from "./VendorForm";
+import VendorTable from "./VendorTable";
 import styles from "./Vendors.module.css";
-
-interface Vendor {
-  id: string;
-  name: string;
-  bizNo: string | null;
-  createdAt: string;
-}
 
 export default function VendorsPage() {
   const { tenantId, canEdit, canDelete } = useAuth();
@@ -23,7 +19,7 @@ export default function VendorsPage() {
   const [bizNo, setBizNo] = useState("");
   const [error, setError] = useState("");
   const importRef = useRef<HTMLInputElement>(null);
-  const [importResult, setImportResult] = useState<{ total: number; success: number; failed: number; results: { index: number; status: string; error?: string }[] } | null>(null);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
   // 수정 상태
   const [editId, setEditId] = useState<string | null>(null);
@@ -98,7 +94,7 @@ export default function VendorsPage() {
 
   const importMutation = useMutation({
     mutationFn: (items: { name: string; bizNo?: string }[]) =>
-      apiPost<{ total: number; success: number; failed: number; results: { index: number; status: string; error?: string }[] }>("/vendors/batch", { tenantId: tenantId!, items }),
+      apiPost<ImportResult>("/vendors/batch", { tenantId: tenantId!, items }),
     onSuccess: (data) => {
       setImportResult(data);
       queryClient.invalidateQueries({ queryKey: ["vendors"] });
@@ -130,182 +126,45 @@ export default function VendorsPage() {
       <h1 className={styles.title}>거래처 관리</h1>
 
       {canEdit && (
-        <div className={styles.formSection}>
-          <h2 className={styles.sectionTitle}>거래처 등록</h2>
-          <form className={styles.form} onSubmit={handleCreate}>
-            <div className={styles.formRow}>
-              <label className={styles.label}>거래처명</label>
-              <input
-                className={styles.input}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="거래처명"
-                required
-              />
-            </div>
-            <div className={styles.formRow}>
-              <label className={styles.label}>사업자등록번호</label>
-              <input
-                className={styles.input}
-                value={bizNo}
-                onChange={(e) => setBizNo(e.target.value)}
-                placeholder="000-00-00000"
-              />
-            </div>
-            <button
-              type="submit"
-              className={styles.submitBtn}
-              disabled={createMutation.isPending}
-            >
-              {createMutation.isPending ? "등록 중..." : "등록"}
-            </button>
-          </form>
-          {error && <p className={styles.error}>{error}</p>}
-        </div>
+        <VendorForm
+          name={name}
+          bizNo={bizNo}
+          onNameChange={setName}
+          onBizNoChange={setBizNo}
+          onSubmit={handleCreate}
+          isPending={createMutation.isPending}
+          error={error}
+        />
       )}
 
-      <div className={styles.tableSection}>
-        <div className={styles.tableHeader}>
-          <h2 className={styles.sectionTitle}>거래처 목록</h2>
-          <div className={styles.actions}>
-            <button
-              className={styles.downloadBtn}
-              onClick={() => downloadTemplate("거래처_템플릿", ["거래처명", "사업자등록번호"])}
-            >
-              템플릿 다운로드
-            </button>
-            <input type="file" ref={importRef} accept=".xlsx,.xls,.csv" onChange={handleImport} hidden />
-            <button
-              className={styles.downloadBtn}
-              onClick={() => importRef.current?.click()}
-              disabled={importMutation.isPending}
-            >
-              {importMutation.isPending ? "업로드 중..." : "엑셀 업로드"}
-            </button>
-            <button
-              className={styles.downloadBtn}
-              onClick={() => {
-                exportToXlsx("거래처목록", "거래처", ["거래처명", "사업자등록번호", "등록일"], vendors.map((v) => [
-                  v.name,
-                  v.bizNo || "",
-                  new Date(v.createdAt).toLocaleDateString("ko-KR"),
-                ]));
-              }}
-              disabled={vendors.length === 0}
-            >
-              엑셀 다운로드
-            </button>
-          </div>
-        </div>
-        {importResult && (
-          <div className={styles.importResult}>
-            <div className={styles.importSummary}>
-              <span>총 {importResult.total}건</span>
-              <span className={styles.importSuccess}>성공 {importResult.success}건</span>
-              {importResult.failed > 0 && <span className={styles.importFailed}>실패 {importResult.failed}건</span>}
-              <button className={styles.cancelBtn} onClick={() => setImportResult(null)}>닫기</button>
-            </div>
-            {importResult.failed > 0 && (
-              <ul className={styles.importErrors}>
-                {importResult.results.filter((r) => r.status === "error").map((r) => (
-                  <li key={r.index}>{r.error}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-        <table>
-          <thead>
-            <tr>
-              <th>거래처명</th>
-              <th>사업자등록번호</th>
-              <th>등록일</th>
-              {(canEdit || canDelete) && <th>관리</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {vendors.map((vendor) => (
-              <tr key={vendor.id}>
-                <td>
-                  {editId === vendor.id ? (
-                    <input
-                      className={styles.editInput}
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                    />
-                  ) : (
-                    vendor.name
-                  )}
-                </td>
-                <td>
-                  {editId === vendor.id ? (
-                    <input
-                      className={styles.editInput}
-                      value={editBizNo}
-                      onChange={(e) => setEditBizNo(e.target.value)}
-                    />
-                  ) : (
-                    vendor.bizNo || "-"
-                  )}
-                </td>
-                <td>{new Date(vendor.createdAt).toLocaleDateString("ko-KR")}</td>
-                {(canEdit || canDelete) && (
-                  <td>
-                    <div className={styles.actions}>
-                      {editId === vendor.id ? (
-                        <>
-                          <button
-                            className={styles.saveBtn}
-                            onClick={handleUpdate}
-                            disabled={updateMutation.isPending}
-                          >
-                            저장
-                          </button>
-                          <button
-                            className={styles.cancelBtn}
-                            onClick={() => setEditId(null)}
-                          >
-                            취소
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          {canEdit && (
-                            <button
-                              className={styles.editBtn}
-                              onClick={() => startEdit(vendor)}
-                            >
-                              수정
-                            </button>
-                          )}
-                          {canDelete && (
-                            <button
-                              className={styles.deleteBtn}
-                              onClick={() => handleDelete(vendor)}
-                            >
-                              삭제
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </td>
-                )}
-              </tr>
-            ))}
-            {vendors.length === 0 && (
-              <tr>
-                <td
-                  colSpan={canEdit || canDelete ? 4 : 3}
-                  style={{ textAlign: "center", color: "var(--text-muted)" }}
-                >
-                  등록된 거래처가 없습니다
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <VendorTable
+        vendors={vendors}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        editId={editId}
+        editName={editName}
+        editBizNo={editBizNo}
+        onEditNameChange={setEditName}
+        onEditBizNoChange={setEditBizNo}
+        onStartEdit={startEdit}
+        onUpdate={handleUpdate}
+        onCancelEdit={() => setEditId(null)}
+        onDelete={handleDelete}
+        updatePending={updateMutation.isPending}
+        importRef={importRef}
+        importPending={importMutation.isPending}
+        importResult={importResult}
+        onImport={handleImport}
+        onClearImportResult={() => setImportResult(null)}
+        onDownloadTemplate={() => downloadTemplate("거래처_템플릿", ["거래처명", "사업자등록번호"])}
+        onExport={() => {
+          exportToXlsx("거래처목록", "거래처", ["거래처명", "사업자등록번호", "등록일"], vendors.map((v) => [
+            v.name,
+            v.bizNo || "",
+            new Date(v.createdAt).toLocaleDateString("ko-KR"),
+          ]));
+        }}
+      />
     </div>
   );
 }

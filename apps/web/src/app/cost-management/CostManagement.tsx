@@ -4,66 +4,13 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { exportToXlsx } from "@/lib/export-xlsx";
-import { parseXlsx, downloadTemplate } from "@/lib/import-xlsx";
+import { downloadTemplate } from "@/lib/import-xlsx";
+import { parseXlsx } from "@/lib/import-xlsx";
 import styles from "./CostManagement.module.css";
-
-interface Product {
-  id: string;
-  code: string;
-  name: string;
-  category: string | null;
-  unit: string | null;
-  standardCost: number | null;
-  safetyStock: number;
-  description: string | null;
-}
-
-interface ItemCost {
-  itemName: string;
-  totalQty: number;
-  totalAmount: number;
-  avgUnitCost: number;
-  tradeCount: number;
-}
-
-interface VendorCost {
-  vendorId: string;
-  vendorName: string;
-  bizNo: string | null;
-  totalAmount: number;
-  tradeCount: number;
-}
-
-interface ProjectCost {
-  projectId: string;
-  code: string;
-  name: string;
-  totalCost: number;
-}
-
-interface DeptCost {
-  departmentId: string;
-  code: string;
-  name: string;
-  totalCost: number;
-}
-
-interface VarianceRow {
-  itemName: string;
-  productCode: string | null;
-  category: string | null;
-  unit: string | null;
-  quantity: number;
-  standardCost: number | null;
-  actualUnitCost: number;
-  standardTotal: number | null;
-  actualTotal: number;
-  variance: number | null;
-  varianceRate: number | null;
-}
-
-const fmt = (n: number) => n.toLocaleString();
+import type { Product, ImportResult } from "./types";
+import { fmt } from "./types";
+import CostForm from "./CostForm";
+import CostTable from "./CostTable";
 
 export default function CostManagementPage() {
   const { tenantId, canEdit, canDelete } = useAuth();
@@ -83,7 +30,7 @@ export default function CostManagementPage() {
   const [formDesc, setFormDesc] = useState("");
   const [formError, setFormError] = useState("");
   const importRef = useRef<HTMLInputElement>(null);
-  const [importResult, setImportResult] = useState<{ total: number; success: number; failed: number; results: { index: number; status: string; error?: string }[] } | null>(null);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
   // 분석 필터
   const [startDate, setStartDate] = useState("");
@@ -106,31 +53,31 @@ export default function CostManagementPage() {
 
   const { data: itemData } = useQuery({
     queryKey: ["cost-by-item", startDate, endDate],
-    queryFn: () => apiGet<{ items: ItemCost[]; totalAmount: number }>(`/cost-management/analysis/by-item?${qp}`),
+    queryFn: () => apiGet<{ items: { itemName: string; totalQty: number; totalAmount: number; avgUnitCost: number; tradeCount: number }[]; totalAmount: number }>(`/cost-management/analysis/by-item?${qp}`),
     enabled: !!tenantId && tab === "analysis" && analysisView === "item",
   });
 
   const { data: vendorData } = useQuery({
     queryKey: ["cost-by-vendor", startDate, endDate],
-    queryFn: () => apiGet<{ vendors: VendorCost[]; totalAmount: number }>(`/cost-management/analysis/by-vendor?${qp}`),
+    queryFn: () => apiGet<{ vendors: { vendorId: string; vendorName: string; bizNo: string | null; totalAmount: number; tradeCount: number }[]; totalAmount: number }>(`/cost-management/analysis/by-vendor?${qp}`),
     enabled: !!tenantId && tab === "analysis" && analysisView === "vendor",
   });
 
   const { data: projectData } = useQuery({
     queryKey: ["cost-by-project", startDate, endDate],
-    queryFn: () => apiGet<{ projects: ProjectCost[]; totalCost: number }>(`/cost-management/analysis/by-project?${qp}`),
+    queryFn: () => apiGet<{ projects: { projectId: string; code: string; name: string; totalCost: number }[]; totalCost: number }>(`/cost-management/analysis/by-project?${qp}`),
     enabled: !!tenantId && tab === "analysis" && analysisView === "project",
   });
 
   const { data: deptData } = useQuery({
     queryKey: ["cost-by-dept", startDate, endDate],
-    queryFn: () => apiGet<{ departments: DeptCost[]; totalCost: number }>(`/cost-management/analysis/by-department?${qp}`),
+    queryFn: () => apiGet<{ departments: { departmentId: string; code: string; name: string; totalCost: number }[]; totalCost: number }>(`/cost-management/analysis/by-department?${qp}`),
     enabled: !!tenantId && tab === "analysis" && analysisView === "dept",
   });
 
   const { data: varianceData } = useQuery({
     queryKey: ["cost-variance", startDate, endDate],
-    queryFn: () => apiGet<{ variances: VarianceRow[]; totalActual: number; totalStandard: number; totalVariance: number }>(
+    queryFn: () => apiGet<{ variances: { itemName: string; productCode: string | null; category: string | null; unit: string | null; quantity: number; standardCost: number | null; actualUnitCost: number; standardTotal: number | null; actualTotal: number; variance: number | null; varianceRate: number | null }[]; totalActual: number; totalStandard: number; totalVariance: number }>(
       `/cost-management/analysis/variance?${qp}`,
     ),
     enabled: !!tenantId && tab === "variance",
@@ -157,7 +104,7 @@ export default function CostManagementPage() {
 
   const importMutation = useMutation({
     mutationFn: (items: { code: string; name: string; category?: string; unit?: string; standardCost?: number; safetyStock?: number }[]) =>
-      apiPost<{ total: number; success: number; failed: number; results: { index: number; status: string; error?: string }[] }>("/cost-management/products/batch", { tenantId: tenantId!, items }),
+      apiPost<ImportResult>("/cost-management/products/batch", { tenantId: tenantId!, items }),
     onSuccess: (data) => {
       setImportResult(data);
       queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -235,14 +182,9 @@ export default function CostManagementPage() {
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
-  // 날짜 필터 UI
-  const dateFilter = (
-    <div className={styles.filterRow}>
-      <input className={styles.formInput} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ width: 150 }} />
-      <span className={styles.unit}>~</span>
-      <input className={styles.formInput} type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ width: 150 }} />
-    </div>
-  );
+  const handleDelete = (p: Product) => {
+    if (confirm(`${p.name}을(를) 삭제하시겠습니까?`)) deleteMutation.mutate(p.id);
+  };
 
   return (
     <div>
@@ -287,333 +229,58 @@ export default function CostManagementPage() {
       {/* 품목 관리 탭 */}
       {tab === "manage" && (
         <div className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>품목 목록</h2>
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <button className={styles.secondaryBtn} onClick={() => downloadTemplate("품목_템플릿", ["코드", "품목명", "카테고리", "단위", "표준원가", "안전재고"])}>템플릿</button>
-              <input type="file" ref={importRef} accept=".xlsx,.xls,.csv" onChange={handleImport} hidden />
-              <button className={styles.secondaryBtn} onClick={() => importRef.current?.click()} disabled={importMutation.isPending}>
-                {importMutation.isPending ? "업로드 중..." : "엑셀 업로드"}
-              </button>
-              {canEdit && (
-                <button className={styles.primaryBtn} onClick={() => { if (showForm) resetForm(); else setShowForm(true); }}>
-                  {showForm ? "취소" : "품목 등록"}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {importResult && (
-            <div style={{ marginBottom: "12px", padding: "12px", background: "var(--primary-light)", border: "1px solid var(--primary)", borderRadius: "var(--radius)" }}>
-              <div style={{ display: "flex", gap: "12px", alignItems: "center", fontSize: "0.85rem", fontWeight: 600 }}>
-                <span>총 {importResult.total}건</span>
-                <span style={{ color: "#166534" }}>성공 {importResult.success}건</span>
-                {importResult.failed > 0 && <span style={{ color: "#dc2626" }}>실패 {importResult.failed}건</span>}
-                <button className={styles.secondaryBtn} onClick={() => setImportResult(null)}>닫기</button>
-              </div>
-              {importResult.failed > 0 && (
-                <ul style={{ margin: "8px 0 0", paddingLeft: "20px", fontSize: "0.8rem", color: "#dc2626" }}>
-                  {importResult.results.filter((r) => r.status === "error").map((r) => (
-                    <li key={r.index}>{r.error}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-
-          {showForm && (
-            <div className={styles.form}>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>코드 *</label>
-                <input className={styles.formInput} value={formCode} onChange={(e) => setFormCode(e.target.value)} placeholder="P-001" readOnly={!!editingId} />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>이름 *</label>
-                <input className={styles.formInput} value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="품목명" />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>카테고리</label>
-                <input className={styles.formInput} value={formCategory} onChange={(e) => setFormCategory(e.target.value)} placeholder="직접재료, 부품 등" />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>단위</label>
-                <input className={styles.formInput} value={formUnit} onChange={(e) => setFormUnit(e.target.value)} placeholder="EA, KG, M" />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>표준원가</label>
-                <input className={styles.formInput} type="number" value={formStdCost} onChange={(e) => setFormStdCost(e.target.value)} placeholder="0" />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>안전재고</label>
-                <input className={styles.formInput} type="number" value={formSafetyStock} onChange={(e) => setFormSafetyStock(e.target.value)} placeholder="0" />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>설명</label>
-                <input className={styles.formInput} value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="설명" />
-              </div>
-              {formError && <div className={styles.formGroupFull} style={{ color: "var(--danger)", fontSize: "0.85rem" }}>{formError}</div>}
-              <div className={styles.formActions}>
-                <button className={styles.secondaryBtn} onClick={resetForm}>취소</button>
-                <button className={styles.primaryBtn} onClick={handleSubmit} disabled={isPending}>
-                  {isPending ? "저장 중..." : editingId ? "수정" : "등록"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          <table>
-            <thead>
-              <tr>
-                <th>코드</th>
-                <th>품목명</th>
-                <th>카테고리</th>
-                <th>단위</th>
-                <th style={{ textAlign: "right" }}>표준원가</th>
-                <th style={{ textAlign: "right" }}>안전재고</th>
-                <th>설명</th>
-                {(canEdit || canDelete) && <th>관리</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.code}</td>
-                  <td>{p.name}</td>
-                  <td>{p.category || "-"}</td>
-                  <td>{p.unit || "-"}</td>
-                  <td style={{ textAlign: "right" }}>{p.standardCost != null ? `${fmt(p.standardCost)}원` : "-"}</td>
-                  <td style={{ textAlign: "right" }}>{p.safetyStock > 0 ? fmt(p.safetyStock) : "-"}</td>
-                  <td>{p.description || "-"}</td>
-                  {(canEdit || canDelete) && (
-                    <td>
-                      <div className={styles.actions}>
-                        {canEdit && <button className={styles.editBtn} onClick={() => startEdit(p)}>수정</button>}
-                        {canDelete && (
-                          <button className={styles.dangerBtn} onClick={() => { if (confirm(`${p.name}을(를) 삭제하시겠습니까?`)) deleteMutation.mutate(p.id); }}>
-                            삭제
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-              {products.length === 0 && (
-                <tr><td colSpan={(canEdit || canDelete) ? 8 : 7} style={{ textAlign: "center", color: "var(--text-muted)" }}>등록된 품목이 없습니다</td></tr>
-              )}
-            </tbody>
-          </table>
+          <CostForm
+            showForm={showForm}
+            editingId={editingId}
+            formCode={formCode}
+            formName={formName}
+            formCategory={formCategory}
+            formUnit={formUnit}
+            formStdCost={formStdCost}
+            formSafetyStock={formSafetyStock}
+            formDesc={formDesc}
+            formError={formError}
+            isPending={isPending}
+            importPending={importMutation.isPending}
+            importResult={importResult}
+            importRef={importRef}
+            canEdit={canEdit}
+            onFormCodeChange={setFormCode}
+            onFormNameChange={setFormName}
+            onFormCategoryChange={setFormCategory}
+            onFormUnitChange={setFormUnit}
+            onFormStdCostChange={setFormStdCost}
+            onFormSafetyStockChange={setFormSafetyStock}
+            onFormDescChange={setFormDesc}
+            onToggleForm={() => { if (showForm) resetForm(); else setShowForm(true); }}
+            onResetForm={resetForm}
+            onSubmit={handleSubmit}
+            onImport={handleImport}
+            onDownloadTemplate={() => downloadTemplate("품목_템플릿", ["코드", "품목명", "카테고리", "단위", "표준원가", "안전재고"])}
+            onClearImportResult={() => setImportResult(null)}
+          />
         </div>
       )}
 
-      {/* 원가 분석 탭 */}
-      {tab === "analysis" && (
-        <div className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>원가 분석</h2>
-            {dateFilter}
-          </div>
-
-          <div className={styles.subTabs}>
-            {([["item", "품목별"], ["vendor", "거래처별"], ["project", "프로젝트별"], ["dept", "부서별"]] as const).map(([key, label]) => (
-              <button
-                key={key}
-                className={`${styles.subTab} ${analysisView === key ? styles.subTabActive : ""}`}
-                onClick={() => setAnalysisView(key)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {/* 품목별 */}
-          {analysisView === "item" && itemData && (
-            <>
-              <div className={styles.sectionHeader}>
-                <span className={styles.unit}>총 매입원가: {fmt(itemData.totalAmount)}원</span>
-                <button className={styles.downloadBtn} onClick={() => {
-                  exportToXlsx("품목별_원가분석", "품목별", ["품목명", "수량", "총액", "평균단가", "건수"],
-                    itemData.items.map((i) => [i.itemName, i.totalQty, i.totalAmount, i.avgUnitCost, i.tradeCount]));
-                }} disabled={itemData.items.length === 0}>엑셀 다운로드</button>
-              </div>
-              <table>
-                <thead><tr><th>품목명</th><th style={{ textAlign: "right" }}>수량</th><th style={{ textAlign: "right" }}>총액</th><th style={{ textAlign: "right" }}>평균단가</th><th style={{ textAlign: "right" }}>매입건수</th></tr></thead>
-                <tbody>
-                  {itemData.items.map((i) => (
-                    <tr key={i.itemName}><td>{i.itemName}</td><td style={{ textAlign: "right" }}>{fmt(i.totalQty)}</td><td style={{ textAlign: "right" }}>{fmt(i.totalAmount)}원</td><td style={{ textAlign: "right" }}>{fmt(i.avgUnitCost)}원</td><td style={{ textAlign: "right" }}>{i.tradeCount}</td></tr>
-                  ))}
-                  {itemData.items.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--text-muted)" }}>데이터 없음</td></tr>}
-                </tbody>
-              </table>
-            </>
-          )}
-
-          {/* 거래처별 */}
-          {analysisView === "vendor" && vendorData && (
-            <>
-              <div className={styles.sectionHeader}>
-                <span className={styles.unit}>총 매입원가: {fmt(vendorData.totalAmount)}원</span>
-                <button className={styles.downloadBtn} onClick={() => {
-                  exportToXlsx("거래처별_원가분석", "거래처별", ["거래처", "사업자번호", "총액", "건수"],
-                    vendorData.vendors.map((v) => [v.vendorName, v.bizNo || "", v.totalAmount, v.tradeCount]));
-                }} disabled={vendorData.vendors.length === 0}>엑셀 다운로드</button>
-              </div>
-              <table>
-                <thead><tr><th>거래처</th><th>사업자번호</th><th style={{ textAlign: "right" }}>총 매입액</th><th style={{ textAlign: "right" }}>거래건수</th></tr></thead>
-                <tbody>
-                  {vendorData.vendors.map((v) => (
-                    <tr key={v.vendorId}><td>{v.vendorName}</td><td>{v.bizNo || "-"}</td><td style={{ textAlign: "right" }}>{fmt(v.totalAmount)}원</td><td style={{ textAlign: "right" }}>{v.tradeCount}</td></tr>
-                  ))}
-                  {vendorData.vendors.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--text-muted)" }}>데이터 없음</td></tr>}
-                </tbody>
-              </table>
-            </>
-          )}
-
-          {/* 프로젝트별 */}
-          {analysisView === "project" && projectData && (
-            <>
-              <div className={styles.sectionHeader}>
-                <span className={styles.unit}>총 비용: {fmt(projectData.totalCost)}원</span>
-                <button className={styles.downloadBtn} onClick={() => {
-                  exportToXlsx("프로젝트별_원가분석", "프로젝트별", ["코드", "프로젝트명", "비용"],
-                    projectData.projects.map((p) => [p.code, p.name, p.totalCost]));
-                }} disabled={projectData.projects.length === 0}>엑셀 다운로드</button>
-              </div>
-              <table>
-                <thead><tr><th>코드</th><th>프로젝트명</th><th style={{ textAlign: "right" }}>비용</th></tr></thead>
-                <tbody>
-                  {projectData.projects.map((p) => (
-                    <tr key={p.projectId}><td>{p.code}</td><td>{p.name}</td><td style={{ textAlign: "right" }}>{fmt(p.totalCost)}원</td></tr>
-                  ))}
-                  {projectData.projects.length === 0 && <tr><td colSpan={3} style={{ textAlign: "center", color: "var(--text-muted)" }}>데이터 없음</td></tr>}
-                </tbody>
-              </table>
-            </>
-          )}
-
-          {/* 부서별 */}
-          {analysisView === "dept" && deptData && (
-            <>
-              <div className={styles.sectionHeader}>
-                <span className={styles.unit}>총 비용: {fmt(deptData.totalCost)}원</span>
-                <button className={styles.downloadBtn} onClick={() => {
-                  exportToXlsx("부서별_원가분석", "부서별", ["코드", "부서명", "비용"],
-                    deptData.departments.map((d) => [d.code, d.name, d.totalCost]));
-                }} disabled={deptData.departments.length === 0}>엑셀 다운로드</button>
-              </div>
-              <table>
-                <thead><tr><th>코드</th><th>부서명</th><th style={{ textAlign: "right" }}>비용</th></tr></thead>
-                <tbody>
-                  {deptData.departments.map((d) => (
-                    <tr key={d.departmentId}><td>{d.code}</td><td>{d.name}</td><td style={{ textAlign: "right" }}>{fmt(d.totalCost)}원</td></tr>
-                  ))}
-                  {deptData.departments.length === 0 && <tr><td colSpan={3} style={{ textAlign: "center", color: "var(--text-muted)" }}>데이터 없음</td></tr>}
-                </tbody>
-              </table>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* 원가 차이분석 탭 */}
-      {tab === "variance" && (
-        <div className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>표준원가 vs 실제원가</h2>
-            <div className={styles.sectionHeaderRight}>
-              {dateFilter}
-              <button className={styles.downloadBtn} onClick={() => {
-                if (!varianceData) return;
-                exportToXlsx("원가차이분석", "차이분석",
-                  ["품목명", "코드", "카테고리", "수량", "표준단가", "실제단가", "표준총액", "실제총액", "차이", "차이율(%)"],
-                  varianceData.variances.map((v) => [
-                    v.itemName, v.productCode || "-", v.category || "-", v.quantity,
-                    v.standardCost ?? "-", v.actualUnitCost, v.standardTotal ?? "-",
-                    v.actualTotal, v.variance ?? "-", v.varianceRate ?? "-",
-                  ]));
-              }} disabled={!varianceData || varianceData.variances.length === 0}>엑셀 다운로드</button>
-            </div>
-          </div>
-
-          {varianceData && (
-            <>
-              <div className={styles.summaryCards} style={{ marginBottom: 20 }}>
-                <div className={styles.summaryCard}>
-                  <div className={styles.summaryLabel}>표준원가 합계</div>
-                  <div className={styles.summaryValue}>{fmt(varianceData.totalStandard)}원</div>
-                </div>
-                <div className={styles.summaryCard}>
-                  <div className={styles.summaryLabel}>실제원가 합계</div>
-                  <div className={styles.summaryValue}>{fmt(varianceData.totalActual)}원</div>
-                </div>
-                <div className={styles.summaryCard}>
-                  <div className={styles.summaryLabel}>총 차이</div>
-                  <div className={`${styles.summaryValue} ${varianceData.totalVariance > 0 ? styles.negative : styles.positive}`}>
-                    {varianceData.totalVariance > 0 ? "+" : ""}{fmt(varianceData.totalVariance)}원
-                  </div>
-                </div>
-                <div className={styles.summaryCard}>
-                  <div className={styles.summaryLabel}>차이율</div>
-                  <div className={`${styles.summaryValue} ${varianceData.totalVariance > 0 ? styles.negative : styles.positive}`}>
-                    {varianceData.totalStandard > 0
-                      ? `${Math.round((varianceData.totalVariance / varianceData.totalStandard) * 1000) / 10}%`
-                      : "-"}
-                  </div>
-                </div>
-              </div>
-
-              <table>
-                <thead>
-                  <tr>
-                    <th>품목명</th>
-                    <th>코드</th>
-                    <th>카테고리</th>
-                    <th style={{ textAlign: "right" }}>수량</th>
-                    <th style={{ textAlign: "right" }}>표준단가</th>
-                    <th style={{ textAlign: "right" }}>실제단가</th>
-                    <th style={{ textAlign: "right" }}>표준총액</th>
-                    <th style={{ textAlign: "right" }}>실제총액</th>
-                    <th style={{ textAlign: "right" }}>차이</th>
-                    <th style={{ textAlign: "right" }}>차이율</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {varianceData.variances.map((v) => (
-                    <tr key={v.itemName}>
-                      <td>{v.itemName}</td>
-                      <td>{v.productCode || "-"}</td>
-                      <td>{v.category || "-"}</td>
-                      <td style={{ textAlign: "right" }}>{fmt(v.quantity)}{v.unit ? ` ${v.unit}` : ""}</td>
-                      <td style={{ textAlign: "right" }}>{v.standardCost != null ? `${fmt(v.standardCost)}원` : <span className={styles.noStandard}>미설정</span>}</td>
-                      <td style={{ textAlign: "right" }}>{fmt(v.actualUnitCost)}원</td>
-                      <td style={{ textAlign: "right" }}>{v.standardTotal != null ? `${fmt(v.standardTotal)}원` : "-"}</td>
-                      <td style={{ textAlign: "right" }}>{fmt(v.actualTotal)}원</td>
-                      <td style={{ textAlign: "right" }}>
-                        {v.variance != null ? (
-                          <span className={v.variance > 0 ? styles.variancePositive : v.variance < 0 ? styles.varianceNegative : styles.varianceZero}>
-                            {v.variance > 0 ? "+" : ""}{fmt(v.variance)}원
-                          </span>
-                        ) : "-"}
-                      </td>
-                      <td style={{ textAlign: "right" }}>
-                        {v.varianceRate != null ? (
-                          <span className={v.varianceRate > 0 ? styles.variancePositive : v.varianceRate < 0 ? styles.varianceNegative : styles.varianceZero}>
-                            {v.varianceRate > 0 ? "+" : ""}{v.varianceRate}%
-                          </span>
-                        ) : "-"}
-                      </td>
-                    </tr>
-                  ))}
-                  {varianceData.variances.length === 0 && (
-                    <tr><td colSpan={10} style={{ textAlign: "center", color: "var(--text-muted)" }}>매입 데이터가 없습니다</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </>
-          )}
-        </div>
-      )}
+      <CostTable
+        tab={tab}
+        analysisView={analysisView}
+        products={products}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        onStartEdit={startEdit}
+        onDelete={handleDelete}
+        startDate={startDate}
+        endDate={endDate}
+        onStartDateChange={setStartDate}
+        onEndDateChange={setEndDate}
+        onAnalysisViewChange={setAnalysisView}
+        itemData={itemData}
+        vendorData={vendorData}
+        projectData={projectData}
+        deptData={deptData}
+        varianceData={varianceData}
+      />
     </div>
   );
 }

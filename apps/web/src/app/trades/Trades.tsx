@@ -2,126 +2,22 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPatch, apiDelete, API_BASE } from "@/lib/api";
+import { apiGet, apiPost, apiDelete } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { exportToXlsx } from "@/lib/export-xlsx";
 import styles from "./Trades.module.css";
-
-interface Vendor {
-  id: string;
-  name: string;
-  bizNo: string | null;
-}
-
-interface TradeItem {
-  id: string;
-  itemName: string;
-  specification: string | null;
-  quantity: number;
-  unitPrice: number;
-  amount: number;
-  note: string | null;
-}
-
-interface PaymentRecord {
-  id: string;
-  paymentDate: string;
-  amount: number;
-  paymentMethod: string;
-  note: string | null;
-}
-
-interface Trade {
-  id: string;
-  tradeType: string;
-  tradeNo: string;
-  tradeDate: string;
-  dueDate: string | null;
-  vendor: Vendor;
-  supplyAmount: number;
-  taxAmount: number;
-  totalAmount: number;
-  paidAmount: number;
-  status: string;
-  description: string | null;
-  note: string | null;
-  items: TradeItem[];
-  payments?: PaymentRecord[];
-}
-
-interface TradeSummary {
-  sales: { count: number; total: number; paid: number; remaining: number };
-  purchase: { count: number; total: number; paid: number; remaining: number };
-}
-
-interface AgingRow {
-  id: string;
-  tradeNo: string;
-  vendorName: string;
-  tradeDate: string;
-  dueDate: string | null;
-  totalAmount: number;
-  paidAmount: number;
-  remaining: number;
-  daysPast: number;
-  bucket: string;
-}
-
-interface AgingReport {
-  rows: AgingRow[];
-  buckets: { current: number; days30: number; days60: number; days90: number };
-  total: number;
-}
-
-interface ItemInput {
-  itemName: string;
-  specification: string;
-  quantity: number;
-  unitPrice: number;
-}
-
-const fmt = (n: number) => n.toLocaleString();
-
-const statusLabel = (s: string) => {
-  switch (s) {
-    case "DRAFT": return { text: "임시", cls: styles.statusDraft };
-    case "CONFIRMED": return { text: "확정", cls: styles.statusConfirmed };
-    case "PARTIAL_PAID": return { text: "부분수금", cls: styles.statusPartialPaid };
-    case "PAID": return { text: "수금완료", cls: styles.statusPaid };
-    case "CANCELLED": return { text: "취소", cls: styles.statusCancelled };
-    default: return { text: s, cls: "" };
-  }
-};
-
-const methodLabel = (m: string) => {
-  switch (m) {
-    case "CASH": return "현금";
-    case "BANK_TRANSFER": return "계좌이체";
-    case "CARD": return "카드";
-    case "NOTE": return "어음";
-    default: return m;
-  }
-};
-
-const emptyItem = (): ItemInput => ({
-  itemName: "",
-  specification: "",
-  quantity: 1,
-  unitPrice: 0,
-});
-
-const downloadPdf = async (url: string, filename: string) => {
-  const token = localStorage.getItem("token");
-  const res = await fetch(`${API_BASE}${url}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const blob = await res.blob();
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
-};
+import {
+  Vendor,
+  Trade,
+  TradeSummary,
+  AgingReport,
+  ItemInput,
+  fmt,
+  methodLabel,
+  emptyItem,
+} from "./types";
+import TradeForm from "./TradeForm";
+import TradeTable from "./TradeTable";
 
 export default function TradesPage() {
   const { tenantId, canEdit, canDelete } = useAuth();
@@ -319,177 +215,6 @@ export default function TradesPage() {
   const supplyTotal = formItems.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
   const taxTotal = Math.round(supplyTotal * 0.1);
 
-  // 거래 목록 테이블 (매출/매입 공통)
-  const renderTradeTable = (list: Trade[], type: string) => (
-    <table>
-      <thead>
-        <tr>
-          <th>거래번호</th>
-          <th>거래일</th>
-          <th>거래처</th>
-          <th>설명</th>
-          <th>상태</th>
-          <th style={{ textAlign: "right" }}>공급가</th>
-          <th style={{ textAlign: "right" }}>세액</th>
-          <th style={{ textAlign: "right" }}>합계</th>
-          <th style={{ textAlign: "right" }}>수금액</th>
-          <th style={{ textAlign: "right" }}>잔액</th>
-          {(canEdit || canDelete) && <th>관리</th>}
-        </tr>
-      </thead>
-      <tbody>
-        {list.map((t) => {
-          const s = statusLabel(t.status);
-          const remaining = t.totalAmount - t.paidAmount;
-          return (
-            <tr key={t.id}>
-              <td>{t.tradeNo}</td>
-              <td>{new Date(t.tradeDate).toLocaleDateString("ko-KR")}</td>
-              <td>{t.vendor.name}</td>
-              <td>{t.description || "-"}</td>
-              <td><span className={`${styles.status} ${s.cls}`}>{s.text}</span></td>
-              <td style={{ textAlign: "right" }}>{fmt(t.supplyAmount)}</td>
-              <td style={{ textAlign: "right" }}>{fmt(t.taxAmount)}</td>
-              <td style={{ textAlign: "right" }}>{fmt(t.totalAmount)}</td>
-              <td style={{ textAlign: "right" }}>{fmt(t.paidAmount)}</td>
-              <td style={{ textAlign: "right", color: remaining > 0 ? "var(--danger)" : "inherit" }}>
-                {fmt(remaining)}
-              </td>
-              {(canEdit || canDelete) && (
-                <td>
-                  <div className={styles.actions}>
-                    <button
-                      className={styles.confirmBtn}
-                      style={{ fontSize: "0.75rem" }}
-                      onClick={() =>
-                        downloadPdf(
-                          `/trades/${t.id}/export-pdf`,
-                          `거래명세서-${t.tradeNo}.pdf`,
-                        )
-                      }
-                      title="PDF 다운로드"
-                    >
-                      PDF
-                    </button>
-                    {canEdit && t.status === "DRAFT" && (
-                      <button
-                        className={styles.confirmBtn}
-                        onClick={() => {
-                          if (confirm("거래를 확정하시겠습니까? 자동으로 전표가 생성됩니다.")) {
-                            confirmMutation.mutate(t.id);
-                          }
-                        }}
-                      >
-                        확정
-                      </button>
-                    )}
-                    {canEdit && !["PAID", "CANCELLED"].includes(t.status) && t.status !== "DRAFT" && (
-                      <button
-                        className={styles.cancelBtn}
-                        onClick={() => {
-                          if (confirm("거래를 취소하시겠습니까?")) {
-                            cancelMutation.mutate(t.id);
-                          }
-                        }}
-                      >
-                        취소
-                      </button>
-                    )}
-                    {canDelete && t.status === "DRAFT" && (
-                      <button
-                        className={styles.dangerBtn}
-                        onClick={() => {
-                          if (confirm("거래를 삭제하시겠습니까?")) {
-                            deleteMutation.mutate(t.id);
-                          }
-                        }}
-                      >
-                        삭제
-                      </button>
-                    )}
-                  </div>
-                </td>
-              )}
-            </tr>
-          );
-        })}
-        {list.length === 0 && (
-          <tr>
-            <td colSpan={(canEdit || canDelete) ? 11 : 10} style={{ textAlign: "center", color: "var(--text-muted)" }}>
-              {type} 거래가 없습니다
-            </td>
-          </tr>
-        )}
-      </tbody>
-    </table>
-  );
-
-  // 거래 등록 폼 (매출/매입 공통)
-  const renderForm = () => (
-    <>
-      <div className={styles.form}>
-        <div className={styles.formGroup}>
-          <label className={styles.formLabel}>거래처 *</label>
-          <select className={styles.formSelect} value={formVendorId} onChange={(e) => setFormVendorId(e.target.value)}>
-            <option value="">선택</option>
-            {vendors.map((v) => (
-              <option key={v.id} value={v.id}>{v.bizNo ? `[${v.bizNo}] ` : ""}{v.name}</option>
-            ))}
-          </select>
-        </div>
-        <div className={styles.formGroup}>
-          <label className={styles.formLabel}>거래일 *</label>
-          <input className={styles.formInput} type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
-        </div>
-        <div className={styles.formGroup}>
-          <label className={styles.formLabel}>결제 예정일</label>
-          <input className={styles.formInput} type="date" value={formDueDate} onChange={(e) => setFormDueDate(e.target.value)} />
-        </div>
-        <div className={styles.formGroup}>
-          <label className={styles.formLabel}>설명</label>
-          <input className={styles.formInput} value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="거래 설명" />
-        </div>
-      </div>
-
-      {/* 품목 */}
-      <div className={styles.itemsHeader}>
-        <span>품목명 *</span>
-        <span>규격</span>
-        <span>수량</span>
-        <span>단가 *</span>
-        <span>금액</span>
-        <span></span>
-      </div>
-      {formItems.map((item, i) => (
-        <div key={i} className={styles.itemRow}>
-          <input className={styles.formInput} value={item.itemName} onChange={(e) => setFormItems((prev) => prev.map((it, j) => j === i ? { ...it, itemName: e.target.value } : it))} placeholder="품목명" />
-          <input className={styles.formInput} value={item.specification} onChange={(e) => setFormItems((prev) => prev.map((it, j) => j === i ? { ...it, specification: e.target.value } : it))} placeholder="규격" />
-          <input className={styles.formInput} type="number" min={1} value={item.quantity} onChange={(e) => setFormItems((prev) => prev.map((it, j) => j === i ? { ...it, quantity: Number(e.target.value) || 1 } : it))} />
-          <input className={styles.formInput} type="number" min={0} value={item.unitPrice || ""} onChange={(e) => setFormItems((prev) => prev.map((it, j) => j === i ? { ...it, unitPrice: Number(e.target.value) || 0 } : it))} placeholder="0" />
-          <span style={{ padding: "8px 12px", fontSize: "0.9rem" }}>{fmt(item.quantity * item.unitPrice)}</span>
-          <button type="button" className={styles.removeBtn} onClick={() => setFormItems((prev) => prev.filter((_, j) => j !== i))} disabled={formItems.length <= 1}>X</button>
-        </div>
-      ))}
-      <div className={styles.itemFooter}>
-        <button type="button" className={styles.addItemBtn} onClick={() => setFormItems((prev) => [...prev, emptyItem()])}>+ 품목 추가</button>
-        <div>
-          <span>공급가: {fmt(supplyTotal)}원</span>
-          <span style={{ margin: "0 12px" }}>세액: {fmt(taxTotal)}원</span>
-          <span style={{ fontWeight: 700 }}>합계: {fmt(supplyTotal + taxTotal)}원</span>
-        </div>
-      </div>
-
-      {formError && <p className={styles.error}>{formError}</p>}
-
-      <div className={styles.formActions}>
-        <button className={styles.secondaryBtn} onClick={resetForm}>취소</button>
-        <button className={styles.primaryBtn} onClick={handleSubmit} disabled={createMutation.isPending}>
-          {createMutation.isPending ? "저장 중..." : "등록"}
-        </button>
-      </div>
-    </>
-  );
-
   const selectedTradeRemaining = selectedTrade
     ? selectedTrade.totalAmount - selectedTrade.paidAmount
     : 0;
@@ -548,8 +273,38 @@ export default function TradesPage() {
               </button>
             )}
           </div>
-          {showForm && renderForm()}
-          {renderTradeTable(trades, "매출")}
+          {showForm && (
+            <TradeForm
+              vendors={vendors}
+              formVendorId={formVendorId}
+              setFormVendorId={setFormVendorId}
+              formDate={formDate}
+              setFormDate={setFormDate}
+              formDueDate={formDueDate}
+              setFormDueDate={setFormDueDate}
+              formDesc={formDesc}
+              setFormDesc={setFormDesc}
+              formNote={formNote}
+              setFormNote={setFormNote}
+              formItems={formItems}
+              setFormItems={setFormItems}
+              formError={formError}
+              supplyTotal={supplyTotal}
+              taxTotal={taxTotal}
+              resetForm={resetForm}
+              handleSubmit={handleSubmit}
+              isPending={createMutation.isPending}
+            />
+          )}
+          <TradeTable
+            trades={trades}
+            type="매출"
+            canEdit={canEdit}
+            canDelete={canDelete}
+            onConfirm={(id) => confirmMutation.mutate(id)}
+            onCancel={(id) => cancelMutation.mutate(id)}
+            onDelete={(id) => deleteMutation.mutate(id)}
+          />
         </div>
       )}
 
@@ -564,8 +319,38 @@ export default function TradesPage() {
               </button>
             )}
           </div>
-          {showForm && renderForm()}
-          {renderTradeTable(trades, "매입")}
+          {showForm && (
+            <TradeForm
+              vendors={vendors}
+              formVendorId={formVendorId}
+              setFormVendorId={setFormVendorId}
+              formDate={formDate}
+              setFormDate={setFormDate}
+              formDueDate={formDueDate}
+              setFormDueDate={setFormDueDate}
+              formDesc={formDesc}
+              setFormDesc={setFormDesc}
+              formNote={formNote}
+              setFormNote={setFormNote}
+              formItems={formItems}
+              setFormItems={setFormItems}
+              formError={formError}
+              supplyTotal={supplyTotal}
+              taxTotal={taxTotal}
+              resetForm={resetForm}
+              handleSubmit={handleSubmit}
+              isPending={createMutation.isPending}
+            />
+          )}
+          <TradeTable
+            trades={trades}
+            type="매입"
+            canEdit={canEdit}
+            canDelete={canDelete}
+            onConfirm={(id) => confirmMutation.mutate(id)}
+            onCancel={(id) => cancelMutation.mutate(id)}
+            onDelete={(id) => deleteMutation.mutate(id)}
+          />
         </div>
       )}
 
