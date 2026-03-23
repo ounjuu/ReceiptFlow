@@ -80,3 +80,35 @@ button {
 input[type="file"] {
   font-size: 0.9rem;
 }
+
+/* ─── 모바일 반응형 전역 스타일 ─── */
+@media (max-width: 768px) {
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  th, td {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  h1 {
+    font-size: 1.3rem;
+  }
+
+  h2 {
+    font-size: 1.1rem;
+  }
+
+  button {
+    padding: 6px 12px;
+    font-size: 0.82rem;
+  }
+
+  input, select, textarea {
+    font-size: 0.85rem;
+  }
+}

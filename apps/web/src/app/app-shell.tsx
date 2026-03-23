@@ -90,6 +90,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
+  // 모바일 사이드바 상태
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   // 검색 상태
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchGroup[]>([]);
@@ -150,6 +153,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       router.push("/login");
     }
   }, [loading, user, isLoginPage, router]);
+
+  // 페이지 이동 시 사이드바 닫기
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   // 바깥 클릭 시 드롭다운 닫기
   useEffect(() => {
@@ -232,7 +240,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={styles.container}>
-      <aside className={styles.sidebar}>
+      {sidebarOpen && <div className={styles.sidebarOverlay} onClick={() => setSidebarOpen(false)} />}
+      <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}>
         <div className={styles.logo}>LedgerFlow</div>
         <nav className={styles.nav}>
           {navItems.map((item) => (
@@ -257,7 +266,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
       <div className={styles.main}>
         <header className={styles.header}>
-          <span>LedgerFlow ERP</span>
+          <button className={styles.hamburger} onClick={() => setSidebarOpen((v) => !v)}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+          <span className={styles.headerTitle}>LedgerFlow ERP</span>
           <div className={styles.searchBar} ref={searchRef}>
             <input
               className={styles.searchInput}

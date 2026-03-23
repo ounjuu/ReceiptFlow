@@ -361,3 +361,127 @@
   color: var(--text-muted);
   font-size: 0.95rem;
 }
+
+/* 햄버거 메뉴 (데스크톱에서 숨김) */
+.hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+}
+
+.hamburger:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.headerTitle {
+  white-space: nowrap;
+}
+
+/* 사이드바 오버레이 (데스크톱에서 숨김) */
+.sidebarOverlay {
+  display: none;
+}
+
+/* ─── 모바일 반응형 (768px 이하) ─── */
+@media (max-width: 768px) {
+  .hamburger {
+    display: flex;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: -260px;
+    top: 0;
+    bottom: 0;
+    width: 250px;
+    z-index: 2000;
+    transition: left 0.25s ease;
+    overflow-y: auto;
+  }
+
+  .sidebarOpen {
+    left: 0;
+  }
+
+  .sidebarOverlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 1999;
+  }
+
+  .header {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .headerTitle {
+    font-size: 0.85rem;
+  }
+
+  .searchBar {
+    max-width: none;
+    margin: 0 4px;
+  }
+
+  .searchInput {
+    font-size: 0.8rem;
+    padding: 6px 10px;
+  }
+
+  .userArea {
+    gap: 6px;
+  }
+
+  .userName {
+    display: none;
+  }
+
+  .roleBadge {
+    display: none;
+  }
+
+  .logoutBtn {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+
+  .content {
+    padding: 12px;
+  }
+
+  .notifDropdown {
+    width: 280px;
+    right: -40px;
+  }
+}
+
+/* ─── 태블릿 (769px ~ 1024px) ─── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .sidebar {
+    width: 180px;
+  }
+
+  .navLink {
+    font-size: 0.82rem;
+    padding: 8px 10px;
+  }
+
+  .content {
+    padding: 16px;
+  }
+
+  .searchBar {
+    max-width: 280px;
+  }
+}
