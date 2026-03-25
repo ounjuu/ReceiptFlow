@@ -44,7 +44,7 @@ export function DashboardAlertsBanner({ alertItems }: DashboardAlertsProps) {
 export interface FinancialCardsProps {
   kpi: DashboardKpi | undefined;
   summary: DashboardSummary | undefined;
-  t: (key: TranslationKey, params?: Record<string, unknown>) => string;
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 }
 
 export function FinancialCards({ kpi, summary, t }: FinancialCardsProps) {
@@ -85,7 +85,7 @@ export function FinancialCards({ kpi, summary, t }: FinancialCardsProps) {
 
 export interface OperationalCardsProps {
   kpi: DashboardKpi | undefined;
-  t: (key: TranslationKey, params?: Record<string, unknown>) => string;
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 }
 
 export function OperationalCards({ kpi, t }: OperationalCardsProps) {

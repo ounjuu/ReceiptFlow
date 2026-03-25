@@ -90,7 +90,7 @@ export interface BudgetChartProps {
   budgetChartData: BudgetChartEntry[];
   budgetData: BudgetVsActual | undefined;
   currentYear: number;
-  t: (key: TranslationKey, params?: Record<string, unknown>) => string;
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 }
 
 export function BudgetChart({ budgetChartData, budgetData, currentYear, t }: BudgetChartProps) {
@@ -161,7 +161,7 @@ export interface BottomGridProps {
   recentJournals: JournalEntry[];
   pendingApprovals: PendingApproval[];
   alerts: DashboardAlerts | undefined;
-  t: (key: TranslationKey, params?: Record<string, unknown>) => string;
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 }
 
 export function BottomGrid({ recentJournals, pendingApprovals, alerts, t }: BottomGridProps) {
