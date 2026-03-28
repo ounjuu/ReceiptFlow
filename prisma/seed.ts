@@ -252,6 +252,66 @@ async function main() {
     }
   }
 
+  // ── 급여 처리 (PayrollRecord, 1~3월) ──
+  const RATES = {
+    nationalPension: 0.045,
+    healthInsurance: 0.03545,
+    longTermCareRate: 0.1281,
+    employmentInsurance: 0.009,
+  };
+
+  function calcIncomeTax(monthly: number): number {
+    if (monthly <= 1060000) return 0;
+    if (monthly <= 1500000) return Math.round((monthly - 1060000) * 0.06);
+    if (monthly <= 3000000) return Math.round(26400 + (monthly - 1500000) * 0.15);
+    if (monthly <= 4500000) return Math.round(251400 + (monthly - 3000000) * 0.15);
+    if (monthly <= 7000000) return Math.round(476400 + (monthly - 4500000) * 0.24);
+    return Math.round(1076400 + (monthly - 7000000) * 0.35);
+  }
+
+  const allEmployees = await prisma.employee.findMany({
+    where: { tenantId: tenant.id, status: "ACTIVE" },
+  });
+
+  let payrollCount = 0;
+  for (const emp of allEmployees) {
+    const baseSalary = Number(emp.baseSalary);
+    for (let month = 1; month <= 3; month++) {
+      const period = `2026-${String(month).padStart(2, "0")}`;
+      const grossPay = baseSalary;
+      const nationalPension = Math.round(grossPay * RATES.nationalPension);
+      const healthInsurance = Math.round(grossPay * RATES.healthInsurance);
+      const longTermCare = Math.round(healthInsurance * RATES.longTermCareRate);
+      const employmentInsurance = Math.round(grossPay * RATES.employmentInsurance);
+      const incomeTax = calcIncomeTax(grossPay);
+      const localIncomeTax = Math.round(incomeTax * 0.1);
+      const totalDeduction = nationalPension + healthInsurance + longTermCare + employmentInsurance + incomeTax + localIncomeTax;
+      const netPay = grossPay - totalDeduction;
+
+      await prisma.payrollRecord.upsert({
+        where: { employeeId_period: { employeeId: emp.id, period } },
+        update: {},
+        create: {
+          employeeId: emp.id,
+          period,
+          baseSalary,
+          overtimePay: 0,
+          bonusPay: 0,
+          grossPay,
+          nationalPension,
+          healthInsurance,
+          longTermCare,
+          employmentInsurance,
+          incomeTax,
+          localIncomeTax,
+          totalDeduction,
+          netPay,
+        },
+      });
+      payrollCount++;
+    }
+  }
+
   // ── 결과 출력 ──
   console.log("=== Seed 완료 ===");
   console.log(`테넌트: ${tenant.name}`);
@@ -262,6 +322,7 @@ async function main() {
   console.log(`프로젝트: ${projects.length}건`);
   console.log(`품목: ${products.length}건`);
   console.log(`직원: ${employees.length}건`);
+  console.log(`급여 기록: ${payrollCount}건 (1~3월)`);
   console.log("");
   console.log("로그인 계정:");
   console.log("  admin@ledgerflow.dev / admin1234 (관리자)");
