@@ -154,20 +154,43 @@ class OcrResponse(BaseModel):
 
 def parse_amount(text: str) -> Optional[float]:
     """영수증 텍스트에서 합계/총액 금액을 추출"""
-    # 합계, 총액, 결제금액 등 키워드 근처 금액 우선
-    for keyword in ["합계", "총액", "결제금액", "총금액", "청구금액", "합 계", "Total"]:
-        pattern = rf"{keyword}\s*[:：]?\s*([\d,]+)\s*원?"
+    # 1순위: 합계 키워드 근처 금액 (한국어 + 영어 + OCR 오타 대응)
+    keywords = [
+        "합계", "총액", "결제금액", "총금액", "청구금액", "합 계",
+        "Total", "TOTAL", "Tolal", "Tolat", "Tota1",  # OCR 오타
+        "Amount", "AMOUNT", "Grand Total", "Sum",
+        "합 계", "결제 금액", "카드결제", "현금결제", "승인금액",
+    ]
+    for keyword in keywords:
+        pattern = rf"(?i){re.escape(keyword)}\s*[:：=]?\s*([\d,. ]+)\s*원?"
         m = re.search(pattern, text)
         if m:
-            return float(m.group(1).replace(",", ""))
+            val = m.group(1).replace(",", "").replace(" ", "").strip(".")
+            try:
+                return float(val)
+            except ValueError:
+                continue
 
-    # 키워드 없으면 가장 큰 금액 추출
+    # 2순위: "원" 붙은 금액 추출 → 최대값
     amounts = re.findall(r"([\d,]{3,})\s*원", text)
-    if not amounts:
-        amounts = re.findall(r"([\d]{1,3}(?:,\d{3})+)", text)
     if amounts:
         nums = [float(a.replace(",", "")) for a in amounts]
         return max(nums)
+
+    # 3순위: 콤마 포함 숫자 (1,000 이상) → 최대값
+    amounts = re.findall(r"(\d{1,3}(?:,\d{3})+)", text)
+    if amounts:
+        nums = [float(a.replace(",", "")) for a in amounts]
+        return max(nums)
+
+    # 4순위: 마지막 줄 부근의 4자리 이상 숫자 → 합계일 가능성
+    lines = [l.strip() for l in text.split("\n") if l.strip()]
+    for line in reversed(lines):
+        nums = re.findall(r"(\d{4,})", line)
+        if nums:
+            candidates = [float(n) for n in nums if 100 <= float(n) <= 100000000]
+            if candidates:
+                return max(candidates)
 
     return None
 
@@ -203,17 +226,42 @@ def parse_vendor(text: str) -> Optional[str]:
             if name:
                 return name
 
-    # 2순위: "사업자" 키워드 또는 사업자등록번호 패턴이 있는 줄의 바로 윗줄
+    # 2순위: "Store", "Shop", "Name" 등 영문 키워드
+    for line in lines:
+        m = re.search(r"(?i)(?:Store|Shop|Name|상점|가게|매장)\s*[:：]?\s*(.+)", line)
+        if m:
+            name = m.group(1).strip()
+            if name:
+                return name
+
+    # 3순위: "사업자" 키워드 또는 사업자등록번호 패턴이 있는 줄의 바로 윗줄
     biz_num = re.compile(r"\d{3}[-\s]?\d{2}[-\s]?\d{5}")
     biz_keyword = re.compile(r"사\s*업\s*자")
     for i, line in enumerate(lines):
         if biz_num.search(line) or biz_keyword.search(line):
             if i > 0:
                 prev = lines[i - 1].strip()
-                # 윗줄이 사업자/번호 관련이 아니면 거래처명으로 간주
                 if prev and not biz_num.search(prev) and not biz_keyword.search(prev):
                     return prev
             break
+
+    # 4순위: "Tel", "전화" 키워드 위의 줄 (상호명 다음에 전화번호가 오는 패턴)
+    tel_pattern = re.compile(r"(?i)(?:Tel|TEL|전\s*화|연락처|☎)\s*[:：]?\s*\d")
+    for i, line in enumerate(lines):
+        if tel_pattern.search(line):
+            if i > 0:
+                prev = lines[i - 1].strip()
+                if prev and len(prev) <= 30 and not re.match(r"^\d", prev):
+                    return prev
+            break
+
+    # 5순위: 첫 번째 줄이 짧으면 상호명일 가능성 (영수증 헤더)
+    skip_words = {"receipt", "영수증", "결제", "카드", "현금", "거래", "date", "no."}
+    for line in lines[:3]:
+        clean = line.strip()
+        if 2 <= len(clean) <= 25 and not re.match(r"^[\d\s\-/.:]+$", clean):
+            if not any(w in clean.lower() for w in skip_words):
+                return clean
 
     return None
 
