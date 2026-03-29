@@ -1,11 +1,15 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { JournalService } from "../journal/journal.service";
 import { CreateFixedAssetDto } from "./dto/create-fixed-asset.dto";
 import { UpdateFixedAssetDto } from "./dto/update-fixed-asset.dto";
 
 @Injectable()
 export class FixedAssetService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly journalService: JournalService,
+  ) {}
 
   async findAll(tenantId: string) {
     const assets = await this.prisma.fixedAsset.findMany({
@@ -216,27 +220,15 @@ export class FixedAssetService {
       // 전표 자동 생성 + DepreciationRecord 생성 (트랜잭션)
       await this.prisma.$transaction(async (tx) => {
         // 감가상각 전표 생성 (차변: 감가상각비, 대변: 감가상각누계액)
-        const entry = await tx.journalEntry.create({
-          data: {
-            tenantId,
-            date: periodEndDate,
-            description: `${asset.name} ${period} 감가상각`,
-            status: "POSTED",
-            lines: {
-              create: [
-                {
-                  accountId: asset.depreciationAccountId,
-                  debit: roundedAmount,
-                  credit: 0,
-                },
-                {
-                  accountId: asset.accumulatedDepAccountId,
-                  debit: 0,
-                  credit: roundedAmount,
-                },
-              ],
-            },
-          },
+        const entry = await this.journalService.createEntry({
+          tenantId,
+          date: periodEndDate,
+          description: `${asset.name} ${period} 감가상각`,
+          lines: [
+            { accountId: asset.depreciationAccountId, debit: roundedAmount, credit: 0 },
+            { accountId: asset.accumulatedDepAccountId, debit: 0, credit: roundedAmount },
+          ],
+          tx,
         });
 
         // 감가상각 기록 생성

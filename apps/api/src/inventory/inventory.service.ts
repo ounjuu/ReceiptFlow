@@ -1,11 +1,15 @@
 import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { JournalService } from "../journal/journal.service";
 import { CreateInventoryTxDto } from "./dto/create-inventory-tx.dto";
 
 @Injectable()
 export class InventoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly journalService: JournalService,
+  ) {}
 
   // 자동 채번 (IV-YYYYMMDD-NNN)
   private async generateTxNo(tenantId: string, txDate: string): Promise<string> {
@@ -226,19 +230,15 @@ export class InventoryService {
 
       if (debitAccountId !== creditAccountId) {
         const costAmount = dto.txType === "OUT" ? dto.quantity * currentAvgCost : totalCost;
-        const entry = await this.prisma.journalEntry.create({
-          data: {
-            tenantId: dto.tenantId,
-            date: new Date(dto.txDate),
-            description: `재고 ${dto.txType === "IN" ? "입고" : "출고"}: ${product.name} ${dto.quantity}${product.unit || "개"} (${txNo})`,
-            status: "POSTED",
-            lines: {
-              create: [
-                { accountId: debitAccountId, debit: costAmount, credit: 0 },
-                { accountId: creditAccountId, debit: 0, credit: costAmount },
-              ],
-            },
-          },
+        const entry = await this.journalService.createEntry({
+          tenantId: dto.tenantId,
+          date: new Date(dto.txDate),
+          description: `재고 ${dto.txType === "IN" ? "입고" : "출고"}: ${product.name} ${dto.quantity}${product.unit || "개"} (${txNo})`,
+          status: "POSTED",
+          lines: [
+            { accountId: debitAccountId, debit: costAmount, credit: 0 },
+            { accountId: creditAccountId, debit: 0, credit: costAmount },
+          ],
         });
         journalEntryId = entry.id;
       }

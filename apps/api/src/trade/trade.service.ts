@@ -4,13 +4,17 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { JournalService } from "../journal/journal.service";
 import { CreateTradeDto } from "./dto/create-trade.dto";
 import { UpdateTradeDto } from "./dto/update-trade.dto";
 import { CreatePaymentDto } from "./dto/create-payment.dto";
 
 @Injectable()
 export class TradeService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly journalService: JournalService,
+  ) {}
 
   // 계정 코드로 계정 ID 조회
   private async getAccountId(tenantId: string, code: string): Promise<string> {
@@ -300,14 +304,12 @@ export class TradeService {
       }
 
       // 전표 생성
-      const journal = await tx.journalEntry.create({
-        data: {
-          tenantId,
-          date: trade.tradeDate,
-          description: `${trade.tradeType === "SALES" ? "매출" : "매입"} 확정 - ${trade.tradeNo} (${trade.vendor.name})`,
-          status: "POSTED",
-          lines: { create: journalLines },
-        },
+      const journal = await this.journalService.createEntry({
+        tenantId,
+        date: trade.tradeDate,
+        description: `${trade.tradeType === "SALES" ? "매출" : "매입"} 확정 - ${trade.tradeNo} (${trade.vendor.name})`,
+        lines: journalLines,
+        tx,
       });
 
       // 거래 상태 변경
@@ -425,14 +427,12 @@ export class TradeService {
         ] || dto.paymentMethod;
 
       // 전표 생성
-      const journal = await tx.journalEntry.create({
-        data: {
-          tenantId,
-          date: new Date(dto.paymentDate),
-          description: `${trade.tradeType === "SALES" ? "매출 입금" : "매입 출금"} - ${trade.tradeNo} (${trade.vendor.name}, ${methodLabel})`,
-          status: "POSTED",
-          lines: { create: journalLines },
-        },
+      const journal = await this.journalService.createEntry({
+        tenantId,
+        date: new Date(dto.paymentDate),
+        description: `${trade.tradeType === "SALES" ? "매출 입금" : "매입 출금"} - ${trade.tradeNo} (${trade.vendor.name}, ${methodLabel})`,
+        lines: journalLines,
+        tx,
       });
 
       // 입금/출금 기록

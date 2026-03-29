@@ -1,13 +1,17 @@
 import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { JournalService } from "../journal/journal.service";
 import { CreateBankAccountDto } from "./dto/create-bank-account.dto";
 import { UpdateBankAccountDto } from "./dto/update-bank-account.dto";
 import { CreateBankTxDto } from "./dto/create-bank-tx.dto";
 
 @Injectable()
 export class BankAccountService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly journalService: JournalService,
+  ) {}
 
   // 자동 채번 (BA-YYYYMMDD-NNN)
   private async generateTxNo(tenantId: string, txDate: string): Promise<string> {
@@ -222,19 +226,15 @@ export class BankAccountService {
         ? `입금: ${dto.counterparty || ""} ${dto.description || ""} (${txNo})`
         : `출금: ${dto.counterparty || ""} ${dto.description || ""} (${txNo})`;
 
-      const entry = await this.prisma.journalEntry.create({
-        data: {
-          tenantId: dto.tenantId,
-          date: new Date(dto.txDate),
-          description: desc.trim(),
-          status: "POSTED",
-          lines: {
-            create: [
-              { accountId: debitId, debit: dto.amount, credit: 0 },
-              { accountId: creditId, debit: 0, credit: dto.amount },
-            ],
-          },
-        },
+      const entry = await this.journalService.createEntry({
+        tenantId: dto.tenantId,
+        date: new Date(dto.txDate),
+        description: desc.trim(),
+        status: "POSTED",
+        lines: [
+          { accountId: debitId, debit: dto.amount, credit: 0 },
+          { accountId: creditId, debit: 0, credit: dto.amount },
+        ],
       });
       journalEntryId = entry.id;
     }
@@ -301,19 +301,15 @@ export class BankAccountService {
     const targetAfter = Number(targetAccount.balance) + dto.amount;
 
     // 이체 전표: DR 도착계좌계정 / CR 출발계좌계정
-    const entry = await this.prisma.journalEntry.create({
-      data: {
-        tenantId: dto.tenantId,
-        date: new Date(dto.txDate),
-        description: `계좌 이체: ${sourceAccount.account.code} → ${targetAccount.account.code} (${txNo})`,
-        status: "POSTED",
-        lines: {
-          create: [
-            { accountId: targetAccount.accountId, debit: dto.amount, credit: 0 },
-            { accountId: sourceAccount.accountId, debit: 0, credit: dto.amount },
-          ],
-        },
-      },
+    const entry = await this.journalService.createEntry({
+      tenantId: dto.tenantId,
+      date: new Date(dto.txDate),
+      description: `계좌 이체: ${sourceAccount.account.code} → ${targetAccount.account.code} (${txNo})`,
+      status: "POSTED",
+      lines: [
+        { accountId: targetAccount.accountId, debit: dto.amount, credit: 0 },
+        { accountId: sourceAccount.accountId, debit: 0, credit: dto.amount },
+      ],
     });
 
     const targetTxNo = await this.generateTxNo(dto.tenantId, dto.txDate);

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { JournalRuleService } from "../journal-rule/journal-rule.service";
+import { JournalService } from "../journal/journal.service";
 import { UploadDocumentDto } from "./dto/upload-document.dto";
 import { CreateDocumentDto } from "./dto/create-document.dto";
 import { UpdateDocumentDto } from "./dto/update-document.dto";
@@ -14,6 +15,7 @@ export class DocumentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly journalRuleService: JournalRuleService,
+    private readonly journalService: JournalService,
   ) {}
 
   // 영수증 이미지 업로드 → Document 생성
@@ -211,30 +213,31 @@ export class DocumentService {
         },
       });
 
-      const journalEntry = await tx.journalEntry.create({
-        data: {
-          tenantId: dto.tenantId,
-          date: new Date(dto.transactionAt),
-          description: `${dto.vendorName} 결제`,
-          documentId: document.id,
-          lines: {
-            create: [
-              {
-                accountId: debitAccountId,
-                vendorId: vendor.id,
-                debit: dto.totalAmount,
-                credit: 0,
-              },
-              {
-                accountId: creditAccountId,
-                vendorId: vendor.id,
-                debit: 0,
-                credit: dto.totalAmount,
-              },
-            ],
+      const journalEntry = await this.journalService.createEntry({
+        tenantId: dto.tenantId,
+        date: new Date(dto.transactionAt),
+        description: `${dto.vendorName} 결제`,
+        lines: [
+          {
+            accountId: debitAccountId,
+            vendorId: vendor.id,
+            debit: dto.totalAmount,
+            credit: 0,
           },
-        },
-        include: { lines: { include: { account: true, vendor: true } } },
+          {
+            accountId: creditAccountId,
+            vendorId: vendor.id,
+            debit: 0,
+            credit: dto.totalAmount,
+          },
+        ],
+        tx,
+      });
+
+      // Document와 JournalEntry 연결
+      await tx.journalEntry.update({
+        where: { id: journalEntry.id },
+        data: { documentId: document.id },
       });
 
       return { document, journalEntry, classification };

@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, ConflictException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { JournalService } from "../journal/journal.service";
 import { CreateEmployeeDto } from "./dto/create-employee.dto";
 import { UpdateEmployeeDto } from "./dto/update-employee.dto";
 
@@ -13,7 +14,10 @@ const RATES = {
 
 @Injectable()
 export class PayrollService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly journalService: JournalService,
+  ) {}
 
   // --- 직원 관리 ---
 
@@ -187,27 +191,15 @@ export class PayrollService {
 
       await this.prisma.$transaction(async (tx) => {
         // 전표 생성 (차변: 급여, 대변: 보통예금)
-        const entry = await tx.journalEntry.create({
-          data: {
-            tenantId,
-            date: periodEndDate,
-            description: `${emp.name} ${period} 급여`,
-            status: "POSTED",
-            lines: {
-              create: [
-                {
-                  accountId: salaryAccount.id,
-                  debit: grossPay,
-                  credit: 0,
-                },
-                {
-                  accountId: bankAccount.id,
-                  debit: 0,
-                  credit: grossPay,
-                },
-              ],
-            },
-          },
+        const entry = await this.journalService.createEntry({
+          tenantId,
+          date: periodEndDate,
+          description: `${emp.name} ${period} 급여`,
+          lines: [
+            { accountId: salaryAccount.id, debit: grossPay, credit: 0 },
+            { accountId: bankAccount.id, debit: 0, credit: grossPay },
+          ],
+          tx,
         });
 
         // PayrollRecord 생성

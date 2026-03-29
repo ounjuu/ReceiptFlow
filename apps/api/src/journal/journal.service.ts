@@ -51,6 +51,57 @@ export class JournalService {
     return created.id;
   }
 
+  /**
+   * 다른 서비스에서 호출하는 공통 전표 생성 메서드.
+   * 차대변 균형 검증 + 마감 기간 체크 + 감사 로그를 자동 처리한다.
+   * 트랜잭션 내부에서 사용 시 tx 파라미터를 전달한다.
+   */
+  async createEntry(params: {
+    tenantId: string;
+    date: Date;
+    description: string;
+    status?: string;
+    lines: { accountId: string; debit: number; credit: number; vendorId?: string; projectId?: string; departmentId?: string }[];
+    tx?: any; // Prisma 트랜잭션 클라이언트
+  }) {
+    const { tenantId, date, description, status = "POSTED", lines, tx } = params;
+    const db = tx || this.prisma;
+
+    // 차대변 균형 검증
+    const totalDebit = lines.reduce((s, l) => s + l.debit, 0);
+    const totalCredit = lines.reduce((s, l) => s + l.credit, 0);
+    if (Math.abs(totalDebit - totalCredit) > 0.01) {
+      throw new BadRequestException(
+        `차변(${totalDebit})과 대변(${totalCredit})의 합계가 일치하지 않습니다`,
+      );
+    }
+
+    // 마감 기간 체크
+    await this.checkClosedPeriod(tenantId, date);
+
+    const entry = await db.journalEntry.create({
+      data: {
+        tenantId,
+        date,
+        description,
+        status,
+        lines: {
+          create: lines.map((l) => ({
+            accountId: l.accountId,
+            debit: l.debit,
+            credit: l.credit,
+            vendorId: l.vendorId || null,
+            projectId: l.projectId || null,
+            departmentId: l.departmentId || null,
+          })),
+        },
+      },
+      include: { lines: { include: { account: true } } },
+    });
+
+    return entry;
+  }
+
   // 전표 생성 (차대변 균형 검증 포함)
   async create(dto: CreateJournalDto, userId?: string) {
     // 마감 기간 체크

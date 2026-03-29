@@ -1,12 +1,16 @@
 import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { JournalService } from "../journal/journal.service";
 import { CreateExpenseClaimDto } from "./dto/create-expense-claim.dto";
 import { UpdateExpenseClaimDto } from "./dto/update-expense-claim.dto";
 
 @Injectable()
 export class ExpenseClaimService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly journalService: JournalService,
+  ) {}
 
   // 자동 채번 (EC-YYYYMMDD-NNN)
   private async generateClaimNo(tenantId: string, claimDate: string): Promise<string> {
@@ -225,19 +229,15 @@ export class ExpenseClaimService {
 
     return this.prisma.$transaction(async (tx) => {
       // 전표 생성
-      const entry = await tx.journalEntry.create({
-        data: {
-          tenantId: claim.tenantId,
-          date: new Date(),
-          description: `경비 정산: ${claim.title} (${claim.claimNo})`,
-          status: "POSTED",
-          lines: {
-            create: [
-              { accountId: debitAccount.id, debit: totalAmount, credit: 0 },
-              { accountId: creditAccount.id, debit: 0, credit: totalAmount },
-            ],
-          },
-        },
+      const entry = await this.journalService.createEntry({
+        tenantId: claim.tenantId,
+        date: new Date(),
+        description: `경비 정산: ${claim.title} (${claim.claimNo})`,
+        lines: [
+          { accountId: debitAccount.id, debit: totalAmount, credit: 0 },
+          { accountId: creditAccount.id, debit: 0, credit: totalAmount },
+        ],
+        tx,
       });
 
       // 경비 정산 상태 업데이트
