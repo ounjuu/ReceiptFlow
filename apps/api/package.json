@@ -7,7 +7,9 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
-    "lint": "eslint \"{src,test}/**/*.ts\""
+    "lint": "eslint \"{src,test}/**/*.ts\"",
+    "test": "jest --config jest.config.ts",
+    "test:e2e": "jest --config jest.config.ts --runInBand"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",
@@ -16,9 +18,11 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^10.4.0",
     "@prisma/client": "^6.1.0",
+    "@types/nodemailer": "^7.0.11",
     "@types/pdfkit": "^0.17.5",
     "fast-xml-parser": "^5.5.8",
     "ioredis": "^5.4.0",
+    "nodemailer": "^8.0.4",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pdfkit": "^0.18.0",
@@ -27,12 +31,18 @@
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.0",
+    "@nestjs/testing": "^11.1.17",
     "@types/bcrypt": "^6.0.0",
+    "@types/jest": "^30.0.0",
     "@types/multer": "^2.0.0",
     "@types/node": "^22.10.0",
     "@types/passport-jwt": "^4.0.1",
+    "@types/supertest": "^7.2.0",
     "bcrypt": "^6.0.0",
+    "jest": "^30.3.0",
     "prisma": "^6.1.0",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.6",
     "typescript": "^5.7.0"
   }
 }

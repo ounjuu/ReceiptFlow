@@ -1,10 +1,14 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { MailService } from "../mail/mail.service";
 import { SetApprovalLinesDto } from "./dto/set-approval-lines.dto";
 
 @Injectable()
 export class ApprovalService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
+  ) {}
 
   // 결재선 조회
   async getApprovalLines(tenantId: string, documentType?: string) {
@@ -105,7 +109,7 @@ export class ApprovalService {
     }
 
     // 결재 요청 생성
-    return this.prisma.approvalRequest.create({
+    const approvalRequest = await this.prisma.approvalRequest.create({
       data: {
         tenantId,
         documentType,
@@ -117,6 +121,34 @@ export class ApprovalService {
       },
       include: { actions: true },
     });
+
+    // 첫 번째 결재자에게 이메일 알림 (fire-and-forget)
+    try {
+      const firstLine = lines[0];
+      const approver = await this.prisma.user.findUnique({
+        where: { id: firstLine.approverId },
+        select: { email: true, name: true },
+      });
+      const submitter = await this.prisma.user.findUnique({
+        where: { id: submittedBy },
+        select: { name: true },
+      });
+
+      if (approver?.email) {
+        const docDesc = await this.getDocumentDescription(documentType, documentId);
+        this.mailService.sendApprovalRequest(
+          approver.email,
+          approver.name || "결재자",
+          documentType,
+          docDesc,
+          submitter?.name || "요청자",
+        );
+      }
+    } catch (err) {
+      // 메일 발송 실패가 결재 흐름을 중단하지 않도록 무시
+    }
+
+    return approvalRequest;
   }
 
   // 승인/반려 처리
@@ -188,6 +220,9 @@ export class ApprovalService {
         });
       }
 
+      // 반려 결과 메일 발송 (fire-and-forget)
+      this.sendResultEmail(request.submittedBy, request.documentType, request.documentId, "REJECTED", comment);
+
       return { status: "REJECTED", message: "결재가 반려되었습니다" };
     }
 
@@ -217,17 +252,54 @@ export class ApprovalService {
         });
       }
 
+      // 최종 승인 결과 메일 발송 (fire-and-forget)
+      this.sendResultEmail(request.submittedBy, request.documentType, request.documentId, "APPROVED", comment);
+
       return { status: "APPROVED", message: "최종 승인되었습니다" };
     } else {
       // 다음 단계로
+      const nextStep = request.currentStep + 1;
       await this.prisma.approvalRequest.update({
         where: { id: requestId },
-        data: { currentStep: request.currentStep + 1 },
+        data: { currentStep: nextStep },
       });
+
+      // 다음 결재자에게 알림 메일 (fire-and-forget)
+      try {
+        const nextLine = await this.prisma.approvalLine.findFirst({
+          where: {
+            tenantId: request.tenantId,
+            documentType: request.documentType,
+            step: nextStep,
+          },
+        });
+        if (nextLine) {
+          const nextApprover = await this.prisma.user.findUnique({
+            where: { id: nextLine.approverId },
+            select: { email: true, name: true },
+          });
+          const submitter = await this.prisma.user.findUnique({
+            where: { id: request.submittedBy },
+            select: { name: true },
+          });
+          if (nextApprover?.email) {
+            const docDesc = await this.getDocumentDescription(request.documentType, request.documentId);
+            this.mailService.sendApprovalRequest(
+              nextApprover.email,
+              nextApprover.name || "결재자",
+              request.documentType,
+              docDesc,
+              submitter?.name || "요청자",
+            );
+          }
+        }
+      } catch (err) {
+        // 메일 발송 실패가 결재 흐름을 중단하지 않도록 무시
+      }
 
       return {
         status: "PENDING",
-        message: `${request.currentStep}단계 승인 완료. ${request.currentStep + 1}단계 결재 대기 중`,
+        message: `${request.currentStep}단계 승인 완료. ${nextStep}단계 결재 대기 중`,
       };
     }
   }
@@ -356,6 +428,57 @@ export class ApprovalService {
     );
 
     return results;
+  }
+
+  /** 결재 결과 메일 발송 헬퍼 (fire-and-forget) */
+  private sendResultEmail(
+    submittedBy: string,
+    documentType: string,
+    documentId: string,
+    action: "APPROVED" | "REJECTED",
+    comment?: string,
+  ): void {
+    (async () => {
+      const submitter = await this.prisma.user.findUnique({
+        where: { id: submittedBy },
+        select: { email: true, name: true },
+      });
+      if (!submitter?.email) return;
+
+      const docDesc = await this.getDocumentDescription(documentType, documentId);
+      this.mailService.sendApprovalResult(
+        submitter.email,
+        submitter.name || "사용자",
+        documentType,
+        docDesc,
+        action,
+        comment,
+      );
+    })().catch(() => {});
+  }
+
+  /** 문서 설명 조회 헬퍼 */
+  private async getDocumentDescription(documentType: string, documentId: string): Promise<string> {
+    if (documentType === "JOURNAL") {
+      const entry = await this.prisma.journalEntry.findUnique({
+        where: { id: documentId },
+        select: { description: true },
+      });
+      return entry?.description || "";
+    } else if (documentType === "TAX_INVOICE") {
+      const invoice = await this.prisma.taxInvoice.findUnique({
+        where: { id: documentId },
+        select: { description: true, issuerName: true, recipientName: true },
+      });
+      return invoice?.description || `${invoice?.issuerName} → ${invoice?.recipientName}` || "";
+    } else if (documentType === "EXPENSE_CLAIM") {
+      const claim = await this.prisma.expenseClaim.findUnique({
+        where: { id: documentId },
+        select: { title: true, claimNo: true, totalAmount: true },
+      });
+      return claim ? `${claim.title} (${claim.claimNo}) - ${Number(claim.totalAmount).toLocaleString()}원` : "";
+    }
+    return "";
   }
 
   // 내 결재 요청 현황 (내가 올린 결재)
