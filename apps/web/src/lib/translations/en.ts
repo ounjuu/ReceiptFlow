@@ -33,6 +33,18 @@ const en: Record<TranslationKey, string> = {
   nav_auditLogs: "Audit Logs",
   nav_settings: "Settings",
 
+  // Navigation Groups
+  navGroup_overview: "Overview",
+  navGroup_accounting: "Accounting",
+  navGroup_evidence: "Evidence",
+  navGroup_master: "Master",
+  navGroup_trade: "Sales/Purchase",
+  navGroup_finance: "Finance",
+  navGroup_hr: "HR/Org",
+  navGroup_tax: "Tax",
+  navGroup_operations: "Operations",
+  navGroup_admin: "Admin",
+
   // Roles
   role_ADMIN: "Admin",
   role_ACCOUNTANT: "Accountant",
@@ -152,6 +164,18 @@ const en: Record<TranslationKey, string> = {
   settings_notifInventoryDesc: "Notify when inventory falls below safety stock",
   settings_notifExpense: "Expense Claims",
   settings_notifExpenseDesc: "Notify when expense claims are pending",
+
+  // Permissions
+  settings_permissions: "Permissions",
+  perm_read: "Read",
+  perm_write: "Write",
+  perm_delete: "Delete",
+  perm_save: "Save Permissions",
+  perm_saving: "Saving...",
+  perm_saved: "Permissions saved",
+  perm_saveFailed: "Failed to save permissions",
+  perm_loading: "Loading permissions...",
+  perm_loadFailed: "Failed to load permissions",
 
   // Common
   common_save: "Save",

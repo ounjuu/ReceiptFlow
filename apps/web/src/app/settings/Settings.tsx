@@ -4,14 +4,16 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { useLocale } from "@/lib/locale";
-import { apiPatch } from "@/lib/api";
+import { apiGet, apiPatch, apiPut } from "@/lib/api";
 import type { Tab } from "./types";
 import { NOTIF_KEYS } from "./types";
 import SettingsForm from "./SettingsForm";
+import PermissionsManager from "./PermissionsManager";
+import type { Permission } from "./PermissionsManager";
 import styles from "./Settings.module.css";
 
 export default function Settings() {
-  const { user, role, refreshUser } = useAuth();
+  const { user, role, isAdmin, refreshUser } = useAuth();
   const { theme, setTheme } = useTheme();
   const { locale, setLocale, t } = useLocale();
   const [tab, setTab] = useState<Tab>("profile");
@@ -31,6 +33,12 @@ export default function Settings() {
   // 알림 설정 탭
   const [notifSettings, setNotifSettings] = useState<Record<string, boolean>>({});
 
+  // 권한 관리 탭
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [permLoading, setPermLoading] = useState(false);
+  const [permSaving, setPermSaving] = useState(false);
+  const [permMsg, setPermMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
   useEffect(() => {
     if (user) setName(user.name);
   }, [user]);
@@ -46,6 +54,32 @@ export default function Settings() {
       setNotifSettings(defaults);
     }
   }, []);
+
+  // 권한 탭 활성화 시 데이터 fetch
+  useEffect(() => {
+    if (tab === "permissions" && isAdmin && permissions.length === 0 && !permLoading) {
+      setPermLoading(true);
+      apiGet<Permission[]>("/auth/permissions")
+        .then((data) => setPermissions(data))
+        .catch(() => setPermMsg({ type: "error", text: t("perm_loadFailed") }))
+        .finally(() => setPermLoading(false));
+    }
+  }, [tab, isAdmin, permissions.length, permLoading, t]);
+
+  const handlePermSave = async (updated: Permission[]) => {
+    setPermSaving(true);
+    setPermMsg(null);
+    try {
+      await apiPut("/auth/permissions/batch", { permissions: updated });
+      setPermissions(updated);
+      setPermMsg({ type: "success", text: t("perm_saved") });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : t("perm_saveFailed");
+      setPermMsg({ type: "error", text: msg });
+    } finally {
+      setPermSaving(false);
+    }
+  };
 
   const handleProfileSave = async () => {
     if (!name.trim()) return;
@@ -119,6 +153,14 @@ export default function Settings() {
         >
           {t("settings_notifications")}
         </button>
+        {isAdmin && (
+          <button
+            className={`${styles.tab} ${tab === "permissions" ? styles.tabActive : ""}`}
+            onClick={() => setTab("permissions")}
+          >
+            {t("settings_permissions")}
+          </button>
+        )}
       </div>
 
       {tab === "profile" && (
@@ -162,6 +204,22 @@ export default function Settings() {
           onToggleNotif={toggleNotif}
           t={t}
         />
+      )}
+
+      {tab === "permissions" && isAdmin && (
+        permLoading ? (
+          <div className={styles.section}>
+            <p>{t("perm_loading")}</p>
+          </div>
+        ) : (
+          <PermissionsManager
+            permissions={permissions}
+            onSave={handlePermSave}
+            saving={permSaving}
+            message={permMsg}
+            t={t}
+          />
+        )
       )}
     </div>
   );

@@ -23,6 +23,13 @@ interface User {
   memberships: Membership[];
 }
 
+interface ModulePermission {
+  module: string;
+  canRead: boolean;
+  canWrite: boolean;
+  canDelete: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -32,6 +39,10 @@ interface AuthContextType {
   canDelete: boolean;
   isAdmin: boolean;
   loading: boolean;
+  permissions: ModulePermission[];
+  canAccess: (module: string) => boolean;
+  canWrite: (module: string) => boolean;
+  canDeleteModule: (module: string) => boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
@@ -52,6 +63,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const canEdit = role === "ADMIN" || role === "ACCOUNTANT";
   const canDelete = role === "ADMIN";
   const isAdmin = role === "ADMIN";
+
+  // 모듈별 권한
+  const [permissions, setPermissions] = useState<ModulePermission[]>([]);
 
   // 토큰으로 유저 정보 조회
   const fetchMe = useCallback(async (t: string) => {
@@ -126,9 +140,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (token) await fetchMe(token);
   }, [token, fetchMe]);
 
+  // 로그인 후 모듈 권한 로드
+  useEffect(() => {
+    if (!user || !token || !tenantId) {
+      setPermissions([]);
+      return;
+    }
+    fetch(`${API_BASE}/auth/permissions/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setPermissions(data))
+      .catch(() => setPermissions([]));
+  }, [user, token, tenantId]);
+
+  const canAccess = useCallback(
+    (module: string) => {
+      if (isAdmin) return true;
+      const p = permissions.find((x) => x.module === module);
+      return p ? p.canRead : true; // 권한 미설정 시 기본 허용
+    },
+    [isAdmin, permissions],
+  );
+
+  const canWriteModule = useCallback(
+    (module: string) => {
+      if (isAdmin) return true;
+      const p = permissions.find((x) => x.module === module);
+      return p ? p.canWrite : canEdit;
+    },
+    [isAdmin, permissions, canEdit],
+  );
+
+  const canDeleteMod = useCallback(
+    (module: string) => {
+      if (isAdmin) return true;
+      const p = permissions.find((x) => x.module === module);
+      return p ? p.canDelete : canDelete;
+    },
+    [isAdmin, permissions, canDelete],
+  );
+
   return (
     <AuthContext.Provider
-      value={{ user, token, tenantId, role, canEdit, canDelete, isAdmin, loading, login, signup, logout, refreshUser }}
+      value={{ user, token, tenantId, role, canEdit, canDelete, isAdmin, loading, permissions, canAccess, canWrite: canWriteModule, canDeleteModule: canDeleteMod, login, signup, logout, refreshUser }}
     >
       {children}
     </AuthContext.Provider>

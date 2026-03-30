@@ -155,7 +155,7 @@ export class AuthService {
     }));
   }
 
-  async invite(email: string, role: string, tenantId: string) {
+  async invite(email: string, role: string, tenantId: string, departmentId?: string) {
     if (!["ADMIN", "ACCOUNTANT", "VIEWER"].includes(role)) {
       throw new BadRequestException("유효하지 않은 역할입니다");
     }
@@ -178,7 +178,7 @@ export class AuthService {
     }
 
     const membership = await this.prisma.membership.create({
-      data: { userId: user.id, tenantId, role },
+      data: { userId: user.id, tenantId, role, ...(departmentId ? { departmentId } : {}) },
       include: { user: { select: { id: true, email: true, name: true } } },
     });
 
@@ -263,6 +263,97 @@ export class AuthService {
     const hashed = await bcrypt.hash(newPassword, 10);
     await this.prisma.user.update({ where: { id: userId }, data: { password: hashed } });
     return { success: true };
+  }
+
+  // --- 권한 관리 ---
+
+  private readonly MODULES = [
+    "dashboard", "journals", "documents", "reports", "accounts",
+    "vendors", "vendor-ledger", "closings", "cash-flow", "tax-invoices",
+    "approvals", "fixed-assets", "payroll", "budgets", "projects",
+    "departments", "trades", "cost-management", "inventory",
+    "expense-claims", "bank-accounts", "vat-returns", "exchange-rates",
+    "journal-templates", "journal-rules", "year-end-settlement", "tax-filing",
+    "members", "audit-logs", "settings",
+  ];
+
+  private readonly DEFAULT_ROLE_PERMISSIONS: Record<string, { canRead: boolean; canWrite: boolean; canDelete: boolean }> = {
+    ADMIN: { canRead: true, canWrite: true, canDelete: true },
+    ACCOUNTANT: { canRead: true, canWrite: true, canDelete: false },
+    VIEWER: { canRead: true, canWrite: false, canDelete: false },
+  };
+
+  async getPermissions(tenantId: string) {
+    // 기존 권한이 있는지 확인
+    const existing = await this.prisma.permission.findFirst({ where: { tenantId } });
+
+    // 없으면 기본 권한 자동 생성
+    if (!existing) {
+      const roles = ["ADMIN", "ACCOUNTANT", "VIEWER"];
+      for (const role of roles) {
+        const perms = this.DEFAULT_ROLE_PERMISSIONS[role];
+        for (const module of this.MODULES) {
+          await this.prisma.permission.upsert({
+            where: { tenantId_role_module: { tenantId, role, module } },
+            create: { tenantId, role, module, ...perms },
+            update: {},
+          });
+        }
+      }
+    }
+
+    return this.prisma.permission.findMany({
+      where: { tenantId },
+      orderBy: [{ role: "asc" }, { module: "asc" }],
+    });
+  }
+
+  async updatePermission(id: string, data: { canRead?: boolean; canWrite?: boolean; canDelete?: boolean }) {
+    const permission = await this.prisma.permission.findUnique({ where: { id } });
+    if (!permission) {
+      throw new NotFoundException("권한을 찾을 수 없습니다");
+    }
+
+    return this.prisma.permission.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async batchUpdatePermissions(
+    tenantId: string,
+    permissions: { role: string; module: string; canRead: boolean; canWrite: boolean; canDelete: boolean }[],
+  ) {
+    const results = [];
+    for (const perm of permissions) {
+      const result = await this.prisma.permission.upsert({
+        where: { tenantId_role_module: { tenantId, role: perm.role, module: perm.module } },
+        create: { tenantId, role: perm.role, module: perm.module, canRead: perm.canRead, canWrite: perm.canWrite, canDelete: perm.canDelete },
+        update: { canRead: perm.canRead, canWrite: perm.canWrite, canDelete: perm.canDelete },
+      });
+      results.push(result);
+    }
+    return results;
+  }
+
+  async getUserPermissions(tenantId: string, role: string) {
+    // 권한이 없으면 기본 권한 생성
+    const existing = await this.prisma.permission.findFirst({ where: { tenantId, role } });
+    if (!existing) {
+      const perms = this.DEFAULT_ROLE_PERMISSIONS[role] || this.DEFAULT_ROLE_PERMISSIONS["VIEWER"];
+      for (const module of this.MODULES) {
+        await this.prisma.permission.upsert({
+          where: { tenantId_role_module: { tenantId, role, module } },
+          create: { tenantId, role, module, ...perms },
+          update: {},
+        });
+      }
+    }
+
+    return this.prisma.permission.findMany({
+      where: { tenantId, role },
+      orderBy: { module: "asc" },
+    });
   }
 
   private generateToken(user: { id: string; email: string; name: string; memberships: { tenantId: string; role: string; tenant: { name: string } }[] }) {

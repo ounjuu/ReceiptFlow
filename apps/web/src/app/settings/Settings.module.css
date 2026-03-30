@@ -237,3 +237,104 @@
 .switchInput:checked + .switchSlider::before {
   transform: translateX(18px);
 }
+
+/* 권한 관리 테이블 */
+.permTableWrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.permTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  min-width: 560px;
+}
+
+.permTable th,
+.permTable td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.permTable th:first-child,
+.permTable td:first-child {
+  text-align: left;
+  padding-left: 16px;
+}
+
+.permRoleHeader {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  min-width: 120px;
+}
+
+.permRoleHeader span {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.permGroup {
+  background: var(--bg);
+}
+
+.permGroup td {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--primary);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.permModuleName {
+  padding-left: 28px !important;
+  font-size: 0.84rem;
+  color: var(--text);
+}
+
+.permCheckboxGroup {
+  display: inline-flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.permCheckbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.permCheckbox input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.permCheckbox input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.permSection {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  max-width: 900px;
+}
+
+@media (max-width: 640px) {
+  .permSection {
+    padding: 12px;
+  }
+}

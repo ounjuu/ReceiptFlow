@@ -11,34 +11,109 @@ import { apiGet } from "@/lib/api";
 import styles from "./layout.module.css";
 import type { TranslationKey } from "@/lib/translations";
 
-const navItems: { href: string; labelKey: TranslationKey }[] = [
-  { href: "/dashboard", labelKey: "nav_dashboard" },
-  { href: "/documents", labelKey: "nav_documents" },
-  { href: "/journals", labelKey: "nav_journals" },
-  { href: "/reports", labelKey: "nav_reports" },
-  { href: "/accounts", labelKey: "nav_accounts" },
-  { href: "/vendors", labelKey: "nav_vendors" },
-  { href: "/vendor-ledger", labelKey: "nav_vendorLedger" },
-  { href: "/closings", labelKey: "nav_closings" },
-  { href: "/cash-flow", labelKey: "nav_cashFlow" },
-  { href: "/tax-invoices", labelKey: "nav_taxInvoices" },
-  { href: "/approvals", labelKey: "nav_approvals" },
-  { href: "/fixed-assets", labelKey: "nav_fixedAssets" },
-  { href: "/payroll", labelKey: "nav_payroll" },
-  { href: "/budgets", labelKey: "nav_budgets" },
-  { href: "/projects", labelKey: "nav_projects" },
-  { href: "/departments", labelKey: "nav_departments" },
-  { href: "/trades", labelKey: "nav_trades" },
-  { href: "/cost-management", labelKey: "nav_costManagement" },
-  { href: "/inventory", labelKey: "nav_inventory" },
-  { href: "/expense-claims", labelKey: "nav_expenseClaims" },
-  { href: "/bank-accounts", labelKey: "nav_bankAccounts" },
-  { href: "/vat-returns", labelKey: "nav_vatReturns" },
-  { href: "/exchange-rates", labelKey: "nav_exchangeRates" },
-  { href: "/journal-templates", labelKey: "nav_journalTemplates" },
-  { href: "/journal-rules", labelKey: "nav_journalRules" },
-  { href: "/year-end-settlement", labelKey: "nav_yearEndSettlement" },
-  { href: "/tax-filing", labelKey: "nav_taxFiling" },
+interface NavItem {
+  href: string;
+  labelKey: TranslationKey;
+  roles?: string[]; // 접근 가능 역할 (미지정 시 전체)
+}
+
+interface NavGroup {
+  groupKey: string; // CSS 클래스용 / 접기 상태 키
+  labelKey: TranslationKey;
+  items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
+  {
+    groupKey: "overview",
+    labelKey: "navGroup_overview" as TranslationKey,
+    items: [
+      { href: "/dashboard", labelKey: "nav_dashboard" },
+      { href: "/reports", labelKey: "nav_reports" },
+      { href: "/cash-flow", labelKey: "nav_cashFlow" },
+    ],
+  },
+  {
+    groupKey: "accounting",
+    labelKey: "navGroup_accounting" as TranslationKey,
+    items: [
+      { href: "/journals", labelKey: "nav_journals", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/accounts", labelKey: "nav_accounts" },
+      { href: "/closings", labelKey: "nav_closings", roles: ["ADMIN"] },
+      { href: "/journal-templates", labelKey: "nav_journalTemplates", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/journal-rules", labelKey: "nav_journalRules", roles: ["ADMIN", "ACCOUNTANT"] },
+    ],
+  },
+  {
+    groupKey: "evidence",
+    labelKey: "navGroup_evidence" as TranslationKey,
+    items: [
+      { href: "/documents", labelKey: "nav_documents", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/approvals", labelKey: "nav_approvals", roles: ["ADMIN", "ACCOUNTANT"] },
+    ],
+  },
+  {
+    groupKey: "master",
+    labelKey: "navGroup_master" as TranslationKey,
+    items: [
+      { href: "/vendors", labelKey: "nav_vendors" },
+      { href: "/vendor-ledger", labelKey: "nav_vendorLedger" },
+    ],
+  },
+  {
+    groupKey: "trade",
+    labelKey: "navGroup_trade" as TranslationKey,
+    items: [
+      { href: "/trades", labelKey: "nav_trades", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/tax-invoices", labelKey: "nav_taxInvoices", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/expense-claims", labelKey: "nav_expenseClaims", roles: ["ADMIN", "ACCOUNTANT"] },
+    ],
+  },
+  {
+    groupKey: "finance",
+    labelKey: "navGroup_finance" as TranslationKey,
+    items: [
+      { href: "/budgets", labelKey: "nav_budgets", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/bank-accounts", labelKey: "nav_bankAccounts" },
+      { href: "/fixed-assets", labelKey: "nav_fixedAssets", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/exchange-rates", labelKey: "nav_exchangeRates" },
+    ],
+  },
+  {
+    groupKey: "hr",
+    labelKey: "navGroup_hr" as TranslationKey,
+    items: [
+      { href: "/payroll", labelKey: "nav_payroll", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/year-end-settlement", labelKey: "nav_yearEndSettlement", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/departments", labelKey: "nav_departments" },
+      { href: "/projects", labelKey: "nav_projects" },
+    ],
+  },
+  {
+    groupKey: "tax",
+    labelKey: "navGroup_tax" as TranslationKey,
+    items: [
+      { href: "/vat-returns", labelKey: "nav_vatReturns" },
+      { href: "/tax-filing", labelKey: "nav_taxFiling", roles: ["ADMIN", "ACCOUNTANT"] },
+    ],
+  },
+  {
+    groupKey: "operations",
+    labelKey: "navGroup_operations" as TranslationKey,
+    items: [
+      { href: "/cost-management", labelKey: "nav_costManagement", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/inventory", labelKey: "nav_inventory", roles: ["ADMIN", "ACCOUNTANT"] },
+    ],
+  },
+  {
+    groupKey: "admin",
+    labelKey: "navGroup_admin" as TranslationKey,
+    items: [
+      { href: "/members", labelKey: "nav_members", roles: ["ADMIN"] },
+      { href: "/audit-logs", labelKey: "nav_auditLogs", roles: ["ADMIN"] },
+      { href: "/settings", labelKey: "nav_settings" },
+    ],
+  },
 ];
 
 const ROLE_KEYS: Record<string, TranslationKey> = {
@@ -244,24 +319,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}>
         <div className={styles.logo}>LedgerFlow</div>
         <nav className={styles.nav}>
-          {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className={styles.navLink}>
-              {t(item.labelKey)}
-            </Link>
-          ))}
-          {isAdmin && (
-            <>
-              <Link href="/members" className={styles.navLink}>
-                {t("nav_members")}
-              </Link>
-              <Link href="/audit-logs" className={styles.navLink}>
-                {t("nav_auditLogs")}
-              </Link>
-            </>
-          )}
-          <Link href="/settings" className={styles.navLink}>
-            {t("nav_settings")}
-          </Link>
+          {navGroups.map((group) => {
+            // 역할 필터링: 접근 가능한 아이템만
+            const visibleItems = group.items.filter(
+              (item) => !item.roles || item.roles.includes(role || ""),
+            );
+            if (visibleItems.length === 0) return null;
+            return (
+              <div key={group.groupKey} className={styles.navGroup}>
+                <div className={styles.navGroupLabel}>{t(group.labelKey)}</div>
+                {visibleItems.map((item) => (
+                  <Link key={item.href} href={item.href} className={styles.navLink}>
+                    {t(item.labelKey)}
+                  </Link>
+                ))}
+              </div>
+            );
+          })}
         </nav>
       </aside>
       <div className={styles.main}>

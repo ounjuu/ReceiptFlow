@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Delete, Body, Param, UseGuards, Request } from "@nestjs/common";
+import { Controller, Post, Get, Patch, Put, Delete, Body, Param, UseGuards, Request } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { RolesGuard } from "./roles.guard";
@@ -61,9 +61,51 @@ export class AuthController {
   @Post("invite")
   async invite(
     @CurrentTenant() tenantId: string,
-    @Body() body: { email: string; role: string },
+    @Body() body: { email: string; role: string; departmentId?: string },
   ) {
-    return this.authService.invite(body.email, body.role, tenantId);
+    return this.authService.invite(body.email, body.role, tenantId, body.departmentId);
+  }
+
+  // --- 권한 관리 ---
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  @Get("permissions")
+  async getPermissions(@CurrentTenant() tenantId: string) {
+    return this.authService.getPermissions(tenantId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get("permissions/me")
+  async getMyPermissions(
+    @CurrentTenant() tenantId: string,
+    @Request() req: { user: { memberships: { tenantId: string; role: string }[] } },
+  ) {
+    const membership = req.user.memberships.find(
+      (m: { tenantId: string }) => m.tenantId === tenantId,
+    );
+    const role = membership?.role || "VIEWER";
+    return this.authService.getUserPermissions(tenantId, role);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  @Patch("permissions/:id")
+  async updatePermission(
+    @Param("id") id: string,
+    @Body() body: { canRead?: boolean; canWrite?: boolean; canDelete?: boolean },
+  ) {
+    return this.authService.updatePermission(id, body);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  @Put("permissions/batch")
+  async batchUpdatePermissions(
+    @CurrentTenant() tenantId: string,
+    @Body() body: { role: string; module: string; canRead: boolean; canWrite: boolean; canDelete: boolean }[],
+  ) {
+    return this.authService.batchUpdatePermissions(tenantId, body);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

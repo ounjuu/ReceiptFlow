@@ -44,6 +44,7 @@ model Tenant {
   bankTransactions     BankTransaction[]
   journalRules         JournalRule[]
   taxFilings           TaxFiling[]
+  permissions          Permission[]
 }
 
 model User {
@@ -61,16 +62,35 @@ model User {
 
 // 멀티 테넌트 소속 관계
 model Membership {
-  id       String @id @default(uuid())
-  role     String @default("USER")
-  userId   String
-  tenantId String
-  user     User   @relation(fields: [userId], references: [id])
-  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  id           String      @id @default(uuid())
+  role         String      @default("USER")
+  userId       String
+  tenantId     String
+  departmentId String?     // 부서 제한 (null이면 전체 부서 접근)
+  user         User        @relation(fields: [userId], references: [id])
+  tenant       Tenant      @relation(fields: [tenantId], references: [id])
+  department   Department? @relation(fields: [departmentId], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+}
+
+// 모듈별 접근 권한
+model Permission {
+  id        String  @id @default(uuid())
+  tenantId  String
+  tenant    Tenant  @relation(fields: [tenantId], references: [id])
+  role      String  // ADMIN, ACCOUNTANT, VIEWER
+  module    String  // journals, documents, vendors, trades, etc.
+  canRead   Boolean @default(true)
+  canWrite  Boolean @default(false)
+  canDelete Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([userId, tenantId])
+  @@unique([tenantId, role, module])
   @@index([tenantId])
 }
 
@@ -616,6 +636,7 @@ model Department {
   updatedAt   DateTime  @updatedAt
 
   journalLines JournalLine[]
+  memberships  Membership[]
 
   @@unique([tenantId, code])
   @@index([tenantId])

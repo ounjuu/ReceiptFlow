@@ -1,6 +1,6 @@
 import type { Locale } from "@/lib/locale";
 
-export type Tab = "profile" | "password" | "notifications";
+export type Tab = "profile" | "password" | "notifications" | "permissions";
 
 export type NotifKeyDef = {
   key: string;

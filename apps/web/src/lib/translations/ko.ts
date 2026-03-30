@@ -31,6 +31,18 @@ const ko = {
   nav_auditLogs: "감사 로그",
   nav_settings: "설정",
 
+  // 네비게이션 그룹
+  navGroup_overview: "개요",
+  navGroup_accounting: "회계",
+  navGroup_evidence: "증빙/결재",
+  navGroup_master: "마스터",
+  navGroup_trade: "매출/매입",
+  navGroup_finance: "자산/재무",
+  navGroup_hr: "인사/조직",
+  navGroup_tax: "세무",
+  navGroup_operations: "운영",
+  navGroup_admin: "관리",
+
   // 역할
   role_ADMIN: "관리자",
   role_ACCOUNTANT: "회계담당",
@@ -150,6 +162,18 @@ const ko = {
   settings_notifInventoryDesc: "재고가 안전재고 이하일 때 알림",
   settings_notifExpense: "경비 정산 알림",
   settings_notifExpenseDesc: "경비 정산 대기 건이 있을 때 알림",
+
+  // 권한 관리
+  settings_permissions: "권한 관리",
+  perm_read: "읽기",
+  perm_write: "쓰기",
+  perm_delete: "삭제",
+  perm_save: "권한 저장",
+  perm_saving: "저장 중...",
+  perm_saved: "권한이 저장되었습니다",
+  perm_saveFailed: "권한 저장에 실패했습니다",
+  perm_loading: "권한 정보를 불러오는 중...",
+  perm_loadFailed: "권한 정보를 불러오지 못했습니다",
 
   // 공통
   common_save: "저장",
