@@ -32,16 +32,13 @@ const ko = {
   nav_settings: "설정",
 
   // 네비게이션 그룹
-  navGroup_overview: "개요",
-  navGroup_accounting: "회계",
-  navGroup_evidence: "증빙/결재",
-  navGroup_master: "마스터",
-  navGroup_trade: "매출/매입",
-  navGroup_finance: "자산/재무",
-  navGroup_hr: "인사/조직",
-  navGroup_tax: "세무",
-  navGroup_operations: "운영",
-  navGroup_admin: "관리",
+  navGroup_home: "홈",
+  navGroup_accounting: "회계관리",
+  navGroup_sales: "매입매출",
+  navGroup_finance: "자금관리",
+  navGroup_tax: "세무관리",
+  navGroup_hr: "인사급여",
+  navGroup_admin: "환경설정",
 
   // 역할
   role_ADMIN: "관리자",

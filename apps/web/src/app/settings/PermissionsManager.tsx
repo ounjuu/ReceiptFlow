@@ -26,11 +26,9 @@ const ROLES = ["ADMIN", "ACCOUNTANT", "VIEWER"] as const;
 // 모듈 카테고리 그룹 (네비게이션과 동일한 구조)
 const MODULE_GROUPS: { groupKey: TranslationKey; modules: { key: string; labelKey: TranslationKey }[] }[] = [
   {
-    groupKey: "navGroup_overview",
+    groupKey: "navGroup_home",
     modules: [
       { key: "dashboard", labelKey: "nav_dashboard" },
-      { key: "reports", labelKey: "nav_reports" },
-      { key: "cash-flow", labelKey: "nav_cashFlow" },
     ],
   },
   {
@@ -38,36 +36,30 @@ const MODULE_GROUPS: { groupKey: TranslationKey; modules: { key: string; labelKe
     modules: [
       { key: "journals", labelKey: "nav_journals" },
       { key: "accounts", labelKey: "nav_accounts" },
-      { key: "closings", labelKey: "nav_closings" },
-      { key: "journal-templates", labelKey: "nav_journalTemplates" },
-      { key: "journal-rules", labelKey: "nav_journalRules" },
-    ],
-  },
-  {
-    groupKey: "navGroup_evidence",
-    modules: [
-      { key: "documents", labelKey: "nav_documents" },
-      { key: "approvals", labelKey: "nav_approvals" },
-    ],
-  },
-  {
-    groupKey: "navGroup_master",
-    modules: [
       { key: "vendors", labelKey: "nav_vendors" },
       { key: "vendor-ledger", labelKey: "nav_vendorLedger" },
+      { key: "documents", labelKey: "nav_documents" },
+      { key: "journal-templates", labelKey: "nav_journalTemplates" },
+      { key: "journal-rules", labelKey: "nav_journalRules" },
+      { key: "approvals", labelKey: "nav_approvals" },
+      { key: "closings", labelKey: "nav_closings" },
     ],
   },
   {
-    groupKey: "navGroup_trade",
+    groupKey: "navGroup_sales",
     modules: [
       { key: "trades", labelKey: "nav_trades" },
       { key: "tax-invoices", labelKey: "nav_taxInvoices" },
       { key: "expense-claims", labelKey: "nav_expenseClaims" },
+      { key: "inventory", labelKey: "nav_inventory" },
+      { key: "cost-management", labelKey: "nav_costManagement" },
     ],
   },
   {
     groupKey: "navGroup_finance",
     modules: [
+      { key: "reports", labelKey: "nav_reports" },
+      { key: "cash-flow", labelKey: "nav_cashFlow" },
       { key: "budgets", labelKey: "nav_budgets" },
       { key: "bank-accounts", labelKey: "nav_bankAccounts" },
       { key: "fixed-assets", labelKey: "nav_fixedAssets" },
@@ -75,26 +67,19 @@ const MODULE_GROUPS: { groupKey: TranslationKey; modules: { key: string; labelKe
     ],
   },
   {
-    groupKey: "navGroup_hr",
-    modules: [
-      { key: "payroll", labelKey: "nav_payroll" },
-      { key: "year-end-settlement", labelKey: "nav_yearEndSettlement" },
-      { key: "departments", labelKey: "nav_departments" },
-      { key: "projects", labelKey: "nav_projects" },
-    ],
-  },
-  {
     groupKey: "navGroup_tax",
     modules: [
       { key: "vat-returns", labelKey: "nav_vatReturns" },
       { key: "tax-filing", labelKey: "nav_taxFiling" },
+      { key: "year-end-settlement", labelKey: "nav_yearEndSettlement" },
     ],
   },
   {
-    groupKey: "navGroup_operations",
+    groupKey: "navGroup_hr",
     modules: [
-      { key: "cost-management", labelKey: "nav_costManagement" },
-      { key: "inventory", labelKey: "nav_inventory" },
+      { key: "payroll", labelKey: "nav_payroll" },
+      { key: "departments", labelKey: "nav_departments" },
+      { key: "projects", labelKey: "nav_projects" },
     ],
   },
   {

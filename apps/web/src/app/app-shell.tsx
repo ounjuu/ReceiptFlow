@@ -23,14 +23,13 @@ interface NavGroup {
   items: NavItem[];
 }
 
+// 더존 Smart A 스타일 메뉴 구성
 const navGroups: NavGroup[] = [
   {
-    groupKey: "overview",
-    labelKey: "navGroup_overview" as TranslationKey,
+    groupKey: "home",
+    labelKey: "navGroup_home" as TranslationKey,
     items: [
       { href: "/dashboard", labelKey: "nav_dashboard" },
-      { href: "/reports", labelKey: "nav_reports" },
-      { href: "/cash-flow", labelKey: "nav_cashFlow" },
     ],
   },
   {
@@ -39,54 +38,36 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/journals", labelKey: "nav_journals", roles: ["ADMIN", "ACCOUNTANT"] },
       { href: "/accounts", labelKey: "nav_accounts" },
-      { href: "/closings", labelKey: "nav_closings", roles: ["ADMIN"] },
-      { href: "/journal-templates", labelKey: "nav_journalTemplates", roles: ["ADMIN", "ACCOUNTANT"] },
-      { href: "/journal-rules", labelKey: "nav_journalRules", roles: ["ADMIN", "ACCOUNTANT"] },
-    ],
-  },
-  {
-    groupKey: "evidence",
-    labelKey: "navGroup_evidence" as TranslationKey,
-    items: [
-      { href: "/documents", labelKey: "nav_documents", roles: ["ADMIN", "ACCOUNTANT"] },
-      { href: "/approvals", labelKey: "nav_approvals", roles: ["ADMIN", "ACCOUNTANT"] },
-    ],
-  },
-  {
-    groupKey: "master",
-    labelKey: "navGroup_master" as TranslationKey,
-    items: [
       { href: "/vendors", labelKey: "nav_vendors" },
       { href: "/vendor-ledger", labelKey: "nav_vendorLedger" },
+      { href: "/documents", labelKey: "nav_documents", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/journal-templates", labelKey: "nav_journalTemplates", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/journal-rules", labelKey: "nav_journalRules", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/approvals", labelKey: "nav_approvals", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/closings", labelKey: "nav_closings", roles: ["ADMIN"] },
     ],
   },
   {
-    groupKey: "trade",
-    labelKey: "navGroup_trade" as TranslationKey,
+    groupKey: "sales",
+    labelKey: "navGroup_sales" as TranslationKey,
     items: [
       { href: "/trades", labelKey: "nav_trades", roles: ["ADMIN", "ACCOUNTANT"] },
       { href: "/tax-invoices", labelKey: "nav_taxInvoices", roles: ["ADMIN", "ACCOUNTANT"] },
       { href: "/expense-claims", labelKey: "nav_expenseClaims", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/inventory", labelKey: "nav_inventory", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/cost-management", labelKey: "nav_costManagement", roles: ["ADMIN", "ACCOUNTANT"] },
     ],
   },
   {
     groupKey: "finance",
     labelKey: "navGroup_finance" as TranslationKey,
     items: [
+      { href: "/reports", labelKey: "nav_reports" },
+      { href: "/cash-flow", labelKey: "nav_cashFlow" },
       { href: "/budgets", labelKey: "nav_budgets", roles: ["ADMIN", "ACCOUNTANT"] },
       { href: "/bank-accounts", labelKey: "nav_bankAccounts" },
       { href: "/fixed-assets", labelKey: "nav_fixedAssets", roles: ["ADMIN", "ACCOUNTANT"] },
       { href: "/exchange-rates", labelKey: "nav_exchangeRates" },
-    ],
-  },
-  {
-    groupKey: "hr",
-    labelKey: "navGroup_hr" as TranslationKey,
-    items: [
-      { href: "/payroll", labelKey: "nav_payroll", roles: ["ADMIN", "ACCOUNTANT"] },
-      { href: "/year-end-settlement", labelKey: "nav_yearEndSettlement", roles: ["ADMIN", "ACCOUNTANT"] },
-      { href: "/departments", labelKey: "nav_departments" },
-      { href: "/projects", labelKey: "nav_projects" },
     ],
   },
   {
@@ -95,14 +76,16 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/vat-returns", labelKey: "nav_vatReturns" },
       { href: "/tax-filing", labelKey: "nav_taxFiling", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/year-end-settlement", labelKey: "nav_yearEndSettlement", roles: ["ADMIN", "ACCOUNTANT"] },
     ],
   },
   {
-    groupKey: "operations",
-    labelKey: "navGroup_operations" as TranslationKey,
+    groupKey: "hr",
+    labelKey: "navGroup_hr" as TranslationKey,
     items: [
-      { href: "/cost-management", labelKey: "nav_costManagement", roles: ["ADMIN", "ACCOUNTANT"] },
-      { href: "/inventory", labelKey: "nav_inventory", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/payroll", labelKey: "nav_payroll", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/departments", labelKey: "nav_departments" },
+      { href: "/projects", labelKey: "nav_projects" },
     ],
   },
   {

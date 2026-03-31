@@ -34,16 +34,13 @@ const en: Record<TranslationKey, string> = {
   nav_settings: "Settings",
 
   // Navigation Groups
-  navGroup_overview: "Overview",
+  navGroup_home: "Home",
   navGroup_accounting: "Accounting",
-  navGroup_evidence: "Evidence",
-  navGroup_master: "Master",
-  navGroup_trade: "Sales/Purchase",
+  navGroup_sales: "Sales/Purchase",
   navGroup_finance: "Finance",
-  navGroup_hr: "HR/Org",
   navGroup_tax: "Tax",
-  navGroup_operations: "Operations",
-  navGroup_admin: "Admin",
+  navGroup_hr: "HR/Payroll",
+  navGroup_admin: "Settings",
 
   // Roles
   role_ADMIN: "Admin",
