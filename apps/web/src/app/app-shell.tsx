@@ -168,6 +168,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // 모바일 사이드바 상태
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // 그룹 접기/펼치기 상태 (현재 페이지가 속한 그룹은 자동 펼침)
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
+  const toggleGroup = (groupKey: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) next.delete(groupKey);
+      else next.add(groupKey);
+      return next;
+    });
+  };
+
   // 검색 상태
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchGroup[]>([]);
@@ -320,16 +332,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className={styles.logo}>LedgerFlow</div>
         <nav className={styles.nav}>
           {navGroups.map((group) => {
-            // 역할 필터링: 접근 가능한 아이템만
             const visibleItems = group.items.filter(
               (item) => !item.roles || item.roles.includes(role || ""),
             );
             if (visibleItems.length === 0) return null;
+
+            // 현재 페이지가 이 그룹에 속하면 자동 펼침
+            const isActiveGroup = visibleItems.some((item) => pathname.startsWith(item.href));
+            const isCollapsed = collapsedGroups.has(group.groupKey) && !isActiveGroup;
+
             return (
               <div key={group.groupKey} className={styles.navGroup}>
-                <div className={styles.navGroupLabel}>{t(group.labelKey)}</div>
-                {visibleItems.map((item) => (
-                  <Link key={item.href} href={item.href} className={styles.navLink}>
+                <button
+                  className={`${styles.navGroupLabel} ${isActiveGroup ? styles.navGroupActive : ""}`}
+                  onClick={() => toggleGroup(group.groupKey)}
+                >
+                  <span>{t(group.labelKey)}</span>
+                  <svg
+                    className={`${styles.navGroupArrow} ${isCollapsed ? styles.navGroupArrowCollapsed : ""}`}
+                    width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                {!isCollapsed && visibleItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`${styles.navLink} ${pathname.startsWith(item.href) ? styles.navLinkActive : ""}`}
+                  >
                     {t(item.labelKey)}
                   </Link>
                 ))}

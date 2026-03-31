@@ -30,17 +30,43 @@
 }
 
 .navGroup {
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .navGroupLabel {
-  font-size: 0.68rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 12px 14px 4px;
-  opacity: 0.7;
+  letter-spacing: 0.04em;
+  padding: 10px 14px 6px;
+  background: none;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  transition: color 0.15s;
+  text-align: left;
+}
+
+.navGroupLabel:hover {
+  color: var(--primary);
+}
+
+.navGroupActive {
+  color: var(--primary);
+}
+
+.navGroupArrow {
+  transition: transform 0.2s;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.navGroupArrowCollapsed {
+  transform: rotate(-90deg);
 }
 
 .navLink {
@@ -55,6 +81,12 @@
 .navLink:hover {
   background: var(--primary-light);
   color: var(--primary);
+}
+
+.navLinkActive {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 600;
 }
 
 .main {
