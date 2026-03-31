@@ -14,7 +14,13 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${path}`, { ...init, headers });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...init, headers });
+  } catch {
+    throw new Error("네트워크 연결을 확인해주세요");
+  }
+
   if (!res.ok) {
     // 401이면 토큰 만료 → 로그인 페이지로 리다이렉트
     if (res.status === 401 && typeof window !== "undefined") {
@@ -22,6 +28,19 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
       window.location.href = "/login";
       throw new Error("인증이 만료되었습니다");
     }
+
+    if (res.status === 403) {
+      throw new Error("접근 권한이 없습니다");
+    }
+
+    if (res.status === 404) {
+      throw new Error("요청한 리소스를 찾을 수 없습니다");
+    }
+
+    if (res.status >= 500) {
+      throw new Error("서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요");
+    }
+
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message || `API error ${res.status}`);
   }
