@@ -37,6 +37,7 @@ const navGroups: NavGroup[] = [
     labelKey: "navGroup_accounting" as TranslationKey,
     items: [
       { href: "/journals", labelKey: "nav_journals", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/journal-book", labelKey: "nav_journalBook" as TranslationKey },
       { href: "/accounts", labelKey: "nav_accounts" },
       { href: "/general-ledger", labelKey: "nav_generalLedger" },
       { href: "/account-ledger", labelKey: "nav_accountLedger" as TranslationKey },

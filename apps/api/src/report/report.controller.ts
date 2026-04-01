@@ -113,4 +113,13 @@ export class ReportController {
   ) {
     return this.reportService.cashBook(tenantId, startDate, endDate);
   }
+
+  @Get("journal-book")
+  async journalBook(
+    @CurrentTenant() tenantId: string,
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string,
+  ) {
+    return this.reportService.journalBook(tenantId, startDate, endDate);
+  }
 }

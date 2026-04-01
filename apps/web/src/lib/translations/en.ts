@@ -29,6 +29,7 @@ const en: Record<TranslationKey, string> = {
   nav_bankAccounts: "Bank Accounts",
   nav_vatReturns: "VAT Returns",
   nav_exchangeRates: "Exchange Rates",
+  nav_journalBook: "Journal Book",
   nav_journalTemplates: "Recurring Journals",
   nav_journalRules: "Auto Journal Rules",
   nav_yearEndSettlement: "Year-end Settlement",

@@ -1128,4 +1128,66 @@ export class ReportService {
       totalExpense,
     };
   }
+
+  // 분개장: 모든 전표를 일자순으로 나열
+  async journalBook(tenantId: string, startDate?: string, endDate?: string) {
+    const dateFilter: Record<string, unknown> = {};
+    if (startDate) dateFilter.gte = new Date(startDate);
+    if (endDate) dateFilter.lte = new Date(endDate + "T23:59:59");
+
+    const journalEntries = await this.prisma.journalEntry.findMany({
+      where: {
+        tenantId,
+        status: "POSTED",
+        ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
+      },
+      include: {
+        lines: {
+          include: {
+            account: { select: { code: true, name: true } },
+            vendor: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: [{ date: "asc" }, { id: "asc" }],
+    });
+
+    let grandTotalDebit = 0;
+    let grandTotalCredit = 0;
+
+    const entries = journalEntries.map((je) => {
+      const lines = je.lines.map((l) => {
+        const debit = Number(l.debit) * Number(je.exchangeRate);
+        const credit = Number(l.credit) * Number(je.exchangeRate);
+        return {
+          accountCode: l.account.code,
+          accountName: l.account.name,
+          vendorName: l.vendor?.name ?? null,
+          debit,
+          credit,
+        };
+      });
+
+      const totalDebit = lines.reduce((sum, l) => sum + l.debit, 0);
+      const totalCredit = lines.reduce((sum, l) => sum + l.credit, 0);
+      grandTotalDebit += totalDebit;
+      grandTotalCredit += totalCredit;
+
+      return {
+        id: je.id,
+        date: je.date.toISOString().slice(0, 10),
+        description: je.description ?? "",
+        lines,
+        totalDebit,
+        totalCredit,
+      };
+    });
+
+    return {
+      entries,
+      grandTotalDebit,
+      grandTotalCredit,
+      entryCount: entries.length,
+    };
+  }
 }
