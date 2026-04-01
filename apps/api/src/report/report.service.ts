@@ -75,6 +75,138 @@ export class ReportService {
     };
   }
 
+  // 일계표: 특정 일자의 계정별 차변/대변 합계
+  async dailySummary(tenantId: string, date: string) {
+    const startOfDay = new Date(date);
+    const endOfDay = new Date(date + "T23:59:59");
+
+    const accounts = await this.prisma.account.findMany({
+      where: { tenantId },
+      include: {
+        journalLines: {
+          where: {
+            journalEntry: {
+              status: "POSTED",
+              tenantId,
+              date: { gte: startOfDay, lte: endOfDay },
+            },
+          },
+          include: {
+            journalEntry: { select: { exchangeRate: true } },
+          },
+        },
+      },
+      orderBy: { code: "asc" },
+    });
+
+    const rows = accounts
+      .map((account) => {
+        const debit = account.journalLines.reduce(
+          (sum, l) => sum + Number(l.debit) * Number(l.journalEntry.exchangeRate),
+          0,
+        );
+        const credit = account.journalLines.reduce(
+          (sum, l) => sum + Number(l.credit) * Number(l.journalEntry.exchangeRate),
+          0,
+        );
+        return {
+          code: account.code,
+          name: account.name,
+          type: account.type,
+          debit,
+          credit,
+        };
+      })
+      .filter((r) => r.debit !== 0 || r.credit !== 0);
+
+    return {
+      date,
+      rows,
+      totalDebit: rows.reduce((sum, r) => sum + r.debit, 0),
+      totalCredit: rows.reduce((sum, r) => sum + r.credit, 0),
+    };
+  }
+
+  // 월계표: 월별 계정별 차변/대변 합계 + 누적(1월~당월)
+  async monthlySummary(tenantId: string, year: number, month: number) {
+    // 당월 범위
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0, 23, 59, 59);
+
+    // 누적 범위 (1월 1일 ~ 당월 말)
+    const yearStart = new Date(year, 0, 1);
+
+    const accounts = await this.prisma.account.findMany({
+      where: { tenantId },
+      include: {
+        journalLines: {
+          where: {
+            journalEntry: {
+              status: "POSTED",
+              tenantId,
+              date: { gte: yearStart, lte: monthEnd },
+            },
+          },
+          include: {
+            journalEntry: { select: { date: true, exchangeRate: true } },
+          },
+        },
+      },
+      orderBy: { code: "asc" },
+    });
+
+    const rows = accounts
+      .map((account) => {
+        let monthDebit = 0;
+        let monthCredit = 0;
+        let cumulativeDebit = 0;
+        let cumulativeCredit = 0;
+
+        for (const l of account.journalLines) {
+          const debit = Number(l.debit) * Number(l.journalEntry.exchangeRate);
+          const credit = Number(l.credit) * Number(l.journalEntry.exchangeRate);
+          const lineDate = new Date(l.journalEntry.date);
+
+          // 누적 (1월~당월)
+          cumulativeDebit += debit;
+          cumulativeCredit += credit;
+
+          // 당월
+          if (lineDate >= monthStart && lineDate <= monthEnd) {
+            monthDebit += debit;
+            monthCredit += credit;
+          }
+        }
+
+        return {
+          code: account.code,
+          name: account.name,
+          type: account.type,
+          monthDebit,
+          monthCredit,
+          cumulativeDebit,
+          cumulativeCredit,
+        };
+      })
+      .filter(
+        (r) =>
+          r.monthDebit !== 0 ||
+          r.monthCredit !== 0 ||
+          r.cumulativeDebit !== 0 ||
+          r.cumulativeCredit !== 0,
+      );
+
+    return {
+      year,
+      month,
+      rows,
+      totalMonthDebit: rows.reduce((sum, r) => sum + r.monthDebit, 0),
+      totalMonthCredit: rows.reduce((sum, r) => sum + r.monthCredit, 0),
+      totalCumulativeDebit: rows.reduce((sum, r) => sum + r.cumulativeDebit, 0),
+      totalCumulativeCredit: rows.reduce((sum, r) => sum + r.cumulativeCredit, 0),
+    };
+  }
+
   // 손익계산서: 수익 - 비용 = 당기순이익
   async incomeStatement(tenantId: string, startDate?: string, endDate?: string) {
     const { rows } = await this.trialBalance(tenantId, startDate, endDate);

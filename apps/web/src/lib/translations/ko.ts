@@ -7,6 +7,7 @@ const ko = {
   nav_accounts: "계정과목",
   nav_generalLedger: "총계정원장",
   nav_accountLedger: "계정별원장",
+  nav_summaryTable: "일/월계표",
   nav_vendors: "거래처",
   nav_vendorLedger: "거래처 원장",
   nav_closings: "결산",

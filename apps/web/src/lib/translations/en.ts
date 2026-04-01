@@ -9,6 +9,7 @@ const en: Record<TranslationKey, string> = {
   nav_accounts: "Chart of Accounts",
   nav_generalLedger: "General Ledger",
   nav_accountLedger: "Account Ledger",
+  nav_summaryTable: "Summary Table",
   nav_vendors: "Vendors",
   nav_vendorLedger: "Vendor Ledger",
   nav_closings: "Closing",
