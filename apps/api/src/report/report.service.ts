@@ -99,6 +99,117 @@ export class ReportService {
     };
   }
 
+  // 총계정원장: 계정별 거래 내역 + 누적 잔액
+  async generalLedger(
+    tenantId: string,
+    startDate?: string,
+    endDate?: string,
+    accountId?: string,
+  ) {
+    // 계정 조회
+    const accountFilter: Record<string, unknown> = { tenantId };
+    if (accountId) accountFilter.id = accountId;
+
+    const accounts = await this.prisma.account.findMany({
+      where: accountFilter,
+      orderBy: { code: "asc" },
+    });
+
+    const dateFilter: Record<string, unknown> = {};
+    if (startDate) dateFilter.gte = new Date(startDate);
+    if (endDate) dateFilter.lte = new Date(endDate + "T23:59:59");
+
+    const result = [];
+
+    for (const account of accounts) {
+      // 기초잔액: startDate 이전 POSTED 전표의 합계
+      let openingBalance = 0;
+      if (startDate) {
+        const beforeLines = await this.prisma.journalLine.findMany({
+          where: {
+            accountId: account.id,
+            journalEntry: {
+              status: "POSTED",
+              tenantId,
+              date: { lt: new Date(startDate) },
+            },
+          },
+          include: { journalEntry: { select: { exchangeRate: true } } },
+        });
+
+        openingBalance = beforeLines.reduce((sum, l) => {
+          const debit = Number(l.debit) * Number(l.journalEntry.exchangeRate);
+          const credit = Number(l.credit) * Number(l.journalEntry.exchangeRate);
+          return account.normalBalance === "DEBIT"
+            ? sum + debit - credit
+            : sum + credit - debit;
+        }, 0);
+      }
+
+      // 기간 내 거래 조회
+      const lines = await this.prisma.journalLine.findMany({
+        where: {
+          accountId: account.id,
+          journalEntry: {
+            status: "POSTED",
+            tenantId,
+            ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
+          },
+        },
+        include: {
+          journalEntry: {
+            select: { id: true, date: true, description: true, exchangeRate: true },
+          },
+        },
+        orderBy: { journalEntry: { date: "asc" } },
+      });
+
+      // 거래가 없고 기초잔액도 없으면 스킵
+      if (lines.length === 0 && openingBalance === 0) continue;
+
+      let runningBalance = openingBalance;
+      let totalDebit = 0;
+      let totalCredit = 0;
+
+      const entries = lines.map((l) => {
+        const debit = Number(l.debit) * Number(l.journalEntry.exchangeRate);
+        const credit = Number(l.credit) * Number(l.journalEntry.exchangeRate);
+        totalDebit += debit;
+        totalCredit += credit;
+
+        if (account.normalBalance === "DEBIT") {
+          runningBalance += debit - credit;
+        } else {
+          runningBalance += credit - debit;
+        }
+
+        return {
+          date: new Date(l.journalEntry.date).toISOString().slice(0, 10),
+          journalEntryId: l.journalEntry.id,
+          description: l.journalEntry.description || "",
+          debit,
+          credit,
+          balance: runningBalance,
+        };
+      });
+
+      result.push({
+        accountId: account.id,
+        code: account.code,
+        name: account.name,
+        type: account.type,
+        normalBalance: account.normalBalance,
+        openingBalance,
+        entries,
+        closingBalance: runningBalance,
+        totalDebit,
+        totalCredit,
+      });
+    }
+
+    return { accounts: result };
+  }
+
   // 대시보드 요약
   async dashboardSummary(tenantId: string) {
     // 최근 6개월 범위 계산
