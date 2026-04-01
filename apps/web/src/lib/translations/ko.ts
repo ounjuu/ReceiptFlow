@@ -12,6 +12,7 @@ const ko = {
   nav_vendorLedger: "거래처 원장",
   nav_closings: "결산",
   nav_cashFlow: "자금 관리",
+  nav_cashBook: "현금출납장",
   nav_taxInvoices: "세금계산서",
   nav_approvals: "전자결재",
   nav_fixedAssets: "고정자산",

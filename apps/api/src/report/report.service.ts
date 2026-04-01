@@ -1006,4 +1006,126 @@ export class ReportService {
         ) < 0.01,
     };
   }
+
+  // 현금출납장: 현금 계정(10100) 입출금 내역
+  async cashBook(tenantId: string, startDate?: string, endDate?: string) {
+    // 현금 계정 자동 조회
+    const account = await this.prisma.account.findFirstOrThrow({
+      where: { tenantId, code: "10100" },
+    });
+
+    const dateFilter: Record<string, unknown> = {};
+    if (startDate) dateFilter.gte = new Date(startDate);
+    if (endDate) dateFilter.lte = new Date(endDate + "T23:59:59");
+
+    // 기초잔액: startDate 이전 POSTED 전표의 합계
+    let openingBalance = 0;
+    if (startDate) {
+      const beforeLines = await this.prisma.journalLine.findMany({
+        where: {
+          accountId: account.id,
+          journalEntry: {
+            status: "POSTED",
+            tenantId,
+            date: { lt: new Date(startDate) },
+          },
+        },
+        include: { journalEntry: { select: { exchangeRate: true } } },
+      });
+
+      openingBalance = beforeLines.reduce((sum, l) => {
+        const debit = Number(l.debit) * Number(l.journalEntry.exchangeRate);
+        const credit = Number(l.credit) * Number(l.journalEntry.exchangeRate);
+        // 현금은 DEBIT normal balance: 차변 - 대변
+        return sum + debit - credit;
+      }, 0);
+    }
+
+    // 기간 내 거래 조회 (거래처 정보 포함)
+    const lines = await this.prisma.journalLine.findMany({
+      where: {
+        accountId: account.id,
+        journalEntry: {
+          status: "POSTED",
+          tenantId,
+          ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
+        },
+      },
+      include: {
+        vendor: { select: { name: true } },
+        journalEntry: {
+          select: {
+            id: true,
+            date: true,
+            description: true,
+            exchangeRate: true,
+            lines: {
+              select: {
+                debit: true,
+                credit: true,
+                account: { select: { code: true, name: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { journalEntry: { date: "asc" } },
+    });
+
+    let runningBalance = openingBalance;
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    const entries = lines.map((l) => {
+      const debit = Number(l.debit) * Number(l.journalEntry.exchangeRate);
+      const credit = Number(l.credit) * Number(l.journalEntry.exchangeRate);
+      const income = debit;   // 차변 = 입금
+      const expense = credit; // 대변 = 출금
+      totalIncome += income;
+      totalExpense += expense;
+      runningBalance += income - expense;
+
+      // 상대계정 찾기: 같은 전표에서 반대 방향의 다른 계정
+      const isDebitSide = debit > 0;
+      const counterparts = l.journalEntry.lines.filter((ol) => {
+        if (ol.account.code === account.code) return false;
+        return isDebitSide ? Number(ol.credit) > 0 : Number(ol.debit) > 0;
+      });
+
+      let counterpartCode = "";
+      let counterpartName = "";
+      if (counterparts.length === 1) {
+        counterpartCode = counterparts[0].account.code;
+        counterpartName = counterparts[0].account.name;
+      } else if (counterparts.length > 1) {
+        counterpartCode = counterparts[0].account.code;
+        counterpartName = "제";
+      }
+
+      return {
+        date: new Date(l.journalEntry.date).toISOString().slice(0, 10),
+        journalEntryId: l.journalEntry.id,
+        description: l.journalEntry.description || "",
+        counterpartCode,
+        counterpartName,
+        vendorName: l.vendor?.name || null,
+        income,
+        expense,
+        balance: runningBalance,
+      };
+    });
+
+    return {
+      account: {
+        id: account.id,
+        code: account.code,
+        name: account.name,
+      },
+      openingBalance,
+      entries,
+      closingBalance: runningBalance,
+      totalIncome,
+      totalExpense,
+    };
+  }
 }

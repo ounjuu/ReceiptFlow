@@ -67,6 +67,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/reports", labelKey: "nav_reports" },
       { href: "/cash-flow", labelKey: "nav_cashFlow" },
+      { href: "/cash-book", labelKey: "nav_cashBook" },
       { href: "/budgets", labelKey: "nav_budgets", roles: ["ADMIN", "ACCOUNTANT"] },
       { href: "/bank-accounts", labelKey: "nav_bankAccounts" },
       { href: "/fixed-assets", labelKey: "nav_fixedAssets", roles: ["ADMIN", "ACCOUNTANT"] },

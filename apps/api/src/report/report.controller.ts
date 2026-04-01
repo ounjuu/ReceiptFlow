@@ -104,4 +104,13 @@ export class ReportController {
   async dashboardAlerts(@CurrentTenant() tenantId: string) {
     return this.reportService.getDashboardAlerts(tenantId);
   }
+
+  @Get("cash-book")
+  async cashBook(
+    @CurrentTenant() tenantId: string,
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string,
+  ) {
+    return this.reportService.cashBook(tenantId, startDate, endDate);
+  }
 }

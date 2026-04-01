@@ -14,6 +14,7 @@ const en: Record<TranslationKey, string> = {
   nav_vendorLedger: "Vendor Ledger",
   nav_closings: "Closing",
   nav_cashFlow: "Cash Flow",
+  nav_cashBook: "Cash Book",
   nav_taxInvoices: "Tax Invoices",
   nav_approvals: "Approvals",
   nav_fixedAssets: "Fixed Assets",
