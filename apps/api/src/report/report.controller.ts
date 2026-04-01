@@ -8,6 +8,16 @@ import { CurrentTenant } from "../auth/current-tenant.decorator";
 export class ReportController {
   constructor(private readonly reportService: ReportService) {}
 
+  @Get("account-ledger")
+  async accountLedger(
+    @CurrentTenant() tenantId: string,
+    @Query("accountId") accountId: string,
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string,
+  ) {
+    return this.reportService.accountLedger(tenantId, accountId, startDate, endDate);
+  }
+
   @Get("general-ledger")
   async generalLedger(
     @CurrentTenant() tenantId: string,

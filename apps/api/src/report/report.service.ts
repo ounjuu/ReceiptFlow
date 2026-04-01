@@ -210,6 +210,139 @@ export class ReportService {
     return { accounts: result };
   }
 
+  // 계정별원장: 특정 계정의 거래 내역 + 상대계정 정보
+  async accountLedger(
+    tenantId: string,
+    accountId: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    // 계정 조회
+    const account = await this.prisma.account.findFirstOrThrow({
+      where: { id: accountId, tenantId },
+    });
+
+    const dateFilter: Record<string, unknown> = {};
+    if (startDate) dateFilter.gte = new Date(startDate);
+    if (endDate) dateFilter.lte = new Date(endDate + "T23:59:59");
+
+    // 기초잔액: startDate 이전 POSTED 전표의 합계
+    let openingBalance = 0;
+    if (startDate) {
+      const beforeLines = await this.prisma.journalLine.findMany({
+        where: {
+          accountId: account.id,
+          journalEntry: {
+            status: "POSTED",
+            tenantId,
+            date: { lt: new Date(startDate) },
+          },
+        },
+        include: { journalEntry: { select: { exchangeRate: true } } },
+      });
+
+      openingBalance = beforeLines.reduce((sum, l) => {
+        const debit = Number(l.debit) * Number(l.journalEntry.exchangeRate);
+        const credit = Number(l.credit) * Number(l.journalEntry.exchangeRate);
+        return account.normalBalance === "DEBIT"
+          ? sum + debit - credit
+          : sum + credit - debit;
+      }, 0);
+    }
+
+    // 기간 내 거래 조회 (거래처 정보 포함)
+    const lines = await this.prisma.journalLine.findMany({
+      where: {
+        accountId: account.id,
+        journalEntry: {
+          status: "POSTED",
+          tenantId,
+          ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
+        },
+      },
+      include: {
+        vendor: { select: { name: true } },
+        journalEntry: {
+          select: {
+            id: true,
+            date: true,
+            description: true,
+            exchangeRate: true,
+            lines: {
+              select: {
+                debit: true,
+                credit: true,
+                account: { select: { code: true, name: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { journalEntry: { date: "asc" } },
+    });
+
+    let runningBalance = openingBalance;
+    let totalDebit = 0;
+    let totalCredit = 0;
+
+    const entries = lines.map((l) => {
+      const debit = Number(l.debit) * Number(l.journalEntry.exchangeRate);
+      const credit = Number(l.credit) * Number(l.journalEntry.exchangeRate);
+      totalDebit += debit;
+      totalCredit += credit;
+
+      if (account.normalBalance === "DEBIT") {
+        runningBalance += debit - credit;
+      } else {
+        runningBalance += credit - debit;
+      }
+
+      // 상대계정 찾기: 같은 전표에서 반대 방향의 다른 계정
+      const isDebitSide = debit > 0;
+      const counterparts = l.journalEntry.lines.filter((ol) => {
+        if (ol.account.code === account.code) return false;
+        return isDebitSide ? Number(ol.credit) > 0 : Number(ol.debit) > 0;
+      });
+
+      let counterpartCode = "";
+      let counterpartName = "";
+      if (counterparts.length === 1) {
+        counterpartCode = counterparts[0].account.code;
+        counterpartName = counterparts[0].account.name;
+      } else if (counterparts.length > 1) {
+        counterpartCode = counterparts[0].account.code;
+        counterpartName = "제";
+      }
+
+      return {
+        date: new Date(l.journalEntry.date).toISOString().slice(0, 10),
+        journalEntryId: l.journalEntry.id,
+        description: l.journalEntry.description || "",
+        counterpartCode,
+        counterpartName,
+        vendorName: l.vendor?.name || null,
+        debit,
+        credit,
+        balance: runningBalance,
+      };
+    });
+
+    return {
+      account: {
+        id: account.id,
+        code: account.code,
+        name: account.name,
+        type: account.type,
+        normalBalance: account.normalBalance,
+      },
+      openingBalance,
+      entries,
+      closingBalance: runningBalance,
+      totalDebit,
+      totalCredit,
+    };
+  }
+
   // 대시보드 요약
   async dashboardSummary(tenantId: string) {
     // 최근 6개월 범위 계산
