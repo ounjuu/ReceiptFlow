@@ -72,6 +72,28 @@ export class ReportController {
     return this.reportService.balanceSheet(tenantId, startDate, endDate);
   }
 
+  @Get("comparative-income")
+  async comparativeIncome(
+    @CurrentTenant() tenantId: string,
+    @Query("currentStart") currentStart: string,
+    @Query("currentEnd") currentEnd: string,
+    @Query("previousStart") previousStart: string,
+    @Query("previousEnd") previousEnd: string,
+  ) {
+    return this.reportService.comparativeIncomeStatement(
+      tenantId, currentStart, currentEnd, previousStart, previousEnd,
+    );
+  }
+
+  @Get("comparative-balance")
+  async comparativeBalance(
+    @CurrentTenant() tenantId: string,
+    @Query("currentEnd") currentEnd: string,
+    @Query("previousEnd") previousEnd: string,
+  ) {
+    return this.reportService.comparativeBalanceSheet(tenantId, currentEnd, previousEnd);
+  }
+
   @Get("daily-cash")
   async dailyCash(
     @CurrentTenant() tenantId: string,

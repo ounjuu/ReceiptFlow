@@ -1030,6 +1030,168 @@ export class ReportService {
     };
   }
 
+  // 비교 손익계산서: 전기 vs 당기
+  async comparativeIncomeStatement(
+    tenantId: string,
+    currentStart: string,
+    currentEnd: string,
+    previousStart: string,
+    previousEnd: string,
+  ) {
+    const [current, previous] = await Promise.all([
+      this.incomeStatement(tenantId, currentStart, currentEnd),
+      this.incomeStatement(tenantId, previousStart, previousEnd),
+    ]);
+
+    // 계정별 병합 (코드 기준)
+    const accountMap = new Map<string, {
+      type: string; code: string; name: string;
+      currentAmount: number; previousAmount: number;
+    }>();
+
+    for (const r of current.revenue) {
+      accountMap.set(r.code, {
+        type: "REVENUE", code: r.code, name: r.name,
+        currentAmount: r.amount, previousAmount: 0,
+      });
+    }
+    for (const r of current.expense) {
+      accountMap.set(r.code, {
+        type: "EXPENSE", code: r.code, name: r.name,
+        currentAmount: r.amount, previousAmount: 0,
+      });
+    }
+    for (const r of previous.revenue) {
+      const existing = accountMap.get(r.code);
+      if (existing) {
+        existing.previousAmount = r.amount;
+      } else {
+        accountMap.set(r.code, {
+          type: "REVENUE", code: r.code, name: r.name,
+          currentAmount: 0, previousAmount: r.amount,
+        });
+      }
+    }
+    for (const r of previous.expense) {
+      const existing = accountMap.get(r.code);
+      if (existing) {
+        existing.previousAmount = r.amount;
+      } else {
+        accountMap.set(r.code, {
+          type: "EXPENSE", code: r.code, name: r.name,
+          currentAmount: 0, previousAmount: r.amount,
+        });
+      }
+    }
+
+    const rows = Array.from(accountMap.values())
+      .sort((a, b) => a.code.localeCompare(b.code))
+      .map((r) => ({
+        ...r,
+        difference: r.currentAmount - r.previousAmount,
+        changeRate: r.previousAmount !== 0
+          ? Math.round(((r.currentAmount - r.previousAmount) / Math.abs(r.previousAmount)) * 10000) / 100
+          : null,
+      }));
+
+    return {
+      rows,
+      currentTotal: {
+        revenue: current.totalRevenue,
+        expense: current.totalExpense,
+        netIncome: current.netIncome,
+      },
+      previousTotal: {
+        revenue: previous.totalRevenue,
+        expense: previous.totalExpense,
+        netIncome: previous.netIncome,
+      },
+    };
+  }
+
+  // 비교 대차대조표: 전기 vs 당기
+  async comparativeBalanceSheet(
+    tenantId: string,
+    currentEnd: string,
+    previousEnd: string,
+  ) {
+    const [current, previous] = await Promise.all([
+      this.balanceSheet(tenantId, undefined, currentEnd),
+      this.balanceSheet(tenantId, undefined, previousEnd),
+    ]);
+
+    // 계정별 병합 헬퍼
+    const mergeRows = (
+      currentRows: { code: string; name: string; amount: number }[],
+      previousRows: { code: string; name: string; amount: number }[],
+      section: string,
+    ) => {
+      const map = new Map<string, {
+        section: string; code: string; name: string;
+        currentAmount: number; previousAmount: number;
+      }>();
+
+      for (const r of currentRows) {
+        map.set(r.code, {
+          section, code: r.code, name: r.name,
+          currentAmount: r.amount, previousAmount: 0,
+        });
+      }
+      for (const r of previousRows) {
+        const existing = map.get(r.code);
+        if (existing) {
+          existing.previousAmount = r.amount;
+        } else {
+          map.set(r.code, {
+            section, code: r.code, name: r.name,
+            currentAmount: 0, previousAmount: r.amount,
+          });
+        }
+      }
+
+      return Array.from(map.values())
+        .sort((a, b) => a.code.localeCompare(b.code))
+        .map((r) => ({
+          ...r,
+          difference: r.currentAmount - r.previousAmount,
+          changeRate: r.previousAmount !== 0
+            ? Math.round(((r.currentAmount - r.previousAmount) / Math.abs(r.previousAmount)) * 10000) / 100
+            : null,
+        }));
+    };
+
+    const calcTotal = (
+      currentVal: number,
+      previousVal: number,
+    ) => ({
+      current: currentVal,
+      previous: previousVal,
+      difference: currentVal - previousVal,
+      changeRate: previousVal !== 0
+        ? Math.round(((currentVal - previousVal) / Math.abs(previousVal)) * 10000) / 100
+        : null,
+    });
+
+    return {
+      currentAssets: mergeRows(current.currentAssets, previous.currentAssets, "currentAssets"),
+      nonCurrentAssets: mergeRows(current.nonCurrentAssets, previous.nonCurrentAssets, "nonCurrentAssets"),
+      currentLiabilities: mergeRows(current.currentLiabilities, previous.currentLiabilities, "currentLiabilities"),
+      nonCurrentLiabilities: mergeRows(current.nonCurrentLiabilities, previous.nonCurrentLiabilities, "nonCurrentLiabilities"),
+      equity: mergeRows(current.equity, previous.equity, "equity"),
+      totals: {
+        totalCurrentAssets: calcTotal(current.totalCurrentAssets, previous.totalCurrentAssets),
+        totalNonCurrentAssets: calcTotal(current.totalNonCurrentAssets, previous.totalNonCurrentAssets),
+        totalAssets: calcTotal(current.totalAssets, previous.totalAssets),
+        totalCurrentLiabilities: calcTotal(current.totalCurrentLiabilities, previous.totalCurrentLiabilities),
+        totalNonCurrentLiabilities: calcTotal(current.totalNonCurrentLiabilities, previous.totalNonCurrentLiabilities),
+        totalLiabilities: calcTotal(current.totalLiabilities, previous.totalLiabilities),
+        totalEquity: calcTotal(current.totalEquity, previous.totalEquity),
+        retainedEarnings: calcTotal(current.retainedEarnings, previous.retainedEarnings),
+        totalLiabilitiesAndEquity: calcTotal(current.totalLiabilitiesAndEquity, previous.totalLiabilitiesAndEquity),
+      },
+    };
+  }
+
   // 현금출납장: 현금 계정(10100) 입출금 내역
   async cashBook(tenantId: string, startDate?: string, endDate?: string) {
     // 현금 계정 자동 조회

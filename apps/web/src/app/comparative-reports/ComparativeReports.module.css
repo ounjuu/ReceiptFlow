@@ -1,0 +1,192 @@
+.title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+}
+
+/* 탭 */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+
+.tab {
+  padding: 8px 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.tab:first-child {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.tab:last-child {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.tabActive {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+/* 기간 선택 */
+.periodRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.periodLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 32px;
+}
+
+.periodSelect {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  background: var(--card-bg);
+  color: inherit;
+}
+
+.periodSelect:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* 섹션 */
+.section {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.unit {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* 테이블 */
+.compTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.compTable th,
+.compTable td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.compTable th {
+  background: var(--bg);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.compTable td {
+  text-align: right;
+}
+
+.compTable td:first-child,
+.compTable td:nth-child(2) {
+  text-align: left;
+}
+
+/* 그룹 헤더 */
+.groupHeader td {
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-light);
+  font-size: 0.85rem;
+}
+
+/* 소계 행 */
+.subtotalRow {
+  font-weight: 600;
+  background: #faf8fd;
+}
+
+/* 총계 행 */
+.grandTotalRow {
+  font-weight: 700;
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.grandTotalRow td {
+  border-top: 2px solid var(--border);
+}
+
+/* 증감 색상 */
+.positive {
+  color: var(--success);
+}
+
+.negative {
+  color: var(--danger);
+}
+
+/* 요약 바 */
+.summaryBar {
+  display: flex;
+  gap: 32px;
+  padding: 16px 20px;
+  background: var(--primary-light);
+  border-radius: var(--radius);
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.summaryLabel {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.summaryValue {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+}
