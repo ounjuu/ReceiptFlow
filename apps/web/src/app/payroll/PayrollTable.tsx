@@ -2,6 +2,20 @@
 
 import styles from "./Payroll.module.css";
 import { Employee, PayrollRecord, PayrollSummary, ProcessResult, fmt, now } from "./types";
+import { API_BASE } from "@/lib/api";
+
+const downloadPdf = async (url: string, filename: string) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_BASE}${url}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
 
 /* ── 직원 목록 테이블 ── */
 
@@ -331,6 +345,7 @@ export function RecordsTab({
               <th style={{ textAlign: "right" }}>지방소득세</th>
               <th style={{ textAlign: "right" }}>총공제</th>
               <th style={{ textAlign: "right" }}>실수령액</th>
+              <th>PDF</th>
             </tr>
           </thead>
           <tbody>
@@ -367,12 +382,27 @@ export function RecordsTab({
                 <td style={{ textAlign: "right", fontWeight: 700 }}>
                   {fmt(r.netPay)}
                 </td>
+                <td>
+                  <button
+                    className={styles.secondaryBtn}
+                    style={{ fontSize: "0.75rem", padding: "4px 10px", whiteSpace: "nowrap" }}
+                    onClick={() =>
+                      downloadPdf(
+                        `/payroll/records/${r.id}/payslip-pdf`,
+                        `급여명세서-${r.employeeNo}-${r.period}.pdf`,
+                      )
+                    }
+                    title="급여명세서 PDF 다운로드"
+                  >
+                    PDF
+                  </button>
+                </td>
               </tr>
             ))}
             {records.length === 0 && (
               <tr>
                 <td
-                  colSpan={13}
+                  colSpan={14}
                   style={{ textAlign: "center", color: "var(--text-muted)" }}
                 >
                   해당 월 급여 내역이 없습니다

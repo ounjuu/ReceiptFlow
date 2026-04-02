@@ -248,6 +248,37 @@ export class PayrollService {
     };
   }
 
+  // 단일 급여 레코드 조회 (PDF용)
+  async getPayrollRecordById(recordId: string) {
+    const r = await this.prisma.payrollRecord.findUniqueOrThrow({
+      where: { id: recordId },
+      include: {
+        employee: { select: { employeeNo: true, name: true, department: true, position: true } },
+      },
+    });
+
+    return {
+      id: r.id,
+      employeeNo: r.employee.employeeNo,
+      employeeName: r.employee.name,
+      department: r.employee.department,
+      position: r.employee.position,
+      period: r.period,
+      baseSalary: Number(r.baseSalary),
+      overtimePay: Number(r.overtimePay),
+      bonusPay: Number(r.bonusPay),
+      grossPay: Number(r.grossPay),
+      nationalPension: Number(r.nationalPension),
+      healthInsurance: Number(r.healthInsurance),
+      longTermCare: Number(r.longTermCare),
+      employmentInsurance: Number(r.employmentInsurance),
+      incomeTax: Number(r.incomeTax),
+      localIncomeTax: Number(r.localIncomeTax),
+      totalDeduction: Number(r.totalDeduction),
+      netPay: Number(r.netPay),
+    };
+  }
+
   // 월별 급여 현황 조회
   async getPayrollRecords(tenantId: string, year: number, month: number) {
     const period = `${year}-${String(month).padStart(2, "0")}`;
