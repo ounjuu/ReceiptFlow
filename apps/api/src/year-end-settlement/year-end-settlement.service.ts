@@ -56,10 +56,25 @@ export class YearEndSettlementService {
       where: { tenantId, status: "ACTIVE" },
     });
 
+    // 모든 직원의 해당 연도 급여 레코드를 일괄 조회 (N+1 방지)
+    const allPayrollRecords = await this.prisma.payrollRecord.findMany({
+      where: {
+        employeeId: { in: employees.map((e) => e.id) },
+        period: { startsWith: `${year}-` },
+      },
+    });
+
+    // 직원별 연간 총급여 맵 생성
+    const grossPayByEmployee = new Map<string, number>();
+    for (const r of allPayrollRecords) {
+      const current = grossPayByEmployee.get(r.employeeId) || 0;
+      grossPayByEmployee.set(r.employeeId, current + Number(r.grossPay));
+    }
+
     const results: { employeeId: string; employeeName: string; annualGrossPay: number }[] = [];
 
     for (const emp of employees) {
-      const annualGrossPay = await this.getAnnualGrossPay(emp.id, year);
+      const annualGrossPay = grossPayByEmployee.get(emp.id) || 0;
 
       await this.prisma.yearEndSettlement.upsert({
         where: { employeeId_year: { employeeId: emp.id, year } },

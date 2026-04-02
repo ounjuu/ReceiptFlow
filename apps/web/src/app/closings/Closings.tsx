@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPatch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { PeriodSummary, AccountingPeriod } from "./types";
+import type { PeriodSummary, AccountingPeriod, CarryForwardResult } from "./types";
 import ClosingsTable from "./ClosingsTable";
 import styles from "./Closings.module.css";
 
@@ -58,6 +58,27 @@ export default function ClosingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["closing-periods"] });
       queryClient.invalidateQueries({ queryKey: ["closing-summary"] });
+    },
+  });
+
+  // 전기이월
+  const [cfYear, setCfYear] = useState(now.getFullYear() - 1);
+  const [cfResult, setCfResult] = useState<CarryForwardResult | null>(null);
+
+  // 선택 연도의 12월 마감 여부
+  const isDecClosed = periods.some(
+    (p) => p.year === cfYear && p.month === 12 && p.status === "CLOSED",
+  );
+
+  const carryForwardMut = useMutation({
+    mutationFn: () =>
+      apiPost<CarryForwardResult>("/closings/carry-forward", {
+        tenantId,
+        year: cfYear,
+      }),
+    onSuccess: (data) => {
+      setCfResult(data);
+      queryClient.invalidateQueries({ queryKey: ["closing-periods"] });
     },
   });
 
@@ -186,6 +207,91 @@ export default function ClosingsPage() {
         <p className={styles.error}>
           미확정 전표가 {summary.unposted}건 있습니다. 모든 전표를 확정(POSTED)한 후 마감할 수 있습니다.
         </p>
+      )}
+
+      {/* 전기이월 */}
+      {isAdmin && (
+        <div className={styles.section} style={{ marginBottom: 24 }}>
+          <h2 className={styles.sectionTitle}>전기이월 (연도 결산)</h2>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: 16 }}>
+            회계연도 말 자산/부채/자본 잔액을 다음 연도로 이월하고, 수익/비용을 이익잉여금으로 대체합니다.
+          </p>
+          <div className={styles.controls}>
+            <div className={styles.formRow}>
+              <span className={styles.label}>이월 기준 연도</span>
+              <select
+                className={styles.select}
+                value={cfYear}
+                onChange={(e) => {
+                  setCfYear(Number(e.target.value));
+                  setCfResult(null);
+                }}
+              >
+                {years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}년
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              className={styles.closeBtn}
+              disabled={!isDecClosed || carryForwardMut.isPending}
+              onClick={() => {
+                if (
+                  confirm(
+                    `${cfYear}년 결산을 실행합니다.\n\n- 자산/부채/자본 잔액을 ${cfYear + 1}년 1월 1일로 이월\n- 수익/비용을 이익잉여금으로 대체\n\n계속하시겠습니까?`,
+                  )
+                ) {
+                  carryForwardMut.mutate();
+                }
+              }}
+            >
+              {carryForwardMut.isPending ? "처리 중..." : "전기이월 실행"}
+            </button>
+          </div>
+          {!isDecClosed && (
+            <p className={styles.error}>
+              {cfYear}년 12월이 마감되지 않았습니다. 12월 마감 후 이월 처리할 수 있습니다.
+            </p>
+          )}
+          {carryForwardMut.isError && (
+            <p className={styles.error}>
+              {(carryForwardMut.error as Error).message}
+            </p>
+          )}
+          {cfResult && (
+            <div className={styles.summaryCards} style={{ marginTop: 16 }}>
+              <div className={styles.card}>
+                <div className={styles.cardLabel}>자산 잔액</div>
+                <div className={styles.cardValue}>
+                  {cfResult.summary.assetBalance.toLocaleString("ko-KR")}원
+                </div>
+              </div>
+              <div className={styles.card}>
+                <div className={styles.cardLabel}>부채 잔액</div>
+                <div className={styles.cardValue}>
+                  {cfResult.summary.liabilityBalance.toLocaleString("ko-KR")}원
+                </div>
+              </div>
+              <div className={styles.card}>
+                <div className={styles.cardLabel}>자본 잔액</div>
+                <div className={styles.cardValue}>
+                  {cfResult.summary.equityBalance.toLocaleString("ko-KR")}원
+                </div>
+              </div>
+              <div className={styles.card}>
+                <div className={styles.cardLabel}>당기순이익</div>
+                <div
+                  className={styles.cardValue}
+                  style={{ color: cfResult.summary.netIncome >= 0 ? "#4caf82" : "#d95454" }}
+                >
+                  {cfResult.summary.netIncome.toLocaleString("ko-KR")}원
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* 마감 이력 */}

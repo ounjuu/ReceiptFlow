@@ -174,12 +174,19 @@ export class PayrollService {
       netPay: number;
     }[] = [];
 
+    // 이미 해당 월 처리된 직원 일괄 조회 (N+1 방지)
+    const existingRecords = await this.prisma.payrollRecord.findMany({
+      where: {
+        employeeId: { in: employees.map((e) => e.id) },
+        period,
+      },
+      select: { employeeId: true },
+    });
+    const processedEmployeeIds = new Set(existingRecords.map((r) => r.employeeId));
+
     for (const emp of employees) {
       // 이미 해당 월 처리된 직원 제외
-      const existing = await this.prisma.payrollRecord.findFirst({
-        where: { employeeId: emp.id, period },
-      });
-      if (existing) continue;
+      if (processedEmployeeIds.has(emp.id)) continue;
 
       // 입사일 이전 월은 건너뜀
       const joinPeriod = `${emp.joinDate.getFullYear()}-${String(emp.joinDate.getMonth() + 1).padStart(2, "0")}`;

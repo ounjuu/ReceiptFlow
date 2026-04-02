@@ -241,6 +241,23 @@ export class TradeService {
     const taxAmount = Number(trade.taxAmount);
     const totalAmount = Number(trade.totalAmount);
 
+    // 매출/매입 모두에 필요한 계정코드를 일괄 조회 (N+1 방지)
+    const neededCodes = trade.tradeType === "SALES"
+      ? ["10800", "40100", "25500"]  // 매출채권, 매출, 부가세예수금
+      : ["50100", "13500", "20100"]; // 매입원가, 부가세대급금, 매입채무
+
+    const neededAccounts = await this.prisma.account.findMany({
+      where: { tenantId, code: { in: neededCodes } },
+    });
+    const acctMap = new Map(neededAccounts.map((a) => [a.code, a.id]));
+
+    // 누락된 계정 체크
+    for (const code of neededCodes) {
+      if (!acctMap.has(code)) {
+        throw new BadRequestException(`계정과목(${code})이 존재하지 않습니다`);
+      }
+    }
+
     return this.prisma.$transaction(async (tx) => {
       let journalLines: {
         accountId: string;
@@ -251,25 +268,21 @@ export class TradeService {
 
       if (trade.tradeType === "SALES") {
         // 매출 확정: 차변 매출채권, 대변 매출+부가세예수금
-        const receivableId = await this.getAccountId(tenantId, "10800"); // 매출채권
-        const revenueId = await this.getAccountId(tenantId, "40100"); // 매출
-        const vatPayableId = await this.getAccountId(tenantId, "25500"); // 부가세예수금
-
         journalLines = [
           {
-            accountId: receivableId,
+            accountId: acctMap.get("10800")!,
             vendorId: trade.vendorId,
             debit: totalAmount,
             credit: 0,
           },
           {
-            accountId: revenueId,
+            accountId: acctMap.get("40100")!,
             vendorId: trade.vendorId,
             debit: 0,
             credit: supplyAmount,
           },
           {
-            accountId: vatPayableId,
+            accountId: acctMap.get("25500")!,
             vendorId: trade.vendorId,
             debit: 0,
             credit: taxAmount,
@@ -277,25 +290,21 @@ export class TradeService {
         ];
       } else {
         // 매입 확정: 차변 매입비용+부가세대급금, 대변 매입채무
-        const expenseId = await this.getAccountId(tenantId, "50100"); // 매입원가
-        const vatReceivableId = await this.getAccountId(tenantId, "13500"); // 부가세대급금
-        const payableId = await this.getAccountId(tenantId, "20100"); // 매입채무
-
         journalLines = [
           {
-            accountId: expenseId,
+            accountId: acctMap.get("50100")!,
             vendorId: trade.vendorId,
             debit: supplyAmount,
             credit: 0,
           },
           {
-            accountId: vatReceivableId,
+            accountId: acctMap.get("13500")!,
             vendorId: trade.vendorId,
             debit: taxAmount,
             credit: 0,
           },
           {
-            accountId: payableId,
+            accountId: acctMap.get("20100")!,
             vendorId: trade.vendorId,
             debit: 0,
             credit: totalAmount,
@@ -375,6 +384,21 @@ export class TradeService {
     const paymentAccountCode =
       dto.paymentMethod === "CASH" ? "10100" : "10300"; // 현금 또는 보통예금
 
+    // 필요한 계정코드를 일괄 조회 (N+1 방지)
+    const paymentNeededCodes = trade.tradeType === "SALES"
+      ? [paymentAccountCode, "10800"]  // 현금/예금, 매출채권
+      : ["20100", paymentAccountCode]; // 매입채무, 현금/예금
+    const paymentAccounts = await this.prisma.account.findMany({
+      where: { tenantId, code: { in: [...new Set(paymentNeededCodes)] } },
+    });
+    const payAcctMap = new Map(paymentAccounts.map((a) => [a.code, a.id]));
+
+    for (const code of paymentNeededCodes) {
+      if (!payAcctMap.has(code)) {
+        throw new BadRequestException(`계정과목(${code})이 존재하지 않습니다`);
+      }
+    }
+
     return this.prisma.$transaction(async (tx) => {
       let journalLines: {
         accountId: string;
@@ -385,17 +409,15 @@ export class TradeService {
 
       if (trade.tradeType === "SALES") {
         // 매출 입금: 차변 현금/예금, 대변 매출채권
-        const cashId = await this.getAccountId(tenantId, paymentAccountCode);
-        const receivableId = await this.getAccountId(tenantId, "10800");
         journalLines = [
           {
-            accountId: cashId,
+            accountId: payAcctMap.get(paymentAccountCode)!,
             vendorId: trade.vendorId,
             debit: dto.amount,
             credit: 0,
           },
           {
-            accountId: receivableId,
+            accountId: payAcctMap.get("10800")!,
             vendorId: trade.vendorId,
             debit: 0,
             credit: dto.amount,
@@ -403,17 +425,15 @@ export class TradeService {
         ];
       } else {
         // 매입 출금: 차변 매입채무, 대변 현금/예금
-        const payableId = await this.getAccountId(tenantId, "20100");
-        const cashId = await this.getAccountId(tenantId, paymentAccountCode);
         journalLines = [
           {
-            accountId: payableId,
+            accountId: payAcctMap.get("20100")!,
             vendorId: trade.vendorId,
             debit: dto.amount,
             credit: 0,
           },
           {
-            accountId: cashId,
+            accountId: payAcctMap.get(paymentAccountCode)!,
             vendorId: trade.vendorId,
             debit: 0,
             credit: dto.amount,

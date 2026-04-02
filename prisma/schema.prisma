@@ -260,6 +260,7 @@ model JournalEntry {
 
   @@index([tenantId])
   @@index([date])
+  @@index([tenantId, status, date])
 }
 
 // 전표 라인 (차변/대변)
@@ -571,6 +572,7 @@ model PayrollRecord {
 
   @@unique([employeeId, period])
   @@index([employeeId])
+  @@index([period])
 }
 
 // ──────────────────────────────────

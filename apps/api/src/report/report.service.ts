@@ -251,25 +251,66 @@ export class ReportService {
     if (startDate) dateFilter.gte = new Date(startDate);
     if (endDate) dateFilter.lte = new Date(endDate + "T23:59:59");
 
+    const accountIds = accounts.map((a) => a.id);
+
+    // 기초잔액용 라인 일괄 조회 (N+1 방지)
+    type BalanceLine = { accountId: string; debit: any; credit: any; journalEntry: { exchangeRate: any } };
+    const beforeLinesByAccount = new Map<string, BalanceLine[]>();
+    let beforeLines: BalanceLine[] = [];
+    if (startDate) {
+      beforeLines = await this.prisma.journalLine.findMany({
+        where: {
+          accountId: { in: accountIds },
+          journalEntry: {
+            status: "POSTED",
+            tenantId,
+            date: { lt: new Date(startDate) },
+          },
+        },
+        include: { journalEntry: { select: { exchangeRate: true } } },
+      });
+
+      for (const l of beforeLines) {
+        const arr = beforeLinesByAccount.get(l.accountId) || [];
+        arr.push(l);
+        beforeLinesByAccount.set(l.accountId, arr);
+      }
+    }
+
+    // 기간 내 거래 라인 일괄 조회 (N+1 방지)
+    const periodLines = await this.prisma.journalLine.findMany({
+      where: {
+        accountId: { in: accountIds },
+        journalEntry: {
+          status: "POSTED",
+          tenantId,
+          ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
+        },
+      },
+      include: {
+        journalEntry: {
+          select: { id: true, date: true, description: true, exchangeRate: true },
+        },
+      },
+      orderBy: { journalEntry: { date: "asc" } },
+    });
+
+    // 계정별로 그룹핑
+    const periodLinesByAccount = new Map<string, typeof periodLines>();
+    for (const l of periodLines) {
+      const arr = periodLinesByAccount.get(l.accountId) || [];
+      arr.push(l);
+      periodLinesByAccount.set(l.accountId, arr);
+    }
+
     const result = [];
 
     for (const account of accounts) {
-      // 기초잔액: startDate 이전 POSTED 전표의 합계
+      // 기초잔액 계산
       let openingBalance = 0;
       if (startDate) {
-        const beforeLines = await this.prisma.journalLine.findMany({
-          where: {
-            accountId: account.id,
-            journalEntry: {
-              status: "POSTED",
-              tenantId,
-              date: { lt: new Date(startDate) },
-            },
-          },
-          include: { journalEntry: { select: { exchangeRate: true } } },
-        });
-
-        openingBalance = beforeLines.reduce((sum, l) => {
+        const accountBeforeLines = beforeLinesByAccount.get(account.id) || [];
+        openingBalance = accountBeforeLines.reduce((sum, l) => {
           const debit = Number(l.debit) * Number(l.journalEntry.exchangeRate);
           const credit = Number(l.credit) * Number(l.journalEntry.exchangeRate);
           return account.normalBalance === "DEBIT"
@@ -278,23 +319,7 @@ export class ReportService {
         }, 0);
       }
 
-      // 기간 내 거래 조회
-      const lines = await this.prisma.journalLine.findMany({
-        where: {
-          accountId: account.id,
-          journalEntry: {
-            status: "POSTED",
-            tenantId,
-            ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
-          },
-        },
-        include: {
-          journalEntry: {
-            select: { id: true, date: true, description: true, exchangeRate: true },
-          },
-        },
-        orderBy: { journalEntry: { date: "asc" } },
-      });
+      const lines = periodLinesByAccount.get(account.id) || [];
 
       // 거래가 없고 기초잔액도 없으면 스킵
       if (lines.length === 0 && openingBalance === 0) continue;
@@ -804,29 +829,53 @@ export class ReportService {
     const income = await this.incomeStatement(tenantId, startDate, endDate);
     const netIncome = income.netIncome;
 
-    // 계정 잔액 변동 계산 헬퍼
-    const getAccountChange = async (code: string) => {
-      const account = await this.prisma.account.findFirst({
-        where: { tenantId, code },
-      });
-      if (!account) return 0;
+    // 현금흐름표에 필요한 모든 계정코드를 일괄 조회 (N+1 방지)
+    const cfCodes = ["50900", "10500", "11300", "20100", "20300", "20700", "23100", "30100", "10100", "10300"];
+    const cfAccounts = await this.prisma.account.findMany({
+      where: { tenantId, code: { in: cfCodes } },
+    });
+    const cfAccountMap = new Map(cfAccounts.map((a) => [a.code, a]));
 
-      const dateFilter: Record<string, unknown> = {};
-      if (startDate) dateFilter.gte = new Date(startDate);
-      if (endDate) dateFilter.lte = new Date(endDate + "T23:59:59");
+    // 고정자산 계정 (13xxx) 조회
+    const fixedAssetAccounts = await this.prisma.account.findMany({
+      where: { tenantId, code: { gte: "13000", lt: "14000" } },
+    });
 
-      const lines = await this.prisma.journalLine.findMany({
-        where: {
-          accountId: account.id,
-          journalEntry: {
-            status: "POSTED",
-            tenantId,
-            ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
+    // 모든 관련 계정의 ID를 모아서 기간 내 라인 일괄 조회
+    const allCfAccountIds = [
+      ...cfAccounts.map((a) => a.id),
+      ...fixedAssetAccounts.map((a) => a.id),
+    ];
+
+    const dateFilter2: Record<string, unknown> = {};
+    if (startDate) dateFilter2.gte = new Date(startDate);
+    if (endDate) dateFilter2.lte = new Date(endDate + "T23:59:59");
+
+    const allCfLines = allCfAccountIds.length > 0
+      ? await this.prisma.journalLine.findMany({
+          where: {
+            accountId: { in: allCfAccountIds },
+            journalEntry: {
+              status: "POSTED",
+              tenantId,
+              ...(Object.keys(dateFilter2).length > 0 && { date: dateFilter2 }),
+            },
           },
-        },
-        include: { journalEntry: { select: { exchangeRate: true } } },
-      });
+          include: { journalEntry: { select: { exchangeRate: true } } },
+        })
+      : [];
 
+    // 계정별로 그룹핑 후 변동액 계산
+    const cfLinesByAccountId = new Map<string, typeof allCfLines>();
+    for (const l of allCfLines) {
+      const arr = cfLinesByAccountId.get(l.accountId) || [];
+      arr.push(l);
+      cfLinesByAccountId.set(l.accountId, arr);
+    }
+
+    const calcChange = (accountId: string | undefined) => {
+      if (!accountId) return 0;
+      const lines = cfLinesByAccountId.get(accountId) || [];
       return lines.reduce(
         (sum, l) =>
           sum +
@@ -835,43 +884,19 @@ export class ReportService {
       );
     };
 
-    // 고정자산 계정 변동 (코드 13xxx)
-    const getFixedAssetChange = async () => {
-      const accounts = await this.prisma.account.findMany({
-        where: { tenantId, code: { gte: "13000", lt: "14000" } },
-      });
-      if (accounts.length === 0) return 0;
+    const getAccountChange = (code: string) => calcChange(cfAccountMap.get(code)?.id);
 
-      const dateFilter: Record<string, unknown> = {};
-      if (startDate) dateFilter.gte = new Date(startDate);
-      if (endDate) dateFilter.lte = new Date(endDate + "T23:59:59");
-
-      const lines = await this.prisma.journalLine.findMany({
-        where: {
-          accountId: { in: accounts.map((a) => a.id) },
-          journalEntry: {
-            status: "POSTED",
-            tenantId,
-            ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
-          },
-        },
-        include: { journalEntry: { select: { exchangeRate: true } } },
-      });
-
-      return lines.reduce(
-        (sum, l) =>
-          sum +
-          (Number(l.debit) - Number(l.credit)) * Number(l.journalEntry.exchangeRate),
-        0,
-      );
-    };
+    // 고정자산 변동 합산
+    const fixedAssetChange = fixedAssetAccounts.reduce(
+      (sum, a) => sum + calcChange(a.id), 0,
+    );
 
     // 영업활동 항목
-    const depreciation = await getAccountChange("50900"); // 감가상각비 (비현금 비용, 가산)
-    const arChange = await getAccountChange("10500");     // 매출채권 변동
-    const inventoryChange = await getAccountChange("11300"); // 재고 변동
-    const apChange = await getAccountChange("20100");     // 매입채무 변동
-    const accruedChange = await getAccountChange("20300"); // 미지급금 변동
+    const depreciation = getAccountChange("50900"); // 감가상각비 (비현금 비용, 가산)
+    const arChange = getAccountChange("10500");     // 매출채권 변동
+    const inventoryChange = getAccountChange("11300"); // 재고 변동
+    const apChange = getAccountChange("20100");     // 매입채무 변동
+    const accruedChange = getAccountChange("20300"); // 미지급금 변동
 
     const operatingItems = [
       { name: "당기순이익", amount: netIncome },
@@ -884,16 +909,15 @@ export class ReportService {
     const operatingTotal = operatingItems.reduce((s, i) => s + i.amount, 0);
 
     // 투자활동
-    const fixedAssetChange = await getFixedAssetChange();
     const investingItems = [
       { name: "유형자산 취득/처분", amount: -fixedAssetChange },
     ];
     const investingTotal = investingItems.reduce((s, i) => s + i.amount, 0);
 
     // 재무활동
-    const shortDebtChange = await getAccountChange("20700"); // 단기차입금
-    const longDebtChange = await getAccountChange("23100");  // 장기차입금
-    const capitalChange = await getAccountChange("30100");   // 자본금
+    const shortDebtChange = getAccountChange("20700"); // 단기차입금
+    const longDebtChange = getAccountChange("23100");  // 장기차입금
+    const capitalChange = getAccountChange("30100");   // 자본금
     const financingItems = [
       { name: "단기차입금 변동", amount: shortDebtChange },
       { name: "장기차입금 변동", amount: longDebtChange },
@@ -906,10 +930,9 @@ export class ReportService {
 
     // 기초 현금 잔액
     const cashCodes = ["10100", "10300"];
-    const cashAccounts = await this.prisma.account.findMany({
-      where: { tenantId, code: { in: cashCodes } },
-    });
-    const cashAccountIds = cashAccounts.map((a) => a.id);
+    const cashAccountIds = cashCodes
+      .map((c) => cfAccountMap.get(c)?.id)
+      .filter((id): id is string => !!id);
 
     let openingCash = 0;
     if (startDate && cashAccountIds.length > 0) {

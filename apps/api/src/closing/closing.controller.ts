@@ -47,6 +47,17 @@ export class ClosingController {
     return this.closingService.close(tenantId, body.year, body.month, req.user.sub);
   }
 
+  // 전기이월 실행
+  @Post("carry-forward")
+  @Roles("ADMIN")
+  async carryForward(
+    @CurrentTenant() tenantId: string,
+    @Body() body: { year: number },
+    @Req() req: { user: { sub: string } },
+  ) {
+    return this.closingService.carryForward(tenantId, body.year, req.user.sub);
+  }
+
   // 마감 취소
   @Patch(":id/reopen")
   @Roles("ADMIN")

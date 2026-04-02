@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
+import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { ClosingService } from "../closing/closing.service";
 import { AuditLogService } from "../audit-log/audit-log.service";
@@ -11,6 +11,7 @@ import * as path from "path";
 export class JournalService {
   constructor(
     private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => ClosingService))
     private readonly closingService: ClosingService,
     private readonly auditLogService: AuditLogService,
   ) {}
@@ -63,8 +64,9 @@ export class JournalService {
     status?: string;
     lines: { accountId: string; debit: number; credit: number; vendorId?: string; projectId?: string; departmentId?: string }[];
     tx?: any; // Prisma 트랜잭션 클라이언트
+    skipClosedPeriodCheck?: boolean; // 결산 이월 등 관리자 작업 시 마감 체크 건너뜀
   }) {
-    const { tenantId, date, description, status = "POSTED", lines, tx } = params;
+    const { tenantId, date, description, status = "POSTED", lines, tx, skipClosedPeriodCheck = false } = params;
     const db = tx || this.prisma;
 
     // 차대변 균형 검증
@@ -77,7 +79,9 @@ export class JournalService {
     }
 
     // 마감 기간 체크
-    await this.checkClosedPeriod(tenantId, date);
+    if (!skipClosedPeriodCheck) {
+      await this.checkClosedPeriod(tenantId, date);
+    }
 
     const entry = await db.journalEntry.create({
       data: {
@@ -187,6 +191,21 @@ export class JournalService {
   ) {
     const results: { index: number; status: string; error?: string; data?: any }[] = [];
 
+    // 모든 전표에서 사용하는 계정코드를 일괄 조회 (N+1 방지)
+    const allAccountCodes = new Set<string>();
+    for (const j of journals) {
+      if (j.lines) {
+        for (const line of j.lines) {
+          allAccountCodes.add(line.accountCode);
+        }
+      }
+    }
+
+    const accounts = await this.prisma.account.findMany({
+      where: { tenantId, code: { in: [...allAccountCodes] } },
+    });
+    const accountCodeMap = new Map(accounts.map((a) => [a.code, a]));
+
     for (let i = 0; i < journals.length; i++) {
       try {
         const j = journals[i];
@@ -195,12 +214,10 @@ export class JournalService {
           continue;
         }
 
-        // 계정코드 → accountId 변환
+        // 계정코드 → accountId 변환 (사전 조회된 맵 사용)
         const resolvedLines: JournalLineDto[] = [];
         for (const line of j.lines) {
-          const account = await this.prisma.account.findUnique({
-            where: { tenantId_code: { tenantId, code: line.accountCode } },
-          });
+          const account = accountCodeMap.get(line.accountCode);
           if (!account) {
             throw new BadRequestException(`계정코드 ${line.accountCode}을 찾을 수 없습니다`);
           }

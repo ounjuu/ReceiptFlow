@@ -14,3 +14,16 @@ export interface AccountingPeriod {
   closedAt: string | null;
   closedBy: string | null;
 }
+
+export interface CarryForwardSummary {
+  assetBalance: number;
+  liabilityBalance: number;
+  equityBalance: number;
+  netIncome: number;
+}
+
+export interface CarryForwardResult {
+  carryForwardEntry: unknown | null;
+  profitClosingEntry: unknown | null;
+  summary: CarryForwardSummary;
+}
