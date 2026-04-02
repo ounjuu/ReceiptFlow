@@ -34,6 +34,7 @@ const ko = {
   nav_taxFiling: "전자신고",
   nav_members: "멤버 관리",
   nav_auditLogs: "감사 로그",
+  nav_vendorSummary: "거래처별 현황",
   nav_settings: "설정",
 
   // 네비게이션 그룹
@@ -189,6 +190,27 @@ const ko = {
   common_filter: "필터",
   common_all: "전체",
   common_won: "원",
+
+  // 거래처별 현황
+  vendorSummary_title: "거래처별 현황",
+  vendorSummary_subtitle: "거래처별 매출/매입 현황을 확인하세요",
+  vendorSummary_period: "기간",
+  vendorSummary_reset: "초기화",
+  vendorSummary_vendorCount: "총 거래처 수",
+  vendorSummary_totalSales: "총 매출",
+  vendorSummary_totalPurchase: "총 매입",
+  vendorSummary_totalNet: "순액",
+  vendorSummary_unit: "(단위: 원)",
+  vendorSummary_download: "엑셀 다운로드",
+  vendorSummary_loading: "불러오는 중...",
+  vendorSummary_empty: "조회된 거래 내역이 없습니다",
+  vendorSummary_colVendor: "거래처명",
+  vendorSummary_colBizNo: "사업자번호",
+  vendorSummary_colSales: "매출",
+  vendorSummary_colPurchase: "매입",
+  vendorSummary_colNet: "순액",
+  vendorSummary_colCount: "건수",
+  vendorSummary_total: "합계",
 } as const;
 
 export type TranslationKey = keyof typeof ko;

@@ -122,4 +122,13 @@ export class ReportController {
   ) {
     return this.reportService.journalBook(tenantId, startDate, endDate);
   }
+
+  @Get("vendor-summary")
+  async vendorSummary(
+    @CurrentTenant() tenantId: string,
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string,
+  ) {
+    return this.reportService.vendorSummary(tenantId, startDate, endDate);
+  }
 }

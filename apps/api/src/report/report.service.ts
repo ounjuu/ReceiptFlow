@@ -1213,4 +1213,89 @@ export class ReportService {
       entryCount: entries.length,
     };
   }
+
+  // 거래처별 매출/매입 현황
+  async vendorSummary(tenantId: string, startDate?: string, endDate?: string) {
+    const dateFilter: Record<string, unknown> = {};
+    if (startDate) dateFilter.gte = new Date(startDate);
+    if (endDate) dateFilter.lte = new Date(endDate + "T23:59:59");
+
+    // POSTED 상태이며 vendorId가 있는 JournalLine 조회
+    const lines = await this.prisma.journalLine.findMany({
+      where: {
+        vendorId: { not: null },
+        journalEntry: {
+          status: "POSTED",
+          tenantId,
+          ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
+        },
+      },
+      include: {
+        journalEntry: { select: { exchangeRate: true } },
+        account: { select: { type: true } },
+        vendor: { select: { id: true, name: true, bizNo: true } },
+      },
+    });
+
+    // 거래처별 집계
+    const vendorMap = new Map<string, {
+      vendorId: string;
+      vendorName: string;
+      bizNo: string | null;
+      salesAmount: number;
+      purchaseAmount: number;
+      transactionCount: number;
+      journalEntryIds: Set<string>;
+    }>();
+
+    for (const line of lines) {
+      if (!line.vendor) continue;
+
+      const vid = line.vendor.id;
+      if (!vendorMap.has(vid)) {
+        vendorMap.set(vid, {
+          vendorId: vid,
+          vendorName: line.vendor.name,
+          bizNo: line.vendor.bizNo,
+          salesAmount: 0,
+          purchaseAmount: 0,
+          transactionCount: 0,
+          journalEntryIds: new Set(),
+        });
+      }
+
+      const entry = vendorMap.get(vid)!;
+      const rate = Number(line.journalEntry.exchangeRate);
+
+      if (line.account.type === "REVENUE") {
+        // 매출: 대변(credit) 합계
+        entry.salesAmount += Number(line.credit) * rate;
+      } else if (line.account.type === "EXPENSE") {
+        // 매입: 차변(debit) 합계
+        entry.purchaseAmount += Number(line.debit) * rate;
+      }
+
+      entry.journalEntryIds.add(line.journalEntryId);
+    }
+
+    const vendors = Array.from(vendorMap.values()).map((v) => ({
+      vendorId: v.vendorId,
+      vendorName: v.vendorName,
+      bizNo: v.bizNo,
+      salesAmount: v.salesAmount,
+      purchaseAmount: v.purchaseAmount,
+      netAmount: v.salesAmount - v.purchaseAmount,
+      transactionCount: v.journalEntryIds.size,
+    }));
+
+    // 매출 내림차순 정렬
+    vendors.sort((a, b) => b.salesAmount - a.salesAmount);
+
+    return {
+      vendors,
+      totalSales: vendors.reduce((sum, v) => sum + v.salesAmount, 0),
+      totalPurchase: vendors.reduce((sum, v) => sum + v.purchaseAmount, 0),
+      totalNet: vendors.reduce((sum, v) => sum + v.netAmount, 0),
+    };
+  }
 }

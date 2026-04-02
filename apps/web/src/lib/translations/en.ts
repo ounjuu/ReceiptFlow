@@ -36,6 +36,7 @@ const en: Record<TranslationKey, string> = {
   nav_taxFiling: "Tax Filing",
   nav_members: "Members",
   nav_auditLogs: "Audit Logs",
+  nav_vendorSummary: "Vendor Summary",
   nav_settings: "Settings",
 
   // Navigation Groups
@@ -191,6 +192,27 @@ const en: Record<TranslationKey, string> = {
   common_filter: "Filter",
   common_all: "All",
   common_won: "KRW",
+
+  // Vendor Summary
+  vendorSummary_title: "Vendor Summary",
+  vendorSummary_subtitle: "View sales and purchase summary by vendor",
+  vendorSummary_period: "Period",
+  vendorSummary_reset: "Reset",
+  vendorSummary_vendorCount: "Total Vendors",
+  vendorSummary_totalSales: "Total Sales",
+  vendorSummary_totalPurchase: "Total Purchases",
+  vendorSummary_totalNet: "Net Amount",
+  vendorSummary_unit: "(Unit: KRW)",
+  vendorSummary_download: "Excel Download",
+  vendorSummary_loading: "Loading...",
+  vendorSummary_empty: "No transactions found",
+  vendorSummary_colVendor: "Vendor",
+  vendorSummary_colBizNo: "Biz No.",
+  vendorSummary_colSales: "Sales",
+  vendorSummary_colPurchase: "Purchases",
+  vendorSummary_colNet: "Net",
+  vendorSummary_colCount: "Count",
+  vendorSummary_total: "Total",
 };
 
 export default en;
