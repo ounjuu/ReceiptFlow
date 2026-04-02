@@ -378,6 +378,20 @@ export default function JournalsPage() {
     }
   };
 
+  const handleCopy = (id: string) => {
+    apiPost<JournalEntry>(`/journals/${id}/copy`, {}).then(() => {
+      queryClient.invalidateQueries({ queryKey: ["journals"] });
+    });
+  };
+
+  const handleReverse = (id: string) => {
+    if (confirm("이 전표의 역분개 전표를 생성하시겠습니까?")) {
+      apiPost<JournalEntry>(`/journals/${id}/reverse`, {}).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["journals"] });
+      });
+    }
+  };
+
   const nextStatus = (current: string): { label: string; next: string } | null => {
     switch (current) {
       case "DRAFT": return { label: "승인", next: "APPROVED" };
@@ -530,6 +544,8 @@ export default function JournalsPage() {
         deleteAttachmentMut={deleteAttachmentMut}
         startEdit={startEdit}
         handleDelete={handleDelete}
+        handleCopy={handleCopy}
+        handleReverse={handleReverse}
         nextStatus={nextStatus}
         setExpandedId={setExpandedId}
         onClearSelection={() => setSelectedIds(new Set())}

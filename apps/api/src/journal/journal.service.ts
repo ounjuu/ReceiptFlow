@@ -260,6 +260,56 @@ export class JournalService {
     });
   }
 
+  // 전표 복사 (같은 내용으로 새 전표 생성, 날짜만 오늘로)
+  async copy(id: string, date?: string) {
+    const original = await this.prisma.journalEntry.findUnique({
+      where: { id },
+      include: { lines: { include: { account: true, vendor: true, project: true, department: true } } },
+    });
+    if (!original) throw new NotFoundException("원본 전표를 찾을 수 없습니다");
+
+    const newDate = date ? new Date(date) : new Date();
+    return this.createEntry({
+      tenantId: original.tenantId,
+      date: newDate,
+      description: `[복사] ${original.description || ""}`,
+      status: "DRAFT",
+      lines: original.lines.map((l) => ({
+        accountId: l.accountId,
+        debit: Number(l.debit),
+        credit: Number(l.credit),
+        vendorId: l.vendorId || undefined,
+        projectId: l.projectId || undefined,
+        departmentId: l.departmentId || undefined,
+      })),
+    });
+  }
+
+  // 역분개 (차변/대변 반대로 새 전표 생성)
+  async reverse(id: string, date?: string) {
+    const original = await this.prisma.journalEntry.findUnique({
+      where: { id },
+      include: { lines: { include: { account: true, vendor: true, project: true, department: true } } },
+    });
+    if (!original) throw new NotFoundException("원본 전표를 찾을 수 없습니다");
+
+    const newDate = date ? new Date(date) : new Date();
+    return this.createEntry({
+      tenantId: original.tenantId,
+      date: newDate,
+      description: `[역분개] ${original.description || ""}`,
+      status: "DRAFT",
+      lines: original.lines.map((l) => ({
+        accountId: l.accountId,
+        debit: Number(l.credit),   // 차변 ↔ 대변 반전
+        credit: Number(l.debit),
+        vendorId: l.vendorId || undefined,
+        projectId: l.projectId || undefined,
+        departmentId: l.departmentId || undefined,
+      })),
+    });
+  }
+
   // 단건 조회
   async findOne(id: string) {
     const entry = await this.prisma.journalEntry.findUnique({

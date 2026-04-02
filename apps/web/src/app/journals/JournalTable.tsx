@@ -46,6 +46,8 @@ export interface JournalTableProps {
   deleteAttachmentMut: UseMutationResult<unknown, Error, { journalId: string; attachmentId: string }>;
   startEdit: (j: JournalEntry) => void;
   handleDelete: (id: string) => void;
+  handleCopy: (id: string) => void;
+  handleReverse: (id: string) => void;
   nextStatus: (current: string) => { label: string; next: string } | null;
   setExpandedId: (id: string | null) => void;
   onClearSelection: () => void;
@@ -82,6 +84,8 @@ export default function JournalTable({
   deleteAttachmentMut,
   startEdit,
   handleDelete,
+  handleCopy,
+  handleReverse,
   nextStatus,
   setExpandedId,
   onClearSelection,
@@ -308,6 +312,24 @@ export default function JournalTable({
                         onClick={() => startEdit(j)}
                       >
                         수정
+                      </button>
+                    )}
+                    {canEdit && (
+                      <button
+                        className={styles.editBtn}
+                        onClick={() => handleCopy(j.id)}
+                        style={{ fontSize: "0.75rem" }}
+                      >
+                        복사
+                      </button>
+                    )}
+                    {canEdit && j.status === "POSTED" && (
+                      <button
+                        className={styles.statusBtn}
+                        onClick={() => handleReverse(j.id)}
+                        style={{ fontSize: "0.75rem" }}
+                      >
+                        역분개
                       </button>
                     )}
                     {j.status !== "POSTED" && canDelete && (

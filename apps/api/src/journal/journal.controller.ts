@@ -62,6 +62,20 @@ export class JournalController {
     return this.journalService.batchCreate(tenantId, body.journals, req.user.sub);
   }
 
+  // 전표 복사
+  @Post(":id/copy")
+  @Roles("ADMIN", "ACCOUNTANT")
+  async copy(@Param("id") id: string, @Body() body: { date?: string }) {
+    return this.journalService.copy(id, body.date);
+  }
+
+  // 역분개
+  @Post(":id/reverse")
+  @Roles("ADMIN", "ACCOUNTANT")
+  async reverse(@Param("id") id: string, @Body() body: { date?: string }) {
+    return this.journalService.reverse(id, body.date);
+  }
+
   // 일괄 상태 변경 (`:id` 라우트보다 먼저 선언)
   @Patch("batch/status")
   @Roles("ADMIN", "ACCOUNTANT")
