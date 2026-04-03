@@ -27,6 +27,7 @@ const ko = {
   nav_bankAccounts: "은행/계좌",
   nav_vatReturns: "부가세 신고",
   nav_exchangeRates: "환율 관리",
+  nav_depreciationSchedule: "감가상각 명세서",
   nav_journalBook: "분개장",
   nav_journalTemplates: "반복 전표",
   nav_journalRules: "자동 전표 규칙",

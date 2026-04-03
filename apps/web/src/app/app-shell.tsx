@@ -74,6 +74,7 @@ const navGroups: NavGroup[] = [
       { href: "/budgets", labelKey: "nav_budgets", roles: ["ADMIN", "ACCOUNTANT"] },
       { href: "/bank-accounts", labelKey: "nav_bankAccounts" },
       { href: "/fixed-assets", labelKey: "nav_fixedAssets", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/depreciation-schedule", labelKey: "nav_depreciationSchedule" as TranslationKey },
       { href: "/exchange-rates", labelKey: "nav_exchangeRates" },
     ],
   },

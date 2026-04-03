@@ -1460,4 +1460,105 @@ export class ReportService {
       totalNet: vendors.reduce((sum, v) => sum + v.netAmount, 0),
     };
   }
+
+  // 감가상각 명세서
+  async depreciationSchedule(tenantId: string, year: number) {
+    // ACTIVE + FULLY_DEPRECIATED 자산 조회
+    const assets = await this.prisma.fixedAsset.findMany({
+      where: {
+        tenantId,
+        status: { in: ["ACTIVE", "FULLY_DEPRECIATED"] },
+      },
+      include: {
+        assetAccount: { select: { code: true, name: true } },
+        depreciationRecords: { orderBy: { period: "asc" } },
+      },
+      orderBy: { acquisitionDate: "asc" },
+    });
+
+    const yearStr = String(year);
+    const prevYearEnd = `${year - 1}-12`; // 전기말 기준
+
+    const assetRows = assets.map((asset) => {
+      const acquisitionCost = Number(asset.acquisitionCost);
+      const residualValue = Number(asset.residualValue);
+      const usefulLifeMonths = asset.usefulLifeMonths;
+      const method = asset.depreciationMethod;
+
+      // 전기말 상각누계액: year 이전 마지막 record의 accumulatedAmount
+      const prevRecords = asset.depreciationRecords.filter(
+        (r) => r.period <= prevYearEnd,
+      );
+      const lastPrevRecord = prevRecords.length > 0 ? prevRecords[prevRecords.length - 1] : null;
+      const prevAccumulatedDep = lastPrevRecord
+        ? Number(lastPrevRecord.accumulatedAmount)
+        : 0;
+
+      // 전기말 장부가액
+      const prevBookValue = acquisitionCost - prevAccumulatedDep;
+
+      // 당기 상각액: 해당 year의 DepreciationRecord amount 합계
+      const currentYearRecords = asset.depreciationRecords.filter(
+        (r) => r.period >= `${year}-01` && r.period <= `${year}-12`,
+      );
+      const currentYearDep = currentYearRecords.reduce(
+        (sum, r) => sum + Number(r.amount),
+        0,
+      );
+
+      // 당기말 상각누계액 = 전기말 + 당기
+      const currentAccumulatedDep = prevAccumulatedDep + currentYearDep;
+
+      // 당기말 장부가액
+      const currentBookValue = acquisitionCost - currentAccumulatedDep;
+
+      // 상각률 계산
+      let depRate = 0;
+      if (method === "STRAIGHT_LINE" && usefulLifeMonths > 0) {
+        depRate = Math.round((12 / usefulLifeMonths) * 10000) / 100; // %
+      } else if (method === "DECLINING_BALANCE" && usefulLifeMonths > 0) {
+        const usefulLifeYears = usefulLifeMonths / 12;
+        const safeResidual = Math.max(residualValue, acquisitionCost * 0.05);
+        depRate =
+          Math.round(
+            (1 - Math.pow(safeResidual / acquisitionCost, 1 / usefulLifeYears)) * 10000,
+          ) / 100;
+      }
+
+      return {
+        id: asset.id,
+        name: asset.name,
+        assetAccountCode: asset.assetAccount.code,
+        assetAccountName: asset.assetAccount.name,
+        acquisitionDate: asset.acquisitionDate.toISOString().split("T")[0],
+        acquisitionCost,
+        usefulLifeMonths,
+        depreciationMethod: method,
+        residualValue,
+        prevAccumulatedDep,
+        prevBookValue,
+        currentYearDep,
+        currentAccumulatedDep,
+        currentBookValue,
+        depRate,
+        status: asset.status,
+      };
+    });
+
+    // 합계
+    const totals = {
+      acquisitionCost: assetRows.reduce((s, a) => s + a.acquisitionCost, 0),
+      prevAccumulatedDep: assetRows.reduce((s, a) => s + a.prevAccumulatedDep, 0),
+      prevBookValue: assetRows.reduce((s, a) => s + a.prevBookValue, 0),
+      currentYearDep: assetRows.reduce((s, a) => s + a.currentYearDep, 0),
+      currentAccumulatedDep: assetRows.reduce((s, a) => s + a.currentAccumulatedDep, 0),
+      currentBookValue: assetRows.reduce((s, a) => s + a.currentBookValue, 0),
+    };
+
+    return {
+      year,
+      assets: assetRows,
+      totals,
+    };
+  }
 }

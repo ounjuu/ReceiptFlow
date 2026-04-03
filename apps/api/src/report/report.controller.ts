@@ -153,4 +153,12 @@ export class ReportController {
   ) {
     return this.reportService.vendorSummary(tenantId, startDate, endDate);
   }
+
+  @Get("depreciation-schedule")
+  async depreciationSchedule(
+    @CurrentTenant() tenantId: string,
+    @Query("year") year: string,
+  ) {
+    return this.reportService.depreciationSchedule(tenantId, Number(year));
+  }
 }
