@@ -30,6 +30,7 @@ const navGroups: NavGroup[] = [
     labelKey: "navGroup_home" as TranslationKey,
     items: [
       { href: "/dashboard", labelKey: "nav_dashboard" },
+      { href: "/anomaly-detection", labelKey: "nav_anomalyDetection" as TranslationKey },
     ],
   },
   {

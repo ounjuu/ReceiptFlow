@@ -1,12 +1,16 @@
 import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import { ReportService } from "./report.service";
+import { AnomalyService } from "./anomaly.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard)
 @Controller("reports")
 export class ReportController {
-  constructor(private readonly reportService: ReportService) {}
+  constructor(
+    private readonly reportService: ReportService,
+    private readonly anomalyService: AnomalyService,
+  ) {}
 
   @Get("daily-summary")
   async dailySummary(
@@ -160,5 +164,10 @@ export class ReportController {
     @Query("year") year: string,
   ) {
     return this.reportService.depreciationSchedule(tenantId, Number(year));
+  }
+
+  @Get("anomalies")
+  async detectAnomalies(@CurrentTenant() tenantId: string) {
+    return this.anomalyService.detectAnomalies(tenantId);
   }
 }

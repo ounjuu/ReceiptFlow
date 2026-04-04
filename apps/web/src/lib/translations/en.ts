@@ -39,6 +39,7 @@ const en: Record<TranslationKey, string> = {
   nav_auditLogs: "Audit Logs",
   nav_vendorSummary: "Vendor Summary",
   nav_comparativeReports: "Comparative Reports",
+  nav_anomalyDetection: "AI Anomaly Detection",
   nav_settings: "Settings",
 
   // Navigation Groups
@@ -251,6 +252,36 @@ const en: Record<TranslationKey, string> = {
   comp_equityTotal: "Total Equity",
   comp_retainedEarnings: "Retained Earnings",
   comp_totalLiabilitiesAndEquity: "Total Liabilities & Equity",
+
+  // AI Anomaly Detection
+  anomaly_title: "AI Anomaly Detection",
+  anomaly_runBtn: "Run Analysis",
+  anomaly_analyzing: "Analyzing...",
+  anomaly_riskLevel: "Risk Level",
+  anomaly_analyzedAt: "Analyzed at",
+  anomaly_clickToAnalyze: "Click \"Run Analysis\" to detect anomalous transactions",
+  anomaly_totalDetected: "Total Detected",
+  anomaly_tabAmount: "Amount Anomaly",
+  anomaly_tabVendor: "New Vendor",
+  anomaly_tabTime: "Time Anomaly",
+  anomaly_tabDuplicate: "Duplicate Suspect",
+  anomaly_colDate: "Date",
+  anomaly_colDescription: "Description",
+  anomaly_colAccount: "Account",
+  anomaly_colAmount: "Amount",
+  anomaly_colAverage: "Average",
+  anomaly_colDeviationRate: "Deviation",
+  anomaly_colVendor: "Vendor",
+  anomaly_colDayOfWeek: "Day",
+  anomaly_colNote: "Note",
+  anomaly_colCount: "Count",
+  anomaly_won: " KRW",
+  anomaly_vendorInfo: "Vendors with no transaction history in the past 6 months",
+  anomaly_weekendNote: "Weekend transaction",
+  anomaly_noAmountAnomalies: "No amount anomalies detected",
+  anomaly_noVendorAnomalies: "No new vendor anomalies detected",
+  anomaly_noTimeAnomalies: "No time anomalies detected",
+  anomaly_noDuplicates: "No duplicate suspects detected",
 };
 
 export default en;

@@ -37,6 +37,7 @@ const ko = {
   nav_auditLogs: "감사 로그",
   nav_vendorSummary: "거래처별 현황",
   nav_comparativeReports: "비교 재무제표",
+  nav_anomalyDetection: "AI 이상거래 감지",
   nav_settings: "설정",
 
   // 네비게이션 그룹
@@ -249,6 +250,36 @@ const ko = {
   comp_equityTotal: "자본 합계",
   comp_retainedEarnings: "이익잉여금 (당기)",
   comp_totalLiabilitiesAndEquity: "부채 및 자본 총계",
+
+  // AI 이상거래 감지
+  anomaly_title: "AI 이상거래 감지",
+  anomaly_runBtn: "분석 실행",
+  anomaly_analyzing: "분석 중...",
+  anomaly_riskLevel: "위험도",
+  anomaly_analyzedAt: "분석 시점",
+  anomaly_clickToAnalyze: "\"분석 실행\" 버튼을 클릭하여 이상거래를 감지하세요",
+  anomaly_totalDetected: "총 감지",
+  anomaly_tabAmount: "금액 이상",
+  anomaly_tabVendor: "신규 거래처",
+  anomaly_tabTime: "시간 이상",
+  anomaly_tabDuplicate: "중복 의심",
+  anomaly_colDate: "일자",
+  anomaly_colDescription: "적요",
+  anomaly_colAccount: "계정",
+  anomaly_colAmount: "금액",
+  anomaly_colAverage: "평균",
+  anomaly_colDeviationRate: "편차율",
+  anomaly_colVendor: "거래처",
+  anomaly_colDayOfWeek: "요일",
+  anomaly_colNote: "비고",
+  anomaly_colCount: "건수",
+  anomaly_won: "원",
+  anomaly_vendorInfo: "최근 6개월 거래 이력이 없는 신규 거래처입니다",
+  anomaly_weekendNote: "주말 거래",
+  anomaly_noAmountAnomalies: "금액 이상 거래가 감지되지 않았습니다",
+  anomaly_noVendorAnomalies: "신규 거래처가 감지되지 않았습니다",
+  anomaly_noTimeAnomalies: "시간 이상 거래가 감지되지 않았습니다",
+  anomaly_noDuplicates: "중복 의심 거래가 감지되지 않았습니다",
 } as const;
 
 export type TranslationKey = keyof typeof ko;
