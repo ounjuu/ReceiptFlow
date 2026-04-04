@@ -12,7 +12,7 @@
   justify-content: center;
   align-items: center;
   padding: 60px;
-  background: linear-gradient(135deg, var(--primary), #9b7dd4);
+  background: linear-gradient(135deg, #1e2a3a, #2563eb);
   color: #fff;
   position: relative;
   overflow: hidden;
@@ -203,7 +203,7 @@
 }
 
 .submitBtn:not(:disabled):hover {
-  background: #6a4aad;
+  background: #1d4ed8;
 }
 
 .submitBtn:not(:disabled):active {

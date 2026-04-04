@@ -4,21 +4,24 @@
 }
 
 .sidebar {
-  width: 220px;
+  width: 230px;
   background: var(--sidebar-bg);
   color: var(--sidebar-text);
-  padding: 20px 0;
+  padding: 0;
   flex-shrink: 0;
-  border-right: 1px solid var(--border);
+  border-right: none;
+  display: flex;
+  flex-direction: column;
 }
 
 .logo {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  color: var(--primary);
-  padding: 0 20px 20px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 12px;
+  color: #fff;
+  padding: 16px 20px;
+  background: rgba(0, 0, 0, 0.15);
+  margin-bottom: 8px;
+  letter-spacing: -0.3px;
 }
 
 .nav {
@@ -27,10 +30,11 @@
   gap: 0;
   padding: 0 8px;
   overflow-y: auto;
+  flex: 1;
 }
 
 .navGroup {
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .navGroupLabel {
@@ -38,24 +42,26 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--sidebar-text);
-  padding: 10px 14px 6px;
+  padding: 14px 12px 4px;
   background: none;
   border: none;
   border-radius: 0;
   cursor: pointer;
   transition: color 0.15s;
   text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .navGroupLabel:hover {
-  color: var(--primary);
+  color: #fff;
 }
 
 .navGroupActive {
-  color: var(--primary);
+  color: var(--sidebar-active);
 }
 
 .navGroupArrow {
@@ -70,24 +76,22 @@
 
 .navLink {
   display: block;
-  padding: 8px 14px 8px 24px;
-  font-size: 0.83rem;
+  padding: 7px 12px 7px 22px;
+  font-size: 0.82rem;
   color: var(--sidebar-text);
   border-radius: var(--radius);
   transition: background 0.15s, color 0.15s;
-  opacity: 0.85;
 }
 
 .navLink:hover {
-  background: var(--primary-light);
-  color: var(--primary);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
 }
 
 .navLinkActive {
-  background: var(--primary-light);
-  color: var(--primary);
+  background: rgba(74, 158, 255, 0.15);
+  color: var(--sidebar-active);
   font-weight: 600;
-  opacity: 1;
 }
 
 .main {
@@ -98,15 +102,16 @@
 }
 
 .header {
-  height: 56px;
+  height: 48px;
   background: var(--card-bg);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  font-weight: 600;
+  padding: 0 20px;
+  font-weight: 500;
   color: var(--text);
+  font-size: 0.88rem;
 }
 
 .userArea {
@@ -133,7 +138,7 @@
 .logoutBtn {
   padding: 5px 12px;
   font-size: 0.8rem;
-  background: #fff;
+  background: var(--card-bg);
   color: var(--text-muted);
   border: 1px solid var(--border);
   border-radius: var(--radius);
