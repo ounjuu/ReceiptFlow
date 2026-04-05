@@ -10,11 +10,14 @@ import {
   LineInput,
   CURRENCY_OPTIONS,
   CURRENCY_SYMBOLS,
+  JOURNAL_TYPES,
 } from "./types";
 
 export interface JournalFormProps {
   formMode: "create" | "edit";
   editingId: string | null;
+  journalType: string;
+  setJournalType: (v: string) => void;
   date: string;
   setDate: (v: string) => void;
   description: string;
@@ -48,6 +51,8 @@ export interface JournalFormProps {
 
 export default function JournalForm({
   formMode,
+  journalType,
+  setJournalType,
   date,
   setDate,
   description,
@@ -85,6 +90,19 @@ export default function JournalForm({
       </h2>
       <form onSubmit={handleSubmit}>
         <div className={styles.formTop}>
+          <div className={styles.formRow}>
+            <label className={styles.label}>전표유형</label>
+            <select
+              className={styles.select}
+              value={journalType}
+              onChange={(e) => setJournalType(e.target.value)}
+              disabled={formMode === "edit"}
+            >
+              {JOURNAL_TYPES.map((t) => (
+                <option key={t.code} value={t.code}>{t.name}</option>
+              ))}
+            </select>
+          </div>
           <div className={styles.formRow}>
             <label className={styles.label}>날짜</label>
             <input

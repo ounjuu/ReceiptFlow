@@ -88,8 +88,9 @@ export class JournalController {
     @CurrentTenant() tenantId: string,
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
+    @Query("journalType") journalType?: string,
   ) {
-    return this.journalService.findAll(tenantId, startDate, endDate);
+    return this.journalService.findAll(tenantId, startDate, endDate, journalType);
   }
 
   @Get(":id")

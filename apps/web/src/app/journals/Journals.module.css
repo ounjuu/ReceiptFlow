@@ -528,3 +528,54 @@
   background: var(--primary);
   color: #fff;
 }
+
+/* 전표 유형 탭 */
+.tabBar {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--border);
+}
+
+.tab {
+  padding: 10px 20px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tab:hover {
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.tabActive {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+/* 전표번호 */
+.journalNumber {
+  font-family: monospace;
+  font-size: 0.82rem;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+/* 전표유형 뱃지 */
+.journalType {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: #f0edf5;
+  color: var(--text-muted);
+}

@@ -9,6 +9,7 @@ import {
   JournalEntry,
   JournalAttachment,
   statusLabel,
+  journalTypeLabel,
   CURRENCY_SYMBOLS,
 } from "./types";
 
@@ -112,7 +113,9 @@ export default function JournalTable({
                   default: return s;
                 }
               };
-              exportToXlsx("전표목록", "전표", ["날짜", "거래처", "설명", "상태", "차변합계", "대변합계"], journals.map((j) => [
+              exportToXlsx("전표목록", "전표", ["전표번호", "유형", "날짜", "거래처", "설명", "상태", "차변합계", "대변합계"], journals.map((j) => [
+                j.journalNumber || "",
+                journalTypeLabel(j.journalType),
                 new Date(j.date).toLocaleDateString("ko-KR"),
                 [...new Set(j.lines.map((l) => l.vendor?.name).filter(Boolean))].join(", ") || "",
                 j.description || "",
@@ -232,10 +235,11 @@ export default function JournalTable({
                 />
               </th>
             )}
+            <th>전표번호</th>
+            <th>유형</th>
             <th>날짜</th>
             <th>거래처</th>
             <th>설명</th>
-            <th>통화</th>
             <th>상태</th>
             <th>차변 합계</th>
             <th>대변 합계</th>
@@ -263,12 +267,13 @@ export default function JournalTable({
                     />
                   </td>
                 )}
+                <td className={styles.journalNumber}>{j.journalNumber || "-"}</td>
+                <td><span className={styles.journalType}>{journalTypeLabel(j.journalType)}</span></td>
                 <td>{new Date(j.date).toLocaleDateString("ko-KR")}</td>
                 <td>
                   {[...new Set(j.lines.map((l) => l.vendor?.name).filter(Boolean))].join(", ") || "-"}
                 </td>
                 <td>{j.description || "-"}</td>
-                <td>{j.currency || "KRW"}</td>
                 <td>
                   <span className={`${styles.status} ${s.cls}`}>{s.text}</span>
                 </td>
@@ -345,7 +350,7 @@ export default function JournalTable({
               </tr>
               {expandedId === j.id && (
                 <tr>
-                  <td colSpan={canEdit ? 12 : 11} className={styles.attachmentRow}>
+                  <td colSpan={canEdit ? 13 : 12} className={styles.attachmentRow}>
                     <div className={styles.attachmentSection}>
                       <div className={styles.attachmentList}>
                         {(j.attachments || []).map((att) => (
@@ -401,7 +406,7 @@ export default function JournalTable({
           })}
           {journals.length === 0 && (
             <tr>
-              <td colSpan={canEdit ? 12 : 11} style={{ textAlign: "center", color: "var(--text-muted)" }}>
+              <td colSpan={canEdit ? 13 : 12} style={{ textAlign: "center", color: "var(--text-muted)" }}>
                 전표가 없습니다
               </td>
             </tr>

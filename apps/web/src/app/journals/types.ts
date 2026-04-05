@@ -43,6 +43,8 @@ export interface JournalAttachment {
 
 export interface JournalEntry {
   id: string;
+  journalNumber: string | null;
+  journalType: string;
   date: string;
   description: string | null;
   status: string;
@@ -82,6 +84,23 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   CNY: "¥",
   GBP: "£",
 };
+
+export const JOURNAL_TYPES = [
+  { code: "GENERAL", name: "일반전표" },
+  { code: "PURCHASE", name: "매입전표" },
+  { code: "SALES", name: "매출전표" },
+  { code: "CASH", name: "자금전표" },
+] as const;
+
+export function journalTypeLabel(type: string) {
+  switch (type) {
+    case "GENERAL": return "일반";
+    case "PURCHASE": return "매입";
+    case "SALES": return "매출";
+    case "CASH": return "자금";
+    default: return type;
+  }
+}
 
 export const CURRENCY_OPTIONS = [
   { code: "KRW", name: "원 (KRW)" },

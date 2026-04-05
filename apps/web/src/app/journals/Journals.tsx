@@ -16,6 +16,7 @@ import {
   JournalAttachment,
   LineInput,
   emptyLine,
+  JOURNAL_TYPES,
 } from "./types";
 import JournalForm from "./JournalForm";
 import JournalTable from "./JournalTable";
@@ -23,9 +24,11 @@ import JournalTable from "./JournalTable";
 export default function JournalsPage() {
   const { tenantId, canEdit, canDelete } = useAuth();
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<string>(""); // "" = 전체
   const [formMode, setFormMode] = useState<"none" | "create" | "edit">("none");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [journalType, setJournalType] = useState("GENERAL");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
   const [currency, setCurrency] = useState("KRW");
@@ -41,14 +44,15 @@ export default function JournalsPage() {
   const [filterStart, setFilterStart] = useState("");
   const [filterEnd, setFilterEnd] = useState("");
 
-  const dateParams = [
+  const queryParams = [
     filterStart && `startDate=${filterStart}`,
     filterEnd && `endDate=${filterEnd}`,
+    activeTab && `journalType=${activeTab}`,
   ].filter(Boolean).join("&");
 
   const { data: journals = [] } = useQuery({
-    queryKey: ["journals", filterStart, filterEnd],
-    queryFn: () => apiGet<JournalEntry[]>(`/journals?tenantId=${tenantId}${dateParams ? `&${dateParams}` : ""}`),
+    queryKey: ["journals", filterStart, filterEnd, activeTab],
+    queryFn: () => apiGet<JournalEntry[]>(`/journals?tenantId=${tenantId}${queryParams ? `&${queryParams}` : ""}`),
   });
 
   const { data: accounts = [] } = useQuery({
@@ -159,6 +163,7 @@ export default function JournalsPage() {
   const createMutation = useMutation({
     mutationFn: (body: {
       tenantId: string;
+      journalType: string;
       date: string;
       description: string;
       currency: string;
@@ -251,6 +256,7 @@ export default function JournalsPage() {
   const resetForm = () => {
     setFormMode("none");
     setEditingId(null);
+    setJournalType(activeTab || "GENERAL");
     setDate(new Date().toISOString().slice(0, 10));
     setDescription("");
     setCurrency("KRW");
@@ -262,6 +268,7 @@ export default function JournalsPage() {
   const startEdit = (j: JournalEntry) => {
     setFormMode("edit");
     setEditingId(j.id);
+    setJournalType(j.journalType || "GENERAL");
     setDate(new Date(j.date).toISOString().slice(0, 10));
     setDescription(j.description || "");
     setCurrency(j.currency || "KRW");
@@ -355,6 +362,7 @@ export default function JournalsPage() {
     } else {
       createMutation.mutate({
         tenantId: tenantId!,
+        journalType,
         date,
         description,
         currency,
@@ -464,6 +472,13 @@ export default function JournalsPage() {
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
+  // 탭 변경 시 새 전표 유형 기본값 설정
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setSelectedIds(new Set());
+    if (tab) setJournalType(tab);
+  };
+
   return (
     <div>
       <div className={styles.header}>
@@ -471,17 +486,41 @@ export default function JournalsPage() {
         {formMode === "none" && canEdit && (
           <button
             className={styles.addBtn}
-            onClick={() => setFormMode("create")}
+            onClick={() => {
+              if (activeTab) setJournalType(activeTab);
+              setFormMode("create");
+            }}
           >
             수기 전표 추가
           </button>
         )}
       </div>
 
+      {/* 전표 유형 탭 */}
+      <div className={styles.tabBar}>
+        <button
+          className={`${styles.tab} ${activeTab === "" ? styles.tabActive : ""}`}
+          onClick={() => handleTabChange("")}
+        >
+          전체
+        </button>
+        {JOURNAL_TYPES.map((t) => (
+          <button
+            key={t.code}
+            className={`${styles.tab} ${activeTab === t.code ? styles.tabActive : ""}`}
+            onClick={() => handleTabChange(t.code)}
+          >
+            {t.name}
+          </button>
+        ))}
+      </div>
+
       {formMode !== "none" && (
         <JournalForm
           formMode={formMode}
           editingId={editingId}
+          journalType={journalType}
+          setJournalType={setJournalType}
           date={date}
           setDate={setDate}
           description={description}

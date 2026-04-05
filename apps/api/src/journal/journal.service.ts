@@ -16,6 +16,45 @@ export class JournalService {
     private readonly auditLogService: AuditLogService,
   ) {}
 
+  // 전표유형 한글 접두사
+  private static readonly TYPE_PREFIX: Record<string, string> = {
+    GENERAL: "일반",
+    PURCHASE: "매입",
+    SALES: "매출",
+    CASH: "자금",
+  };
+
+  // 전표번호 자동채번: 유형-YYYYMMDD-0001
+  private async generateJournalNumber(
+    tenantId: string,
+    journalType: string,
+    date: Date,
+    tx?: any,
+  ): Promise<string> {
+    const db = tx || this.prisma;
+    const prefix = JournalService.TYPE_PREFIX[journalType] || "일반";
+    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, "");
+    const pattern = `${prefix}-${dateStr}-`;
+
+    // 같은 테넌트, 같은 유형, 같은 날짜의 마지막 번호 조회
+    const last = await db.journalEntry.findFirst({
+      where: {
+        tenantId,
+        journalNumber: { startsWith: pattern },
+      },
+      orderBy: { journalNumber: "desc" },
+      select: { journalNumber: true },
+    });
+
+    let seq = 1;
+    if (last?.journalNumber) {
+      const lastSeq = parseInt(last.journalNumber.split("-").pop() || "0", 10);
+      seq = lastSeq + 1;
+    }
+
+    return `${pattern}${String(seq).padStart(4, "0")}`;
+  }
+
   // 마감 기간 체크 헬퍼
   private async checkClosedPeriod(tenantId: string, date: Date) {
     const isClosed = await this.closingService.isClosedPeriod(tenantId, date);
@@ -62,11 +101,12 @@ export class JournalService {
     date: Date;
     description: string;
     status?: string;
+    journalType?: string;
     lines: { accountId: string; debit: number; credit: number; vendorId?: string; projectId?: string; departmentId?: string }[];
     tx?: any; // Prisma 트랜잭션 클라이언트
     skipClosedPeriodCheck?: boolean; // 결산 이월 등 관리자 작업 시 마감 체크 건너뜀
   }) {
-    const { tenantId, date, description, status = "POSTED", lines, tx, skipClosedPeriodCheck = false } = params;
+    const { tenantId, date, description, status = "POSTED", journalType = "GENERAL", lines, tx, skipClosedPeriodCheck = false } = params;
     const db = tx || this.prisma;
 
     // 차대변 균형 검증
@@ -83,12 +123,16 @@ export class JournalService {
       await this.checkClosedPeriod(tenantId, date);
     }
 
+    const journalNumber = await this.generateJournalNumber(tenantId, journalType, date, db);
+
     const entry = await db.journalEntry.create({
       data: {
         tenantId,
         date,
         description,
         status,
+        journalType,
+        journalNumber,
         lines: {
           create: lines.map((l) => ({
             accountId: l.accountId,
@@ -137,10 +181,16 @@ export class JournalService {
       })),
     );
 
+    const journalType = dto.journalType || "GENERAL";
+
     return this.prisma.$transaction(async (tx) => {
+      const journalNumber = await this.generateJournalNumber(dto.tenantId, journalType, new Date(dto.date), tx);
+
       const entry = await tx.journalEntry.create({
         data: {
           tenantId: dto.tenantId,
+          journalType,
+          journalNumber,
           date: new Date(dto.date),
           description: dto.description,
           documentId: dto.documentId,
@@ -244,8 +294,8 @@ export class JournalService {
     return { total: journals.length, success, failed: journals.length - success, results };
   }
 
-  // 테넌트별 전표 목록 조회 (기간 필터)
-  async findAll(tenantId: string, startDate?: string, endDate?: string) {
+  // 테넌트별 전표 목록 조회 (기간 + 유형 필터)
+  async findAll(tenantId: string, startDate?: string, endDate?: string, journalType?: string) {
     const where: Record<string, unknown> = { tenantId };
     if (startDate || endDate) {
       where.date = {
@@ -253,10 +303,13 @@ export class JournalService {
         ...(endDate && { lte: new Date(endDate + "T23:59:59") }),
       };
     }
+    if (journalType) {
+      where.journalType = journalType;
+    }
     return this.prisma.journalEntry.findMany({
       where,
       include: { lines: { include: { account: true, vendor: true, project: true, department: true } }, document: true, attachments: true },
-      orderBy: { date: "desc" },
+      orderBy: [{ date: "desc" }, { journalNumber: "desc" }],
     });
   }
 
@@ -274,6 +327,7 @@ export class JournalService {
       date: newDate,
       description: `[복사] ${original.description || ""}`,
       status: "DRAFT",
+      journalType: original.journalType,
       lines: original.lines.map((l) => ({
         accountId: l.accountId,
         debit: Number(l.debit),
@@ -299,6 +353,7 @@ export class JournalService {
       date: newDate,
       description: `[역분개] ${original.description || ""}`,
       status: "DRAFT",
+      journalType: original.journalType,
       lines: original.lines.map((l) => ({
         accountId: l.accountId,
         debit: Number(l.credit),   // 차변 ↔ 대변 반전
