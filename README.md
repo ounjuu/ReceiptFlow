@@ -66,6 +66,7 @@ prisma/
 | 예산 관리 | 계정별 월 예산, 실적 대비 분석, 소진율 |
 | 은행/계좌 | 계좌별 입출금/이체, 잔액 추적, 자동 전표 |
 | 고정자산 | 정액법/정률법 감가상각, 처분, 자동 전표 |
+| 감가상각 명세서 | 전기말/당기 상각 현황, 장부가액, 상각률 보고서 |
 | 환율 관리 | 외화 환율, 다통화 전표 |
 
 ### 세무관리
@@ -102,6 +103,7 @@ prisma/
 | OCR | 영수증 이미지 → 텍스트 추출 (거래처, 금액, 날짜) |
 | AI 계정 분류 | 거래처명 + OCR 텍스트 기반 계정과목 자동 추천 |
 | 자동 전표 규칙 | 거래처/금액/키워드 조건별 전표 자동 생성 |
+| 이상거래 감지 | 금액 이상(±2σ), 신규 거래처, 주말 전표, 중복 의심 자동 감지 |
 | 전표 승인 알림 | 결재 요청/승인/반려 시 이메일 자동 발송 |
 
 ## 실행 방법
@@ -154,6 +156,9 @@ cd apps/ai && source venv/bin/activate && python -m pytest tests/ -v
 
 # 백엔드 API 테스트 (32개)
 cd apps/api && npx jest --config jest.config.ts --runInBand
+
+# 프론트엔드 테스트 (27개)
+cd apps/web && npx jest
 ```
 
 ## 주요 API
@@ -189,5 +194,20 @@ cd apps/api && npx jest --config jest.config.ts --runInBand
 | POST | `/year-end-settlement/batch-create` | 연말정산 일괄 생성 |
 | POST | `/closings/carry-forward` | 전기분 이월 |
 | GET | `/payroll/records/:id/payslip-pdf` | 급여명세서 PDF |
+| GET | `/reports/depreciation-schedule` | 감가상각 명세서 |
+| GET | `/reports/anomalies` | AI 이상거래 감지 |
 | POST | `/ocr` | AI OCR (AI 서비스) |
 | POST | `/classify` | AI 계정 분류 (AI 서비스) |
+
+## 더존 ERP 대비 차별점
+
+| 항목 | 더존 Smart A | LedgerFlow |
+|------|-------------|------------|
+| AI OCR | 없음 | 영수증 자동 인식 + 계정 분류 |
+| 이상거래 감지 | 없음 | 금액/거래처/시간/중복 자동 감지 |
+| 다국어 | 한국어만 | 한국어/영어 |
+| 다크모드 | 없음 | 라이트/다크/시스템 |
+| 모바일 | 별도 앱 | 반응형 웹 (모바일 브라우저) |
+| 설치 | 패키지 설치 | 웹 브라우저 접속 |
+| 멀티 테넌트 | 없음 | SaaS 멀티 테넌트 |
+| 비용 | 유료 | 오픈소스 무료 |
