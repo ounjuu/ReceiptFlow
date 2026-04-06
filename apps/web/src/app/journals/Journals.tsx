@@ -37,6 +37,7 @@ export default function JournalsPage() {
   const [error, setError] = useState("");
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [focusedRowId, setFocusedRowId] = useState<string | null>(null);
   const journalImportRef = useRef<HTMLInputElement>(null);
   const [journalImportResult, setJournalImportResult] = useState<{ total: number; success: number; failed: number; results: { index: number; status: string; error?: string }[] } | null>(null);
 
@@ -588,6 +589,8 @@ export default function JournalsPage() {
         nextStatus={nextStatus}
         setExpandedId={setExpandedId}
         onClearSelection={() => setSelectedIds(new Set())}
+        focusedRowId={focusedRowId}
+        setFocusedRowId={setFocusedRowId}
         API_BASE={API_BASE}
       />
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { UseMutationResult } from "@tanstack/react-query";
 import { exportToXlsx } from "@/lib/export-xlsx";
 import { downloadTemplate } from "@/lib/import-xlsx";
@@ -52,6 +52,8 @@ export interface JournalTableProps {
   nextStatus: (current: string) => { label: string; next: string } | null;
   setExpandedId: (id: string | null) => void;
   onClearSelection: () => void;
+  focusedRowId: string | null;
+  setFocusedRowId: (id: string | null) => void;
   API_BASE: string;
 }
 
@@ -90,10 +92,76 @@ export default function JournalTable({
   nextStatus,
   setExpandedId,
   onClearSelection,
+  focusedRowId,
+  setFocusedRowId,
   API_BASE,
 }: JournalTableProps) {
+  const tableRef = useRef<HTMLTableSectionElement>(null);
+
+  // 테이블 키보드 단축키
+  const handleTableKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // input/button 등 내부 요소에서 발생한 이벤트 무시
+    const tag = (e.target as HTMLElement).tagName;
+    if (tag === "INPUT" || tag === "BUTTON" || tag === "SELECT") return;
+
+    if (!journals.length) return;
+
+    const currentIdx = focusedRowId ? journals.findIndex((j) => j.id === focusedRowId) : -1;
+
+    // 화살표 아래: 다음 행
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const nextIdx = currentIdx < journals.length - 1 ? currentIdx + 1 : 0;
+      setFocusedRowId(journals[nextIdx].id);
+    }
+    // 화살표 위: 이전 행
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const prevIdx = currentIdx > 0 ? currentIdx - 1 : journals.length - 1;
+      setFocusedRowId(journals[prevIdx].id);
+    }
+
+    if (!focusedRowId) return;
+    const focused = journals.find((j) => j.id === focusedRowId);
+    if (!focused) return;
+
+    // F2: 수정
+    if (e.key === "F2" && canEdit && focused.status !== "POSTED" && focused.status !== "PENDING_APPROVAL") {
+      e.preventDefault();
+      startEdit(focused);
+    }
+    // Delete: 삭제
+    if (e.key === "Delete" && canDelete && focused.status !== "POSTED") {
+      e.preventDefault();
+      handleDelete(focused.id);
+    }
+    // Enter: 펼침/접기
+    if (e.key === "Enter") {
+      e.preventDefault();
+      setExpandedId(expandedId === focused.id ? null : focused.id);
+    }
+    // Space: 체크박스 토글
+    if (e.key === " " && canEdit && focused.status !== "POSTED") {
+      e.preventDefault();
+      toggleOne(focused.id);
+    }
+  }, [journals, focusedRowId, canEdit, canDelete, expandedId, startEdit, handleDelete, setExpandedId, setFocusedRowId, toggleOne]);
+
+  // 포커스된 행이 바뀌면 스크롤
+  useEffect(() => {
+    if (!focusedRowId || !tableRef.current) return;
+    const row = tableRef.current.querySelector(`[data-row-id="${focusedRowId}"]`);
+    if (row) {
+      row.scrollIntoView({ block: "nearest" });
+    }
+  }, [focusedRowId]);
+
   return (
-    <div className={styles.tableSection}>
+    <div
+      className={styles.tableSection}
+      tabIndex={0}
+      onKeyDown={handleTableKeyDown}
+    >
       <div className={styles.tableHeader}>
         <h2 className={styles.sectionTitle}>전표 목록</h2>
         <div className={styles.filterRow}>
@@ -248,15 +316,25 @@ export default function JournalTable({
             <th>관리</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody ref={tableRef}>
           {journals.map((j) => {
             const s = statusLabel(j.status);
             const jTotalDebit = j.lines.reduce((sum, l) => sum + Number(l.debit), 0);
             const jTotalCredit = j.lines.reduce((sum, l) => sum + Number(l.credit), 0);
             const isPosted = j.status === "POSTED";
+            const isFocused = focusedRowId === j.id;
             return (
               <React.Fragment key={j.id}>
-              <tr className={selectedIds.has(j.id) ? styles.selectedRow : ""}>
+              <tr
+                data-row-id={j.id}
+                className={`${selectedIds.has(j.id) ? styles.selectedRow : ""} ${isFocused ? styles.focusedRow : ""}`}
+                onClick={() => setFocusedRowId(j.id)}
+                onDoubleClick={() => {
+                  if (canEdit && j.status !== "POSTED" && j.status !== "PENDING_APPROVAL") {
+                    startEdit(j);
+                  }
+                }}
+              >
                 {canEdit && (
                   <td>
                     <input
@@ -413,6 +491,17 @@ export default function JournalTable({
           )}
         </tbody>
       </table>
+
+      {/* 테이블 단축키 안내 */}
+      <div className={styles.tableShortcuts}>
+        <kbd>↑↓</kbd> 행 이동
+        <kbd>F2</kbd> 수정
+        <kbd>Del</kbd> 삭제
+        <kbd>Enter</kbd> 상세
+        <kbd>Space</kbd> 선택
+        <span className={styles.shortcutDivider}>|</span>
+        <span>더블클릭으로 수정</span>
+      </div>
     </div>
   );
 }

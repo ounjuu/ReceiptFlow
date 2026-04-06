@@ -579,3 +579,80 @@
   background: #f0edf5;
   color: var(--text-muted);
 }
+
+/* 폼 타이틀 바 (제목 + 단축키 안내) */
+.formTitleBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.formTitleBar .sectionTitle {
+  margin-bottom: 0;
+}
+
+/* 단축키 안내 (폼 상단) */
+.shortcutHints {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.shortcutHints kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  font-size: 0.7rem;
+  font-family: monospace;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  box-shadow: 0 1px 0 var(--border);
+  color: var(--text-muted);
+}
+
+/* 포커스된 행 (키보드 네비게이션) */
+.focusedRow {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.focusedRow td {
+  background: var(--primary-light);
+}
+
+/* 테이블 하단 단축키 안내 */
+.tableShortcuts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+}
+
+.tableShortcuts kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  font-size: 0.7rem;
+  font-family: monospace;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  box-shadow: 0 1px 0 var(--border);
+  color: var(--text-muted);
+}
+
+.shortcutDivider {
+  color: var(--border);
+  margin: 0 4px;
+}
+
+/* 테이블 섹션 포커스 시 아웃라인 제거 (내부 행으로 대체) */
+.tableSection:focus {
+  outline: none;
+}
