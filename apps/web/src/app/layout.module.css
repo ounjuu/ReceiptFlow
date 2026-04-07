@@ -42,22 +42,22 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--sidebar-text);
-  padding: 14px 12px 4px;
+  padding: 10px 12px;
   background: none;
   border: none;
-  border-radius: 0;
+  border-radius: var(--radius);
   cursor: pointer;
-  transition: color 0.15s;
+  transition: color 0.15s, background 0.15s;
   text-align: left;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
 }
 
 .navGroupLabel:hover {
   color: #fff;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .navGroupActive {

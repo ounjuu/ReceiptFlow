@@ -161,11 +161,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // 모바일 사이드바 상태
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // 그룹 접기/펼치기 상태 (현재 페이지가 속한 그룹은 자동 펼침)
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  // 명시적으로 펼친 그룹만 추적 (기본: 전부 접힘)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   const toggleGroup = (groupKey: string) => {
-    setCollapsedGroups((prev) => {
+    setExpandedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(groupKey)) next.delete(groupKey);
       else next.add(groupKey);
@@ -330,9 +330,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             );
             if (visibleItems.length === 0) return null;
 
-            // 현재 페이지가 이 그룹에 속하면 자동 펼침
+            // 현재 페이지가 속한 그룹 또는 명시적 펼침만 표시
             const isActiveGroup = visibleItems.some((item) => pathname.startsWith(item.href));
-            const isCollapsed = collapsedGroups.has(group.groupKey) && !isActiveGroup;
+            const isCollapsed = !expandedGroups.has(group.groupKey) && !isActiveGroup;
 
             return (
               <div key={group.groupKey} className={styles.navGroup}>
