@@ -42,11 +42,38 @@ export interface BudgetVsActual {
 
 export interface JournalEntry {
   id: string;
+  journalType: string;
   date: string;
   description: string | null;
   status: string;
   lines: { debit: string; credit: string; account: { name: string } }[];
 }
+
+export const JOURNAL_TYPE_LABELS: Record<string, string> = {
+  GENERAL: "일반전표",
+  PURCHASE: "매입전표",
+  SALES: "매출전표",
+  CASH: "현금전표",
+};
+
+export const JOURNAL_TYPE_COLORS: Record<string, string> = {
+  GENERAL: "#7c5cbf",
+  PURCHASE: "#e5a336",
+  SALES: "#4caf82",
+  CASH: "#5b9bd5",
+};
+
+export const JOURNAL_STATUS_COLORS: Record<string, string> = {
+  DRAFT: "#e5a336",
+  APPROVED: "#7c5cbf",
+  POSTED: "#4caf82",
+};
+
+export const JOURNAL_STATUS_LABELS: Record<string, string> = {
+  DRAFT: "임시저장",
+  APPROVED: "승인",
+  POSTED: "전기",
+};
 
 export interface PendingApproval {
   id: string;

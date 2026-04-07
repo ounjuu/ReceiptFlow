@@ -15,6 +15,10 @@ import {
   JOURNAL_STATUS_KEYS,
   DOC_TYPE_LABEL,
   ACTION_LABELS,
+  JOURNAL_TYPE_LABELS,
+  JOURNAL_TYPE_COLORS,
+  JOURNAL_STATUS_LABELS,
+  JOURNAL_STATUS_COLORS,
   type DashboardSummary,
   type DashboardAlerts,
   type BudgetVsActual,
@@ -75,6 +79,95 @@ export function ChartGrid({ summary, pieData, totalDocs }: ChartGridProps) {
               </Pie>
               <Legend />
             </PieChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className={styles.empty}>데이터가 없습니다</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- 전표 유형별 / 상태별 현황 차트 ---
+
+export interface JournalTypeChartProps {
+  journals: JournalEntry[];
+}
+
+export function JournalTypeChart({ journals }: JournalTypeChartProps) {
+  // 유형별 집계
+  const typeCounts = journals.reduce<Record<string, number>>((acc, j) => {
+    const type = j.journalType || "GENERAL";
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {});
+
+  const typeData = Object.entries(typeCounts).map(([key, value]) => ({
+    name: JOURNAL_TYPE_LABELS[key] || key,
+    value,
+    color: JOURNAL_TYPE_COLORS[key] || COLORS.muted,
+  }));
+
+  const totalJournals = typeData.reduce((s, d) => s + d.value, 0);
+
+  // 상태별 집계
+  const statusCounts = journals.reduce<Record<string, number>>((acc, j) => {
+    acc[j.status] = (acc[j.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const statusData = Object.entries(statusCounts).map(([key, value]) => ({
+    name: JOURNAL_STATUS_LABELS[key] || key,
+    value,
+    fill: JOURNAL_STATUS_COLORS[key] || COLORS.muted,
+  }));
+
+  return (
+    <div className={styles.chartGrid}>
+      {/* 전표 유형별 현황 (도넛) */}
+      <div className={styles.section}>
+        <h2 className={styles.sectionTitle}>전표 유형별 현황 ({totalJournals}건)</h2>
+        {typeData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie
+                data={typeData}
+                cx="50%"
+                cy="50%"
+                innerRadius={50}
+                outerRadius={90}
+                paddingAngle={3}
+                dataKey="value"
+                label={({ name, value }) => `${name} ${value}건`}
+              >
+                {typeData.map((entry, i) => (
+                  <Cell key={i} fill={entry.color} />
+                ))}
+              </Pie>
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className={styles.empty}>데이터가 없습니다</p>
+        )}
+      </div>
+
+      {/* 전표 상태별 현황 (바) */}
+      <div className={styles.section}>
+        <h2 className={styles.sectionTitle}>전표 상태별 현황</h2>
+        {statusData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={statusData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e8e4f0" />
+              <XAxis dataKey="name" fontSize={12} />
+              <YAxis fontSize={12} allowDecimals={false} />
+              <Tooltip formatter={(v) => [`${v}건`, "건수"]} />
+              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                {statusData.map((entry, i) => (
+                  <Cell key={i} fill={entry.fill} />
+                ))}
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         ) : (
           <p className={styles.empty}>데이터가 없습니다</p>

@@ -17,7 +17,7 @@ import {
   type AlertItem,
 } from "./types";
 import { DashboardAlertsBanner, FinancialCards, OperationalCards } from "./DashboardCards";
-import { ChartGrid, BudgetChart, TopVendorsChart, BottomGrid } from "./DashboardCharts";
+import { ChartGrid, JournalTypeChart, BudgetChart, TopVendorsChart, BottomGrid } from "./DashboardCharts";
 
 export default function DashboardPage() {
   const { tenantId } = useAuth();
@@ -48,12 +48,13 @@ export default function DashboardPage() {
     enabled: !!tenantId,
   });
 
-  const { data: recentJournals = [] } = useQuery({
+  const { data: allJournals = [] } = useQuery({
     queryKey: ["journals-recent", tenantId],
     queryFn: () => apiGet<JournalEntry[]>(`/journals?tenantId=${tenantId}`),
     enabled: !!tenantId,
-    select: (data) => data.slice(0, 5),
   });
+
+  const recentJournals = allJournals.slice(0, 5);
 
   const { data: pendingApprovals = [] } = useQuery({
     queryKey: ["approvals-pending", tenantId],
@@ -120,6 +121,8 @@ export default function DashboardPage() {
       <OperationalCards kpi={kpi} t={t} />
 
       <ChartGrid summary={summary} pieData={pieData} totalDocs={totalDocs} />
+
+      <JournalTypeChart journals={allJournals} />
 
       <BudgetChart
         budgetChartData={budgetChartData}
