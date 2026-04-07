@@ -16,6 +16,12 @@ import {
 // 그리드 컬럼 순서 (키보드 네비게이션용)
 const GRID_COLS = ["vendorBizNo", "vendorName", "accountId", "projectId", "departmentId", "debit", "credit"] as const;
 
+interface SummaryItem {
+  id: string;
+  code: string;
+  description: string;
+}
+
 export interface JournalFormProps {
   formMode: "create" | "edit";
   editingId: string | null;
@@ -24,7 +30,11 @@ export interface JournalFormProps {
   date: string;
   setDate: (v: string) => void;
   description: string;
-  setDescription: (v: string) => void;
+  handleDescriptionInput: (v: string) => void;
+  summarySuggestions: SummaryItem[];
+  showSummaryDropdown: boolean;
+  selectSummary: (item: SummaryItem) => void;
+  summaryRef: React.RefObject<HTMLDivElement | null>;
   currency: string;
   exchangeRate: string;
   setExchangeRate: (v: string) => void;
@@ -59,7 +69,11 @@ export default function JournalForm({
   date,
   setDate,
   description,
-  setDescription,
+  handleDescriptionInput,
+  summarySuggestions,
+  showSummaryDropdown,
+  selectSummary,
+  summaryRef,
   currency,
   exchangeRate,
   setExchangeRate,
@@ -222,15 +236,30 @@ export default function JournalForm({
               required
             />
           </div>
-          <div className={styles.formRow} style={{ flex: 1 }}>
-            <label className={styles.label}>설명</label>
+          <div className={styles.formRow} style={{ flex: 1, position: "relative" }} ref={summaryRef}>
+            <label className={styles.label}>적요 (코드/내용 검색)</label>
             <input
               className={styles.input}
               type="text"
-              placeholder="예: 사무용품 구매"
+              placeholder="코드 또는 내용 입력 (예: 001, 사무용품)"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => handleDescriptionInput(e.target.value)}
+              autoComplete="off"
             />
+            {showSummaryDropdown && summarySuggestions.length > 0 && (
+              <ul className={styles.autocomplete}>
+                {summarySuggestions.map((s) => (
+                  <li
+                    key={s.id}
+                    className={styles.autocompleteItem}
+                    onMouseDown={() => selectSummary(s)}
+                  >
+                    <span className={styles.autocompleteNo}>{s.code}</span>
+                    <span className={styles.autocompleteName}>{s.description}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           <div className={styles.formRow}>
             <label className={styles.label}>통화</label>

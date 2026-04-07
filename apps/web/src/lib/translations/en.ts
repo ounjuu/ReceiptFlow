@@ -33,6 +33,7 @@ const en: Record<TranslationKey, string> = {
   nav_journalBook: "Journal Book",
   nav_journalTemplates: "Recurring Journals",
   nav_journalRules: "Auto Journal Rules",
+  nav_summaryCodes: "Summary Codes",
   nav_yearEndSettlement: "Year-end Settlement",
   nav_taxFiling: "Tax Filing",
   nav_members: "Members",

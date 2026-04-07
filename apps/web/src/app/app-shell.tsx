@@ -48,6 +48,7 @@ const navGroups: NavGroup[] = [
       { href: "/documents", labelKey: "nav_documents", roles: ["ADMIN", "ACCOUNTANT"] },
       { href: "/journal-templates", labelKey: "nav_journalTemplates", roles: ["ADMIN", "ACCOUNTANT"] },
       { href: "/journal-rules", labelKey: "nav_journalRules", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/summary-codes", labelKey: "nav_summaryCodes" as TranslationKey, roles: ["ADMIN", "ACCOUNTANT"] },
       { href: "/approvals", labelKey: "nav_approvals", roles: ["ADMIN", "ACCOUNTANT"] },
       { href: "/closings", labelKey: "nav_closings", roles: ["ADMIN"] },
     ],

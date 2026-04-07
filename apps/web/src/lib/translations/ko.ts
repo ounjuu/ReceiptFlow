@@ -31,6 +31,7 @@ const ko = {
   nav_journalBook: "분개장",
   nav_journalTemplates: "반복 전표",
   nav_journalRules: "자동 전표 규칙",
+  nav_summaryCodes: "적요 코드 관리",
   nav_yearEndSettlement: "연말정산",
   nav_taxFiling: "전자신고",
   nav_members: "멤버 관리",

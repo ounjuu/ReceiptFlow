@@ -45,6 +45,7 @@ model Tenant {
   journalRules         JournalRule[]
   taxFilings           TaxFiling[]
   permissions          Permission[]
+  summaryCodes         SummaryCode[]
 }
 
 model User {
@@ -983,4 +984,22 @@ model TaxFiling {
   @@unique([tenantId, filingType, year, period])
   @@index([tenantId])
   @@index([filingType])
+}
+
+// ──────────────────────────────────
+// 적요 코드 (빠른 입력용)
+// ──────────────────────────────────
+model SummaryCode {
+  id          String   @id @default(uuid())
+  code        String           // 적요 코드 (예: 001, 002)
+  description String           // 적요 내용 (예: 사무용품 구매)
+  category    String   @default("GENERAL") // GENERAL, PURCHASE, SALES, CASH
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, category])
 }
