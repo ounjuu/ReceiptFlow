@@ -7,6 +7,21 @@ import { UpdateJournalDto } from "./dto/update-journal.dto";
 import * as fs from "fs";
 import * as path from "path";
 
+// 상태 전이 규칙
+const STATUS_TRANSITIONS: Record<string, string[]> = {
+  DRAFT: ["APPROVED", "PENDING_APPROVAL"],
+  PENDING_APPROVAL: ["APPROVED", "DRAFT"],
+  APPROVED: ["POSTED", "DRAFT"],
+  POSTED: [],
+};
+
+// 전표 조회 시 공통 include
+const ENTRY_INCLUDE = {
+  lines: { include: { account: true, vendor: true, project: true, department: true } },
+  document: true,
+  attachments: true,
+} as const;
+
 @Injectable()
 export class JournalService {
   constructor(
@@ -53,6 +68,38 @@ export class JournalService {
     }
 
     return `${pattern}${String(seq).padStart(4, "0")}`;
+  }
+
+  // 차대변 균형 검증
+  private validateBalance(lines: { debit: number; credit: number }[], tolerance = 0.01) {
+    const totalDebit = lines.reduce((s, l) => s + l.debit, 0);
+    const totalCredit = lines.reduce((s, l) => s + l.credit, 0);
+    if (Math.abs(totalDebit - totalCredit) > tolerance) {
+      throw new BadRequestException(
+        `차변(${totalDebit})과 대변(${totalCredit})의 합계가 일치하지 않습니다`,
+      );
+    }
+  }
+
+  // 상태 전이 검증
+  private validateStatusTransition(currentStatus: string, newStatus: string, entryId?: string) {
+    const allowed = STATUS_TRANSITIONS[currentStatus] || [];
+    if (!allowed.includes(newStatus)) {
+      const prefix = entryId ? `전표(${entryId})의 ` : "";
+      throw new BadRequestException(
+        `${prefix}상태를 ${currentStatus}에서 ${newStatus}(으)로 변경할 수 없습니다`,
+      );
+    }
+  }
+
+  // 전표 조회 (없으면 예외)
+  private async findEntryOrFail(id: string, include?: any) {
+    const entry = await this.prisma.journalEntry.findUnique({
+      where: { id },
+      include: include || ENTRY_INCLUDE,
+    });
+    if (!entry) throw new NotFoundException(`JournalEntry ${id} not found`);
+    return entry;
   }
 
   // 마감 기간 체크 헬퍼
@@ -109,14 +156,7 @@ export class JournalService {
     const { tenantId, date, description, status = "POSTED", journalType = "GENERAL", lines, tx, skipClosedPeriodCheck = false } = params;
     const db = tx || this.prisma;
 
-    // 차대변 균형 검증
-    const totalDebit = lines.reduce((s, l) => s + l.debit, 0);
-    const totalCredit = lines.reduce((s, l) => s + l.credit, 0);
-    if (Math.abs(totalDebit - totalCredit) > 0.01) {
-      throw new BadRequestException(
-        `차변(${totalDebit})과 대변(${totalCredit})의 합계가 일치하지 않습니다`,
-      );
-    }
+    this.validateBalance(lines);
 
     // 마감 기간 체크
     if (!skipClosedPeriodCheck) {
@@ -159,15 +199,7 @@ export class JournalService {
       throw new BadRequestException("전표 라인이 최소 1건 이상 필요합니다");
     }
 
-    // 차변/대변 합계 검증
-    const totalDebit = dto.lines.reduce((sum, l) => sum + l.debit, 0);
-    const totalCredit = dto.lines.reduce((sum, l) => sum + l.credit, 0);
-
-    if (Math.abs(totalDebit - totalCredit) > 0.001) {
-      throw new BadRequestException(
-        `차변(${totalDebit})과 대변(${totalCredit})의 합계가 일치하지 않습니다`,
-      );
-    }
+    this.validateBalance(dto.lines);
 
     // 모든 라인의 vendorId를 미리 확정
     const resolvedLines = await Promise.all(
@@ -308,30 +340,34 @@ export class JournalService {
     }
     return this.prisma.journalEntry.findMany({
       where,
-      include: { lines: { include: { account: true, vendor: true, project: true, department: true } }, document: true, attachments: true },
+      include: ENTRY_INCLUDE,
       orderBy: [{ date: "desc" }, { journalNumber: "desc" }],
     });
   }
 
-  // 전표 복사 (같은 내용으로 새 전표 생성, 날짜만 오늘로)
-  async copy(id: string, date?: string) {
+  // 원본 전표 기반 새 전표 생성 (복사/역분개 공통)
+  private async duplicateEntry(
+    id: string,
+    opts: { prefix: string; swapDebitCredit?: boolean; date?: string },
+  ) {
     const original = await this.prisma.journalEntry.findUnique({
       where: { id },
-      include: { lines: { include: { account: true, vendor: true, project: true, department: true } } },
+      include: { lines: true },
     });
     if (!original) throw new NotFoundException("원본 전표를 찾을 수 없습니다");
 
-    const newDate = date ? new Date(date) : new Date();
+    const newDate = opts.date ? new Date(opts.date) : new Date();
+
     return this.createEntry({
       tenantId: original.tenantId,
       date: newDate,
-      description: `[복사] ${original.description || ""}`,
+      description: `[${opts.prefix}] ${original.description || ""}`,
       status: "DRAFT",
       journalType: original.journalType,
       lines: original.lines.map((l) => ({
         accountId: l.accountId,
-        debit: Number(l.debit),
-        credit: Number(l.credit),
+        debit: opts.swapDebitCredit ? Number(l.credit) : Number(l.debit),
+        credit: opts.swapDebitCredit ? Number(l.debit) : Number(l.credit),
         vendorId: l.vendorId || undefined,
         projectId: l.projectId || undefined,
         departmentId: l.departmentId || undefined,
@@ -339,44 +375,19 @@ export class JournalService {
     });
   }
 
-  // 역분개 (차변/대변 반대로 새 전표 생성)
-  async reverse(id: string, date?: string) {
-    const original = await this.prisma.journalEntry.findUnique({
-      where: { id },
-      include: { lines: { include: { account: true, vendor: true, project: true, department: true } } },
-    });
-    if (!original) throw new NotFoundException("원본 전표를 찾을 수 없습니다");
+  // 전표 복사
+  async copy(id: string, date?: string) {
+    return this.duplicateEntry(id, { prefix: "복사", date });
+  }
 
-    const newDate = date ? new Date(date) : new Date();
-    return this.createEntry({
-      tenantId: original.tenantId,
-      date: newDate,
-      description: `[역분개] ${original.description || ""}`,
-      status: "DRAFT",
-      journalType: original.journalType,
-      lines: original.lines.map((l) => ({
-        accountId: l.accountId,
-        debit: Number(l.credit),   // 차변 ↔ 대변 반전
-        credit: Number(l.debit),
-        vendorId: l.vendorId || undefined,
-        projectId: l.projectId || undefined,
-        departmentId: l.departmentId || undefined,
-      })),
-    });
+  // 역분개
+  async reverse(id: string, date?: string) {
+    return this.duplicateEntry(id, { prefix: "역분개", swapDebitCredit: true, date });
   }
 
   // 단건 조회
   async findOne(id: string) {
-    const entry = await this.prisma.journalEntry.findUnique({
-      where: { id },
-      include: { lines: { include: { account: true, vendor: true, project: true, department: true } }, document: true, attachments: true },
-    });
-
-    if (!entry) {
-      throw new NotFoundException(`JournalEntry ${id} not found`);
-    }
-
-    return entry;
+    return this.findEntryOrFail(id);
   }
 
   // 전표 수정
@@ -396,31 +407,12 @@ export class JournalService {
       await this.checkClosedPeriod(entry.tenantId, new Date(dto.date));
     }
 
-    // 상태 전이 검증 (DRAFT → PENDING_APPROVAL → APPROVED → POSTED)
     if (dto.status) {
-      const validTransitions: Record<string, string[]> = {
-        DRAFT: ["APPROVED", "PENDING_APPROVAL"],
-        PENDING_APPROVAL: ["APPROVED", "DRAFT"],
-        APPROVED: ["POSTED", "DRAFT"],
-        POSTED: [],
-      };
-      const allowed = validTransitions[entry.status] || [];
-      if (!allowed.includes(dto.status)) {
-        throw new BadRequestException(
-          `상태를 ${entry.status}에서 ${dto.status}(으)로 변경할 수 없습니다`,
-        );
-      }
+      this.validateStatusTransition(entry.status, dto.status);
     }
 
-    // 라인이 제공되면 차대변 균형 검증
     if (dto.lines && dto.lines.length > 0) {
-      const totalDebit = dto.lines.reduce((sum, l) => sum + l.debit, 0);
-      const totalCredit = dto.lines.reduce((sum, l) => sum + l.credit, 0);
-      if (Math.abs(totalDebit - totalCredit) > 0.001) {
-        throw new BadRequestException(
-          `차변(${totalDebit})과 대변(${totalCredit})의 합계가 일치하지 않습니다`,
-        );
-      }
+      this.validateBalance(dto.lines);
     }
 
     // 라인이 제공되면 vendorId 확정
@@ -580,13 +572,6 @@ export class JournalService {
 
   // 일괄 상태 변경
   async batchUpdateStatus(ids: string[], status: string, userId?: string) {
-    const validTransitions: Record<string, string[]> = {
-      DRAFT: ["APPROVED", "PENDING_APPROVAL"],
-      PENDING_APPROVAL: ["APPROVED", "DRAFT"],
-      APPROVED: ["POSTED", "DRAFT"],
-      POSTED: [],
-    };
-
     const entries = await this.prisma.journalEntry.findMany({
       where: { id: { in: ids } },
     });
@@ -595,15 +580,9 @@ export class JournalService {
       throw new BadRequestException("일부 전표를 찾을 수 없습니다");
     }
 
-    // 각 전표별 검증
     for (const entry of entries) {
       await this.checkClosedPeriod(entry.tenantId, entry.date);
-      const allowed = validTransitions[entry.status] || [];
-      if (!allowed.includes(status)) {
-        throw new BadRequestException(
-          `전표(${entry.id})의 상태를 ${entry.status}에서 ${status}(으)로 변경할 수 없습니다`,
-        );
-      }
+      this.validateStatusTransition(entry.status, status, entry.id);
     }
 
     const prevStatuses = entries.map((e) => e.status);
