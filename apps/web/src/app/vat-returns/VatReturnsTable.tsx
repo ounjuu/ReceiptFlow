@@ -12,8 +12,8 @@ function statusLabel(status: string) {
   }
 }
 
-function fmt(n: number) {
-  return `₩${n.toLocaleString()}`;
+function fmt(n: number | null | undefined) {
+  return `₩${(n ?? 0).toLocaleString()}`;
 }
 
 interface VatReturnsTableProps {

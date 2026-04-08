@@ -265,28 +265,28 @@ export default function ClosingsPage() {
               <div className={styles.card}>
                 <div className={styles.cardLabel}>자산 잔액</div>
                 <div className={styles.cardValue}>
-                  {cfResult.summary.assetBalance.toLocaleString("ko-KR")}원
+                  {(cfResult.summary.assetBalance ?? 0).toLocaleString("ko-KR")}원
                 </div>
               </div>
               <div className={styles.card}>
                 <div className={styles.cardLabel}>부채 잔액</div>
                 <div className={styles.cardValue}>
-                  {cfResult.summary.liabilityBalance.toLocaleString("ko-KR")}원
+                  {(cfResult.summary.liabilityBalance ?? 0).toLocaleString("ko-KR")}원
                 </div>
               </div>
               <div className={styles.card}>
                 <div className={styles.cardLabel}>자본 잔액</div>
                 <div className={styles.cardValue}>
-                  {cfResult.summary.equityBalance.toLocaleString("ko-KR")}원
+                  {(cfResult.summary.equityBalance ?? 0).toLocaleString("ko-KR")}원
                 </div>
               </div>
               <div className={styles.card}>
                 <div className={styles.cardLabel}>당기순이익</div>
                 <div
                   className={styles.cardValue}
-                  style={{ color: cfResult.summary.netIncome >= 0 ? "#4caf82" : "#d95454" }}
+                  style={{ color: (cfResult.summary.netIncome ?? 0) >= 0 ? "#4caf82" : "#d95454" }}
                 >
-                  {cfResult.summary.netIncome.toLocaleString("ko-KR")}원
+                  {(cfResult.summary.netIncome ?? 0).toLocaleString("ko-KR")}원
                 </div>
               </div>
             </div>

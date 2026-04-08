@@ -85,27 +85,27 @@ export default function TaxInvoiceTable({
           <div className={styles.summaryCard}>
             <div className={styles.summaryLabel}>매출 공급가액</div>
             <div className={styles.summaryValue}>
-              ₩{summary.sales.supplyAmount.toLocaleString()}
+              ₩{(summary.sales.supplyAmount ?? 0).toLocaleString()}
             </div>
-            <div className={styles.summaryCount}>세액: ₩{summary.sales.taxAmount.toLocaleString()} / {summary.sales.count}건</div>
+            <div className={styles.summaryCount}>세액: ₩{(summary.sales.taxAmount ?? 0).toLocaleString()} / {summary.sales.count ?? 0}건</div>
           </div>
           <div className={styles.summaryCard}>
             <div className={styles.summaryLabel}>매입 공급가액</div>
             <div className={styles.summaryValue}>
-              ₩{summary.purchase.supplyAmount.toLocaleString()}
+              ₩{(summary.purchase.supplyAmount ?? 0).toLocaleString()}
             </div>
-            <div className={styles.summaryCount}>세액: ₩{summary.purchase.taxAmount.toLocaleString()} / {summary.purchase.count}건</div>
+            <div className={styles.summaryCount}>세액: ₩{(summary.purchase.taxAmount ?? 0).toLocaleString()} / {summary.purchase.count ?? 0}건</div>
           </div>
           <div className={styles.summaryCard}>
             <div className={styles.summaryLabel}>매출세액</div>
             <div className={styles.summaryValue}>
-              ₩{summary.sales.taxAmount.toLocaleString()}
+              ₩{(summary.sales.taxAmount ?? 0).toLocaleString()}
             </div>
           </div>
           <div className={styles.summaryCard}>
             <div className={styles.summaryLabel}>납부(환급)세액</div>
-            <div className={`${styles.summaryValue} ${summary.netTaxAmount >= 0 ? styles.summaryPositive : styles.summaryNegative}`}>
-              {summary.netTaxAmount >= 0 ? "" : "-"}₩{Math.abs(summary.netTaxAmount).toLocaleString()}
+            <div className={`${styles.summaryValue} ${(summary.netTaxAmount ?? 0) >= 0 ? styles.summaryPositive : styles.summaryNegative}`}>
+              {(summary.netTaxAmount ?? 0) >= 0 ? "" : "-"}₩{Math.abs(summary.netTaxAmount ?? 0).toLocaleString()}
             </div>
             <div className={styles.summaryCount}>
               {summary.netTaxAmount >= 0 ? "납부" : "환급"}
