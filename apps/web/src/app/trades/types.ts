@@ -74,7 +74,7 @@ export interface ItemInput {
   unitPrice: number;
 }
 
-export const fmt = (n: number) => n.toLocaleString();
+export const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();
 
 export const statusLabel = (s: string) => {
   switch (s) {

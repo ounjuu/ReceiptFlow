@@ -39,7 +39,7 @@ interface AccountOption {
   name: string;
 }
 
-const fmt = (n: number) => n.toLocaleString("ko-KR");
+const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString("ko-KR");
 
 const TYPE_LABELS: Record<string, string> = {
   ASSET: "자산",

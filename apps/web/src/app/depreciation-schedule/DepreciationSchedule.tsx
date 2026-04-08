@@ -56,7 +56,7 @@ const STATUS_CLASS: Record<string, string> = {
   DISPOSED: "badgeDisposed",
 };
 
-const fmt = (n: number) => n.toLocaleString("ko-KR", { maximumFractionDigits: 0 });
+const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString("ko-KR", { maximumFractionDigits: 0 });
 
 const now = new Date();
 

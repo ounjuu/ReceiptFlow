@@ -63,7 +63,7 @@ interface ComparativeBalanceData {
   };
 }
 
-const fmt = (n: number) => n.toLocaleString();
+const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();
 
 const fmtRate = (rate: number | null) => {
   if (rate === null) return "-";

@@ -7,11 +7,18 @@ import { useAuth } from "@/lib/auth";
 import styles from "./TaxFiling.module.css";
 
 // 타입 정의
-interface FilingSummary {
-  vatCount: number;
-  withholdingCount: number;
-  corporateCount: number;
+interface FilingGroup {
+  count: number;
+  totalTaxableAmount: number;
   totalTaxAmount: number;
+  filings: { id: string; period: string; status: string; taxableAmount: number; taxAmount: number }[];
+}
+
+interface FilingSummary {
+  year: number;
+  vat: FilingGroup;
+  withholding: FilingGroup;
+  corporate: FilingGroup;
 }
 
 interface Filing {
@@ -30,7 +37,7 @@ interface Filing {
 
 type TabType = "overview" | "vat" | "withholding" | "corporate";
 
-const fmt = (n: number) => n.toLocaleString("ko-KR");
+const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString("ko-KR");
 
 const now = new Date();
 
@@ -345,25 +352,25 @@ export default function TaxFilingPage() {
         <div className={styles.summaryCard}>
           <div className={styles.summaryLabel}>부가세</div>
           <div className={styles.summaryValue}>
-            {summary ? `${summary.vatCount}건` : "-"}
+            {summary ? `${summary.vat.count}건` : "-"}
           </div>
         </div>
         <div className={styles.summaryCard}>
           <div className={styles.summaryLabel}>원천세</div>
           <div className={styles.summaryValue}>
-            {summary ? `${summary.withholdingCount}건` : "-"}
+            {summary ? `${summary.withholding.count}건` : "-"}
           </div>
         </div>
         <div className={styles.summaryCard}>
           <div className={styles.summaryLabel}>법인세</div>
           <div className={styles.summaryValue}>
-            {summary ? `${summary.corporateCount}건` : "-"}
+            {summary ? `${summary.corporate.count}건` : "-"}
           </div>
         </div>
         <div className={styles.summaryCard}>
           <div className={styles.summaryLabel}>총 납부세액</div>
           <div className={styles.summaryValue}>
-            {summary ? `${fmt(summary.totalTaxAmount)}원` : "-"}
+            {summary ? `${fmt(summary.vat.totalTaxAmount + summary.withholding.totalTaxAmount + summary.corporate.totalTaxAmount)}원` : "-"}
           </div>
         </div>
       </div>

@@ -34,4 +34,4 @@ export interface ComparisonRow {
   profitMargin: number;
 }
 
-export const fmt = (n: number) => n.toLocaleString();
+export const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();

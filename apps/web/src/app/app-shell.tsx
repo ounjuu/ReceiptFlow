@@ -215,14 +215,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         items.push({ type: "muted", message: t("notif_pendingDocs", { count: alertsData.pendingDocCount }), href: "/documents" });
     }
     if (kpiData) {
-      if (kpiData.approvals.pendingCount > 0)
+      if (kpiData.approvals?.pendingCount > 0)
         items.push({ type: "info", message: t("notif_pendingApprovals", { count: kpiData.approvals.pendingCount }), href: "/approvals" });
-      if (kpiData.inventory.lowStockCount > 0)
+      if (kpiData.inventory?.lowStockCount > 0)
         items.push({ type: "danger", message: t("notif_lowStock", { count: kpiData.inventory.lowStockCount }), href: "/inventory" });
-      if (kpiData.expenseClaims.pendingCount > 0)
+      if (kpiData.expenseClaims?.pendingCount > 0)
         items.push({ type: "warning", message: t("notif_pendingExpense", { count: kpiData.expenseClaims.pendingCount }), href: "/expense-claims" });
-      if (kpiData.trades.salesRemaining > 0)
-        items.push({ type: "warning", message: t("notif_outstanding", { amount: kpiData.trades.salesRemaining.toLocaleString() }), href: "/trades" });
+      if (kpiData.trades?.salesRemaining > 0)
+        items.push({ type: "warning", message: t("notif_outstanding", { amount: (kpiData.trades.salesRemaining ?? 0).toLocaleString() }), href: "/trades" });
     }
     return items;
   }, [alertsData, kpiData, t]);

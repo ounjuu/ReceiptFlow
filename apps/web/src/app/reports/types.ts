@@ -61,4 +61,4 @@ export const tabs: { key: Tab; label: string }[] = [
 
 // --- 헬퍼 ---
 
-export const fmt = (n: number) => n.toLocaleString();
+export const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();

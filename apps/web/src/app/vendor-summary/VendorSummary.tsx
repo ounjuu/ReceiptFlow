@@ -25,7 +25,7 @@ interface VendorSummaryData {
   totalNet: number;
 }
 
-const fmt = (n: number) => n.toLocaleString("ko-KR");
+const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString("ko-KR");
 
 export default function VendorSummary() {
   const { tenantId } = useAuth();

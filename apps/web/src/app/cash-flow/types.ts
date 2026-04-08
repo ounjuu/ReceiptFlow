@@ -50,4 +50,4 @@ export const COLORS = {
   withdraw: "#d95454",
 };
 
-export const fmt = (n: number) => n.toLocaleString();
+export const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();

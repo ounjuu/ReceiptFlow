@@ -60,4 +60,4 @@ export interface ImportResult {
   results: { index: number; status: string; error?: string }[];
 }
 
-export const fmt = (n: number) => n.toLocaleString();
+export const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();

@@ -86,7 +86,7 @@ export default function AnomalyDetection() {
     }
   };
 
-  const fmt = (n: number) => n.toLocaleString();
+  const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();
   const fmtDate = (d: string) => new Date(d).toLocaleDateString("ko-KR");
 
   const tabs: { key: TabKey; label: string; count: number }[] = [
