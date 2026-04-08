@@ -59,6 +59,20 @@ export class DashboardReportService {
       now.toISOString().slice(0, 10),
     );
 
+    // 5. 전표 유형별 집계
+    const journalTypeCounts = await this.prisma.journalEntry.groupBy({
+      by: ["journalType"],
+      where: { tenantId },
+      _count: true,
+    });
+
+    // 6. 전표 상태별 집계
+    const journalStatusCounts = await this.prisma.journalEntry.groupBy({
+      by: ["status"],
+      where: { tenantId },
+      _count: true,
+    });
+
     return {
       monthlyExpense,
       statusCounts: statusCounts.map((s) => ({
@@ -69,6 +83,14 @@ export class DashboardReportService {
       totalRevenue: income.totalRevenue,
       totalExpense: income.totalExpense,
       netIncome: income.netIncome,
+      journalTypeCounts: journalTypeCounts.map((j) => ({
+        type: j.journalType,
+        count: j._count,
+      })),
+      journalStatusCounts: journalStatusCounts.map((j) => ({
+        status: j.status,
+        count: j._count,
+      })),
     };
   }
 

@@ -227,6 +227,7 @@ model Document {
 
   @@index([tenantId])
   @@index([status])
+  @@index([tenantId, status])
 }
 
 // ──────────────────────────────────
@@ -290,6 +291,7 @@ model JournalLine {
   @@index([vendorId])
   @@index([projectId])
   @@index([departmentId])
+  @@index([journalEntryId, accountId])
 }
 
 // 전표 첨부파일

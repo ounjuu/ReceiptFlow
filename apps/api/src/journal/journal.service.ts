@@ -326,8 +326,12 @@ export class JournalService {
     return { total: journals.length, success, failed: journals.length - success, results };
   }
 
-  // 테넌트별 전표 목록 조회 (기간 + 유형 필터)
-  async findAll(tenantId: string, startDate?: string, endDate?: string, journalType?: string) {
+  // 테넌트별 전표 목록 조회 (기간 + 유형 필터 + 페이지네이션)
+  async findAll(
+    tenantId: string,
+    opts?: { startDate?: string; endDate?: string; journalType?: string; page?: number; limit?: number },
+  ) {
+    const { startDate, endDate, journalType, page = 1, limit = 20 } = opts || {};
     const where: Record<string, unknown> = { tenantId };
     if (startDate || endDate) {
       where.date = {
@@ -338,11 +342,19 @@ export class JournalService {
     if (journalType) {
       where.journalType = journalType;
     }
-    return this.prisma.journalEntry.findMany({
-      where,
-      include: ENTRY_INCLUDE,
-      orderBy: [{ date: "desc" }, { journalNumber: "desc" }],
-    });
+
+    const [data, total] = await Promise.all([
+      this.prisma.journalEntry.findMany({
+        where,
+        include: ENTRY_INCLUDE,
+        orderBy: [{ date: "desc" }, { journalNumber: "desc" }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.journalEntry.count({ where }),
+    ]);
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   // 원본 전표 기반 새 전표 생성 (복사/역분개 공통)

@@ -91,35 +91,23 @@ export function ChartGrid({ summary, pieData, totalDocs }: ChartGridProps) {
 // --- 전표 유형별 / 상태별 현황 차트 ---
 
 export interface JournalTypeChartProps {
-  journals: JournalEntry[];
+  journalTypeCounts?: { type: string; count: number }[];
+  journalStatusCounts?: { status: string; count: number }[];
 }
 
-export function JournalTypeChart({ journals }: JournalTypeChartProps) {
-  // 유형별 집계
-  const typeCounts = journals.reduce<Record<string, number>>((acc, j) => {
-    const type = j.journalType || "GENERAL";
-    acc[type] = (acc[type] || 0) + 1;
-    return acc;
-  }, {});
-
-  const typeData = Object.entries(typeCounts).map(([key, value]) => ({
-    name: JOURNAL_TYPE_LABELS[key] || key,
-    value,
-    color: JOURNAL_TYPE_COLORS[key] || COLORS.muted,
+export function JournalTypeChart({ journalTypeCounts = [], journalStatusCounts = [] }: JournalTypeChartProps) {
+  const typeData = journalTypeCounts.map((j) => ({
+    name: JOURNAL_TYPE_LABELS[j.type] || j.type,
+    value: j.count,
+    color: JOURNAL_TYPE_COLORS[j.type] || COLORS.muted,
   }));
 
   const totalJournals = typeData.reduce((s, d) => s + d.value, 0);
 
-  // 상태별 집계
-  const statusCounts = journals.reduce<Record<string, number>>((acc, j) => {
-    acc[j.status] = (acc[j.status] || 0) + 1;
-    return acc;
-  }, {});
-
-  const statusData = Object.entries(statusCounts).map(([key, value]) => ({
-    name: JOURNAL_STATUS_LABELS[key] || key,
-    value,
-    fill: JOURNAL_STATUS_COLORS[key] || COLORS.muted,
+  const statusData = journalStatusCounts.map((j) => ({
+    name: JOURNAL_STATUS_LABELS[j.status] || j.status,
+    value: j.count,
+    fill: JOURNAL_STATUS_COLORS[j.status] || COLORS.muted,
   }));
 
   return (

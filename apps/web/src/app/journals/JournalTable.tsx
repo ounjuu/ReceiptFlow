@@ -54,6 +54,10 @@ export interface JournalTableProps {
   onClearSelection: () => void;
   focusedRowId: string | null;
   setFocusedRowId: (id: string | null) => void;
+  page: number;
+  totalPages: number;
+  totalCount: number;
+  onPageChange: (page: number) => void;
   API_BASE: string;
 }
 
@@ -94,6 +98,10 @@ export default function JournalTable({
   onClearSelection,
   focusedRowId,
   setFocusedRowId,
+  page,
+  totalPages,
+  totalCount,
+  onPageChange,
   API_BASE,
 }: JournalTableProps) {
   const tableRef = useRef<HTMLTableSectionElement>(null);
@@ -491,6 +499,41 @@ export default function JournalTable({
           )}
         </tbody>
       </table>
+
+      {/* 페이지네이션 */}
+      {totalPages > 1 && (
+        <div className={styles.pagination}>
+          <span className={styles.pageInfo}>총 {totalCount}건</span>
+          <button
+            className={styles.pageBtn}
+            disabled={page <= 1}
+            onClick={() => onPageChange(page - 1)}
+          >
+            이전
+          </button>
+          {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => {
+            const start = Math.max(1, Math.min(page - 4, totalPages - 9));
+            const p = start + i;
+            if (p > totalPages) return null;
+            return (
+              <button
+                key={p}
+                className={`${styles.pageBtn} ${p === page ? styles.pageBtnActive : ""}`}
+                onClick={() => onPageChange(p)}
+              >
+                {p}
+              </button>
+            );
+          })}
+          <button
+            className={styles.pageBtn}
+            disabled={page >= totalPages}
+            onClick={() => onPageChange(page + 1)}
+          >
+            다음
+          </button>
+        </div>
+      )}
 
       {/* 테이블 단축키 안내 */}
       <div className={styles.tableShortcuts}>

@@ -7,6 +7,8 @@ export interface DashboardSummary {
   totalRevenue: number;
   totalExpense: number;
   netIncome: number;
+  journalTypeCounts?: { type: string; count: number }[];
+  journalStatusCounts?: { status: string; count: number }[];
 }
 
 export interface DashboardAlerts {

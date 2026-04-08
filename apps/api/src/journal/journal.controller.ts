@@ -89,8 +89,14 @@ export class JournalController {
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
     @Query("journalType") journalType?: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
   ) {
-    return this.journalService.findAll(tenantId, startDate, endDate, journalType);
+    return this.journalService.findAll(tenantId, {
+      startDate, endDate, journalType,
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    });
   }
 
   @Get(":id")

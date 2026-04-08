@@ -24,6 +24,8 @@ export default function JournalsPage() {
   const [activeTab, setActiveTab] = useState<string>("");
   const [filterStart, setFilterStart] = useState("");
   const [filterEnd, setFilterEnd] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   // 커스텀 훅
   const form = useJournalForm(tenantId, activeTab);
@@ -31,17 +33,25 @@ export default function JournalsPage() {
   const vendorAC = useVendorAutocomplete(tenantId, form.lines, form.setLines, form.updateLine);
   const summaryAC = useSummaryAutocomplete(tenantId, form.journalType, form.setDescription);
 
-  // 전표 목록 조회
+  // 전표 목록 조회 (페이지네이션)
   const queryParams = [
     filterStart && `startDate=${filterStart}`,
     filterEnd && `endDate=${filterEnd}`,
     activeTab && `journalType=${activeTab}`,
+    `page=${page}`,
+    `limit=${PAGE_SIZE}`,
   ].filter(Boolean).join("&");
 
-  const { data: journals = [] } = useQuery({
-    queryKey: ["journals", filterStart, filterEnd, activeTab],
-    queryFn: () => apiGet<JournalEntry[]>(`/journals?tenantId=${tenantId}${queryParams ? `&${queryParams}` : ""}`),
+  const { data: journalResult } = useQuery({
+    queryKey: ["journals", filterStart, filterEnd, activeTab, page],
+    queryFn: () => apiGet<{ data: JournalEntry[]; total: number; page: number; totalPages: number }>(
+      `/journals?tenantId=${tenantId}&${queryParams}`,
+    ),
   });
+
+  const journals = journalResult?.data ?? [];
+  const totalPages = journalResult?.totalPages ?? 1;
+  const totalCount = journalResult?.total ?? 0;
 
   // 폼용 마스터 데이터
   const { data: accounts = [] } = useQuery({
@@ -69,6 +79,7 @@ export default function JournalsPage() {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+    setPage(1);
     actions.setSelectedIds(new Set());
     if (tab) form.setJournalType(tab);
   };
@@ -160,8 +171,8 @@ export default function JournalsPage() {
         hasApprovalLine={actions.hasApprovalLine}
         filterStart={filterStart}
         filterEnd={filterEnd}
-        setFilterStart={setFilterStart}
-        setFilterEnd={setFilterEnd}
+        setFilterStart={(v: string) => { setFilterStart(v); setPage(1); }}
+        setFilterEnd={(v: string) => { setFilterEnd(v); setPage(1); }}
         journalImportRef={actions.journalImportRef}
         journalImportResult={actions.journalImportResult}
         setJournalImportResult={actions.setJournalImportResult}
@@ -188,6 +199,10 @@ export default function JournalsPage() {
         onClearSelection={() => actions.setSelectedIds(new Set())}
         focusedRowId={actions.focusedRowId}
         setFocusedRowId={actions.setFocusedRowId}
+        page={page}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        onPageChange={(p: number) => { setPage(p); actions.setSelectedIds(new Set()); }}
         API_BASE={API_BASE}
       />
     </div>

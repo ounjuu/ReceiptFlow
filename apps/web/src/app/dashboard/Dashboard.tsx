@@ -48,13 +48,13 @@ export default function DashboardPage() {
     enabled: !!tenantId,
   });
 
-  const { data: allJournals = [] } = useQuery({
+  const { data: recentResult } = useQuery({
     queryKey: ["journals-recent", tenantId],
-    queryFn: () => apiGet<JournalEntry[]>(`/journals?tenantId=${tenantId}`),
+    queryFn: () => apiGet<{ data: JournalEntry[] }>(`/journals?tenantId=${tenantId}&limit=5&page=1`),
     enabled: !!tenantId,
   });
 
-  const recentJournals = allJournals.slice(0, 5);
+  const recentJournals = recentResult?.data ?? [];
 
   const { data: pendingApprovals = [] } = useQuery({
     queryKey: ["approvals-pending", tenantId],
@@ -122,7 +122,10 @@ export default function DashboardPage() {
 
       <ChartGrid summary={summary} pieData={pieData} totalDocs={totalDocs} />
 
-      <JournalTypeChart journals={allJournals} />
+      <JournalTypeChart
+        journalTypeCounts={summary?.journalTypeCounts}
+        journalStatusCounts={summary?.journalStatusCounts}
+      />
 
       <BudgetChart
         budgetChartData={budgetChartData}
