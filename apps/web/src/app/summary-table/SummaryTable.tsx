@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { apiGet } from "@/lib/api";
 import { exportToXlsx } from "@/lib/export-xlsx";
+import { usePagination } from "@/lib/usePagination";
+import { Pagination } from "@/lib/Pagination";
 import styles from "./SummaryTable.module.css";
 
 // 일계표 응답 타입
@@ -84,6 +86,12 @@ export default function SummaryTable() {
     queryFn: () => apiGet<MonthlySummaryData>(`/reports/monthly-summary?${monthlyParams}`),
     enabled: !!tenantId && tab === "monthly",
   });
+
+  const dailyRows = dailyData?.rows ?? [];
+  const { pageData: pagedDailyRows, page: dailyPage, totalPages: dailyTotalPages, total: dailyTotal, setPage: setDailyPage } = usePagination(dailyRows, 50);
+
+  const monthlyRows = monthlyData?.rows ?? [];
+  const { pageData: pagedMonthlyRows, page: monthlyPage, totalPages: monthlyTotalPages, total: monthlyTotal, setPage: setMonthlyPage } = usePagination(monthlyRows, 50);
 
   // 일계표 엑셀 다운로드
   const handleDailyDownload = () => {
@@ -199,7 +207,7 @@ export default function SummaryTable() {
                   </tr>
                 </thead>
                 <tbody>
-                  {dailyData.rows.map((row) => (
+                  {pagedDailyRows.map((row) => (
                     <tr key={row.code}>
                       <td>{row.code}</td>
                       <td>
@@ -224,6 +232,7 @@ export default function SummaryTable() {
                   </tr>
                 </tbody>
               </table>
+              <Pagination page={dailyPage} totalPages={dailyTotalPages} total={dailyTotal} onPageChange={setDailyPage} />
             </div>
           )}
         </>
@@ -291,7 +300,7 @@ export default function SummaryTable() {
                   </tr>
                 </thead>
                 <tbody>
-                  {monthlyData.rows.map((row) => (
+                  {pagedMonthlyRows.map((row) => (
                     <tr key={row.code}>
                       <td>{row.code}</td>
                       <td>
@@ -324,6 +333,7 @@ export default function SummaryTable() {
                   </tr>
                 </tbody>
               </table>
+              <Pagination page={monthlyPage} totalPages={monthlyTotalPages} total={monthlyTotal} onPageChange={setMonthlyPage} />
             </div>
           )}
         </>

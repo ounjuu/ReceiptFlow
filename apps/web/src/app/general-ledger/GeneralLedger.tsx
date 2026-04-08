@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { apiGet } from "@/lib/api";
 import { exportToXlsx } from "@/lib/export-xlsx";
+import { usePagination } from "@/lib/usePagination";
+import { Pagination } from "@/lib/Pagination";
 import styles from "./GeneralLedger.module.css";
 
 interface GeneralLedgerEntry {
@@ -77,6 +79,9 @@ export default function GeneralLedger() {
       apiGet<GeneralLedgerData>(`/reports/general-ledger?${queryParams}`),
     enabled: !!tenantId,
   });
+
+  const allAccounts = data?.accounts ?? [];
+  const { pageData: pagedAccounts, page, totalPages, total, setPage } = usePagination(allAccounts, 50);
 
   const handleDownload = () => {
     if (!data) return;
@@ -168,7 +173,7 @@ export default function GeneralLedger() {
         <p className={styles.empty}>조회된 거래 내역이 없습니다</p>
       )}
 
-      {data?.accounts.map((account) => (
+      {pagedAccounts.map((account) => (
         <div key={account.accountId} className={styles.accountSection}>
           <div className={styles.accountHeader}>
             <span className={styles.accountCode}>{account.code}</span>
@@ -225,6 +230,10 @@ export default function GeneralLedger() {
           </table>
         </div>
       ))}
+
+      {data && data.accounts.length > 0 && (
+        <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
+      )}
     </div>
   );
 }

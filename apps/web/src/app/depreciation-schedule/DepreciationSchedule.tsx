@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { exportToXlsx } from "@/lib/export-xlsx";
+import { usePagination } from "@/lib/usePagination";
+import { Pagination } from "@/lib/Pagination";
 import styles from "./DepreciationSchedule.module.css";
 
 interface DepreciationAsset {
@@ -132,6 +134,7 @@ export default function DepreciationSchedulePage() {
 
   const assets = data?.assets || [];
   const totals = data?.totals;
+  const { pageData: pagedAssets, page, totalPages, total, setPage } = usePagination(assets, 50);
 
   return (
     <div>
@@ -220,7 +223,7 @@ export default function DepreciationSchedulePage() {
               </tr>
             </thead>
             <tbody>
-              {assets.map((asset) => (
+              {pagedAssets.map((asset) => (
                 <tr key={asset.id}>
                   <td>{asset.name}</td>
                   <td className={styles.textCenter}>
@@ -272,6 +275,9 @@ export default function DepreciationSchedulePage() {
               )}
             </tbody>
           </table>
+        )}
+        {assets.length > 0 && (
+          <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
         )}
       </div>
     </div>

@@ -6,6 +6,8 @@ import { useAuth } from "@/lib/auth";
 import { apiGet } from "@/lib/api";
 import { useLocale } from "@/lib/locale";
 import { exportToXlsx } from "@/lib/export-xlsx";
+import { usePagination } from "@/lib/usePagination";
+import { Pagination } from "@/lib/Pagination";
 import styles from "./VendorSummary.module.css";
 
 interface VendorRow {
@@ -45,6 +47,9 @@ export default function VendorSummary() {
       apiGet<VendorSummaryData>(`/reports/vendor-summary?${queryParams}`),
     enabled: !!tenantId,
   });
+
+  const allVendors = data?.vendors ?? [];
+  const { pageData: pagedVendors, page, totalPages, total, setPage } = usePagination(allVendors, 50);
 
   const handleDownload = () => {
     if (!data) return;
@@ -161,7 +166,7 @@ export default function VendorSummary() {
               </tr>
             </thead>
             <tbody>
-              {data.vendors.map((v) => (
+              {pagedVendors.map((v) => (
                 <tr key={v.vendorId}>
                   <td>{v.vendorName}</td>
                   <td>{v.bizNo ?? "-"}</td>
@@ -187,6 +192,7 @@ export default function VendorSummary() {
               </tr>
             </tbody>
           </table>
+          <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
         </div>
       )}
     </div>

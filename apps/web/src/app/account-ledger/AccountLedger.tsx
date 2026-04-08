@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { apiGet } from "@/lib/api";
 import { exportToXlsx } from "@/lib/export-xlsx";
+import { usePagination } from "@/lib/usePagination";
+import { Pagination } from "@/lib/Pagination";
 import styles from "./AccountLedger.module.css";
 
 interface AccountLedgerEntry {
@@ -78,6 +80,9 @@ export default function AccountLedger() {
       apiGet<AccountLedgerData>(`/reports/account-ledger?${queryParams}`),
     enabled: !!tenantId && !!accountId,
   });
+
+  const allEntries = data?.entries ?? [];
+  const { pageData: pagedEntries, page, totalPages, total, setPage } = usePagination(allEntries, 50);
 
   const handleDownload = () => {
     if (!data) return;
@@ -214,7 +219,7 @@ export default function AccountLedger() {
                   </tr>
 
                   {/* 거래 내역 */}
-                  {data.entries.map((entry, idx) => (
+                  {pagedEntries.map((entry, idx) => (
                     <tr key={`${entry.journalEntryId}-${idx}`}>
                       <td>{entry.date}</td>
                       <td>{entry.description}</td>
@@ -252,6 +257,7 @@ export default function AccountLedger() {
                   </tr>
                 </tbody>
               </table>
+              <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
             </div>
           )}
         </>

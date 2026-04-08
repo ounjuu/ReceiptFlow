@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { apiGet } from "@/lib/api";
 import { exportToXlsx } from "@/lib/export-xlsx";
+import { usePagination } from "@/lib/usePagination";
+import { Pagination } from "@/lib/Pagination";
 import styles from "./JournalBook.module.css";
 
 interface JournalLine {
@@ -52,6 +54,9 @@ export default function JournalBook() {
       apiGet<JournalBookData>(`/reports/journal-book?${queryParams}`),
     enabled: !!tenantId,
   });
+
+  const allEntries = data?.entries ?? [];
+  const { pageData: pagedEntries, page, totalPages, total, setPage } = usePagination(allEntries, 50);
 
   const handleDownload = () => {
     if (!data) return;
@@ -162,12 +167,12 @@ export default function JournalBook() {
               </tr>
             </thead>
             <tbody>
-              {data.entries.map((entry, entryIdx) => (
+              {pagedEntries.map((entry, entryIdx) => (
                 entry.lines.map((line, lineIdx) => (
                   <tr
                     key={`${entry.id}-${lineIdx}`}
                     className={
-                      lineIdx === entry.lines.length - 1 && entryIdx < data.entries.length - 1
+                      lineIdx === entry.lines.length - 1 && entryIdx < pagedEntries.length - 1
                         ? styles.entryLastLine
                         : ""
                     }
@@ -211,6 +216,7 @@ export default function JournalBook() {
               </tr>
             </tbody>
           </table>
+          <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
         </div>
       )}
     </div>
