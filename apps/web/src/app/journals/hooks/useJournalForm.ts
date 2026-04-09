@@ -12,6 +12,9 @@ export function useJournalForm(tenantId: string | null, activeTab: string) {
   const [description, setDescription] = useState("");
   const [currency, setCurrency] = useState("KRW");
   const [exchangeRate, setExchangeRate] = useState("1");
+  const [evidenceType, setEvidenceType] = useState("NONE");
+  const [supplyAmount, setSupplyAmount] = useState("");
+  const [vatAmount, setVatAmount] = useState("");
   const [lines, setLines] = useState<LineInput[]>([emptyLine(), emptyLine()]);
   const [error, setError] = useState("");
 
@@ -27,6 +30,9 @@ export function useJournalForm(tenantId: string | null, activeTab: string) {
     setDescription("");
     setCurrency("KRW");
     setExchangeRate("1");
+    setEvidenceType("NONE");
+    setSupplyAmount("");
+    setVatAmount("");
     setLines([emptyLine(), emptyLine()]);
     setError("");
   }, [activeTab]);
@@ -39,6 +45,9 @@ export function useJournalForm(tenantId: string | null, activeTab: string) {
     setDescription(j.description || "");
     setCurrency(j.currency || "KRW");
     setExchangeRate(String(Number(j.exchangeRate) || 1));
+    setEvidenceType(j.evidenceType || "NONE");
+    setSupplyAmount(j.supplyAmount ? String(Number(j.supplyAmount)) : "");
+    setVatAmount(j.vatAmount ? String(Number(j.vatAmount)) : "");
     setLines(
       j.lines.map((l) => ({
         accountId: l.account.id,
@@ -79,6 +88,15 @@ export function useJournalForm(tenantId: string | null, activeTab: string) {
       return prev.filter((_, i) => i !== index);
     });
   }, []);
+
+  // 공급가액 변경 시 부가세 자동 계산 (10%)
+  const handleSupplyAmountChange = useCallback((value: string) => {
+    setSupplyAmount(value);
+    const supply = Number(value) || 0;
+    setVatAmount(String(Math.round(supply * 0.1)));
+  }, []);
+
+  const isTaxType = journalType === "PURCHASE" || journalType === "SALES";
 
   const handleCurrencyChange = useCallback(async (cur: string) => {
     setCurrency(cur);
@@ -168,6 +186,7 @@ export function useJournalForm(tenantId: string | null, activeTab: string) {
       createMutation.mutate({
         tenantId: tenantId!,
         journalType,
+        ...(isTaxType && { evidenceType, supplyAmount: Number(supplyAmount) || undefined, vatAmount: Number(vatAmount) || undefined }),
         date,
         description,
         currency,
@@ -183,6 +202,9 @@ export function useJournalForm(tenantId: string | null, activeTab: string) {
     formMode, setFormMode,
     editingId,
     journalType, setJournalType,
+    evidenceType, setEvidenceType,
+    supplyAmount, vatAmount, setVatAmount,
+    isTaxType, handleSupplyAmountChange,
     date, setDate,
     description, setDescription,
     currency, exchangeRate, setExchangeRate,

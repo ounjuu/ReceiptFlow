@@ -126,6 +126,13 @@ export default function JournalsPage() {
           editingId={form.editingId}
           journalType={form.journalType}
           setJournalType={form.setJournalType}
+          isTaxType={form.isTaxType}
+          evidenceType={form.evidenceType}
+          setEvidenceType={form.setEvidenceType}
+          supplyAmount={form.supplyAmount}
+          handleSupplyAmountChange={form.handleSupplyAmountChange}
+          vatAmount={form.vatAmount}
+          setVatAmount={form.setVatAmount}
           date={form.date}
           setDate={form.setDate}
           description={form.description}

@@ -115,10 +115,13 @@ describe("Journal API (e2e)", () => {
         .set("Authorization", `Bearer ${token}`)
         .expect(200);
 
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBeGreaterThanOrEqual(1);
-      expect(res.body[0]).toHaveProperty("id");
-      expect(res.body[0]).toHaveProperty("lines");
+      expect(res.body).toHaveProperty("data");
+      expect(res.body).toHaveProperty("total");
+      expect(res.body).toHaveProperty("totalPages");
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+      expect(res.body.data[0]).toHaveProperty("id");
+      expect(res.body.data[0]).toHaveProperty("lines");
     });
 
     it("기간 필터 조회", async () => {
@@ -128,7 +131,8 @@ describe("Journal API (e2e)", () => {
         .set("Authorization", `Bearer ${token}`)
         .expect(200);
 
-      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body).toHaveProperty("data");
+      expect(Array.isArray(res.body.data)).toBe(true);
     });
   });
 

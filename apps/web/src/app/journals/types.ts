@@ -45,6 +45,9 @@ export interface JournalEntry {
   id: string;
   journalNumber: string | null;
   journalType: string;
+  evidenceType: string | null;
+  supplyAmount: string | null;
+  vatAmount: string | null;
   date: string;
   description: string | null;
   status: string;
@@ -101,6 +104,13 @@ export function journalTypeLabel(type: string) {
     default: return type;
   }
 }
+
+export const EVIDENCE_TYPES = [
+  { code: "TAX_INVOICE", name: "세금계산서" },
+  { code: "CARD", name: "신용카드" },
+  { code: "CASH_RECEIPT", name: "현금영수증" },
+  { code: "NONE", name: "없음" },
+] as const;
 
 export const CURRENCY_OPTIONS = [
   { code: "KRW", name: "원 (KRW)" },

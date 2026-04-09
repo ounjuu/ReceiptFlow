@@ -11,6 +11,7 @@ import {
   CURRENCY_OPTIONS,
   CURRENCY_SYMBOLS,
   JOURNAL_TYPES,
+  EVIDENCE_TYPES,
 } from "./types";
 
 // 그리드 컬럼 순서 (키보드 네비게이션용)
@@ -27,6 +28,13 @@ export interface JournalFormProps {
   editingId: string | null;
   journalType: string;
   setJournalType: (v: string) => void;
+  isTaxType: boolean;
+  evidenceType: string;
+  setEvidenceType: (v: string) => void;
+  supplyAmount: string;
+  handleSupplyAmountChange: (v: string) => void;
+  vatAmount: string;
+  setVatAmount: (v: string) => void;
   date: string;
   setDate: (v: string) => void;
   description: string;
@@ -65,6 +73,13 @@ export interface JournalFormProps {
 export default function JournalForm({
   formMode,
   journalType,
+  isTaxType,
+  evidenceType,
+  setEvidenceType,
+  supplyAmount,
+  handleSupplyAmountChange,
+  vatAmount,
+  setVatAmount,
   setJournalType,
   date,
   setDate,
@@ -287,6 +302,52 @@ export default function JournalForm({
             </div>
           )}
         </div>
+
+        {/* 매입/매출 전표: 부가세 자동 계산 */}
+        {isTaxType && (
+          <div className={styles.vatSection}>
+            <div className={styles.formRow}>
+              <label className={styles.label}>증빙 유형</label>
+              <select
+                className={styles.select}
+                value={evidenceType}
+                onChange={(e) => setEvidenceType(e.target.value)}
+              >
+                {EVIDENCE_TYPES.map((t) => (
+                  <option key={t.code} value={t.code}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.formRow}>
+              <label className={styles.label}>공급가액</label>
+              <input
+                className={styles.input}
+                type="number"
+                value={supplyAmount}
+                onChange={(e) => handleSupplyAmountChange(e.target.value)}
+                placeholder="0"
+                min={0}
+              />
+            </div>
+            <div className={styles.formRow}>
+              <label className={styles.label}>부가세 (10%)</label>
+              <input
+                className={styles.input}
+                type="number"
+                value={vatAmount}
+                onChange={(e) => setVatAmount(e.target.value)}
+                placeholder="자동 계산"
+                min={0}
+              />
+            </div>
+            <div className={styles.formRow}>
+              <label className={styles.label}>합계</label>
+              <span className={styles.vatTotal}>
+                {((Number(supplyAmount) || 0) + (Number(vatAmount) || 0)).toLocaleString()}원
+              </span>
+            </div>
+          </div>
+        )}
 
         <div className={styles.linesHeader}>
           <span>사업자번호</span>

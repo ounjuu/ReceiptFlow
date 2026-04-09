@@ -13,7 +13,10 @@
     "dev:api": "npm run start:dev --workspace=apps/api",
     "build:web": "npm run build --workspace=apps/web",
     "build:api": "npm run build --workspace=apps/api",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test:web && npm run test:api",
+    "test:web": "cd apps/web && npx jest --passWithNoTests",
+    "test:api": "cd apps/api && npx jest --config jest.config.ts --passWithNoTests"
   },
   "devDependencies": {
     "tsx": "^4.21.0"
