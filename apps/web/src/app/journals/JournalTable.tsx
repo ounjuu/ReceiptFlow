@@ -11,6 +11,7 @@ import {
   statusLabel,
   journalTypeLabel,
   CURRENCY_SYMBOLS,
+  Account,
 } from "./types";
 
 export interface JournalTableProps {
@@ -24,6 +25,17 @@ export interface JournalTableProps {
   filterEnd: string;
   setFilterStart: (v: string) => void;
   setFilterEnd: (v: string) => void;
+  searchAccounts: Account[];
+  searchAccountId: string;
+  setSearchAccountId: (v: string) => void;
+  searchKeyword: string;
+  setSearchKeyword: (v: string) => void;
+  searchMinAmount: string;
+  setSearchMinAmount: (v: string) => void;
+  searchMaxAmount: string;
+  setSearchMaxAmount: (v: string) => void;
+  searchStatus: string;
+  setSearchStatus: (v: string) => void;
   journalImportRef: React.RefObject<HTMLInputElement | null>;
   journalImportResult: { total: number; success: number; failed: number; results: { index: number; status: string; error?: string }[] } | null;
   setJournalImportResult: (v: null) => void;
@@ -72,6 +84,17 @@ export default function JournalTable({
   filterEnd,
   setFilterStart,
   setFilterEnd,
+  searchAccounts,
+  searchAccountId,
+  setSearchAccountId,
+  searchKeyword,
+  setSearchKeyword,
+  searchMinAmount,
+  setSearchMinAmount,
+  searchMaxAmount,
+  setSearchMaxAmount,
+  searchStatus,
+  setSearchStatus,
   journalImportRef,
   journalImportResult,
   setJournalImportResult,
@@ -226,6 +249,70 @@ export default function JournalTable({
               onClick={() => { setFilterStart(""); setFilterEnd(""); }}
             >
               초기화
+            </button>
+          )}
+        </div>
+        {/* 고급 검색 */}
+        <div className={styles.filterRow}>
+          <select
+            className={styles.filterInput}
+            value={searchAccountId}
+            onChange={(e) => setSearchAccountId(e.target.value)}
+            style={{ minWidth: 140 }}
+          >
+            <option value="">계정과목 전체</option>
+            {searchAccounts.map((a) => (
+              <option key={a.id} value={a.id}>{a.code} {a.name}</option>
+            ))}
+          </select>
+          <select
+            className={styles.filterInput}
+            value={searchStatus}
+            onChange={(e) => setSearchStatus(e.target.value)}
+            style={{ minWidth: 100 }}
+          >
+            <option value="">상태 전체</option>
+            <option value="DRAFT">임시</option>
+            <option value="APPROVED">승인</option>
+            <option value="POSTED">확정</option>
+          </select>
+          <input
+            className={styles.filterInput}
+            type="text"
+            placeholder="적요 검색"
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            style={{ minWidth: 120 }}
+          />
+          <input
+            className={styles.filterInput}
+            type="number"
+            placeholder="최소 금액"
+            value={searchMinAmount}
+            onChange={(e) => setSearchMinAmount(e.target.value)}
+            style={{ width: 100 }}
+          />
+          <span className={styles.filterSep}>~</span>
+          <input
+            className={styles.filterInput}
+            type="number"
+            placeholder="최대 금액"
+            value={searchMaxAmount}
+            onChange={(e) => setSearchMaxAmount(e.target.value)}
+            style={{ width: 100 }}
+          />
+          {(searchAccountId || searchKeyword || searchMinAmount || searchMaxAmount || searchStatus) && (
+            <button
+              className={styles.filterClear}
+              onClick={() => {
+                setSearchAccountId("");
+                setSearchKeyword("");
+                setSearchMinAmount("");
+                setSearchMaxAmount("");
+                setSearchStatus("");
+              }}
+            >
+              검색 초기화
             </button>
           )}
         </div>

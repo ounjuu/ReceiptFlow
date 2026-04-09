@@ -89,11 +89,20 @@ export class JournalController {
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
     @Query("journalType") journalType?: string,
+    @Query("accountId") accountId?: string,
+    @Query("vendorId") vendorId?: string,
+    @Query("minAmount") minAmount?: string,
+    @Query("maxAmount") maxAmount?: string,
+    @Query("keyword") keyword?: string,
+    @Query("status") status?: string,
     @Query("page") page?: string,
     @Query("limit") limit?: string,
   ) {
     return this.journalService.findAll(tenantId, {
       startDate, endDate, journalType,
+      accountId, vendorId, keyword, status,
+      minAmount: minAmount ? Number(minAmount) : undefined,
+      maxAmount: maxAmount ? Number(maxAmount) : undefined,
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,
     });

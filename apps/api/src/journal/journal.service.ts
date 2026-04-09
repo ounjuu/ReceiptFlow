@@ -329,12 +329,18 @@ export class JournalService {
     return { total: journals.length, success, failed: journals.length - success, results };
   }
 
-  // 테넌트별 전표 목록 조회 (기간 + 유형 필터 + 페이지네이션)
+  // 테넌트별 전표 목록 조회 (복합 검색 + 페이지네이션)
   async findAll(
     tenantId: string,
-    opts?: { startDate?: string; endDate?: string; journalType?: string; page?: number; limit?: number },
+    opts?: {
+      startDate?: string; endDate?: string; journalType?: string;
+      accountId?: string; vendorId?: string;
+      minAmount?: number; maxAmount?: number;
+      keyword?: string; status?: string;
+      page?: number; limit?: number;
+    },
   ) {
-    const { startDate, endDate, journalType, page = 1, limit = 20 } = opts || {};
+    const { startDate, endDate, journalType, accountId, vendorId, minAmount, maxAmount, keyword, status, page = 1, limit = 20 } = opts || {};
     const where: Record<string, unknown> = { tenantId };
     if (startDate || endDate) {
       where.date = {
@@ -344,6 +350,25 @@ export class JournalService {
     }
     if (journalType) {
       where.journalType = journalType;
+    }
+    if (status) {
+      where.status = status;
+    }
+    if (keyword) {
+      where.description = { contains: keyword, mode: "insensitive" };
+    }
+    // 라인 기반 필터 (계정과목, 거래처, 금액범위)
+    if (accountId || vendorId || minAmount !== undefined || maxAmount !== undefined) {
+      const lineFilter: Record<string, unknown> = {};
+      if (accountId) lineFilter.accountId = accountId;
+      if (vendorId) lineFilter.vendorId = vendorId;
+      if (minAmount !== undefined || maxAmount !== undefined) {
+        lineFilter.debit = {
+          ...(minAmount !== undefined && { gte: minAmount }),
+          ...(maxAmount !== undefined && { lte: maxAmount }),
+        };
+      }
+      where.lines = { some: lineFilter };
     }
 
     const [data, total] = await Promise.all([

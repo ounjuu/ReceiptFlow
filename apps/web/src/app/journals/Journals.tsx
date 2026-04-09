@@ -24,6 +24,12 @@ export default function JournalsPage() {
   const [activeTab, setActiveTab] = useState<string>("");
   const [filterStart, setFilterStart] = useState("");
   const [filterEnd, setFilterEnd] = useState("");
+  const [searchAccountId, setSearchAccountId] = useState("");
+  const [searchVendorId, setSearchVendorId] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [searchMinAmount, setSearchMinAmount] = useState("");
+  const [searchMaxAmount, setSearchMaxAmount] = useState("");
+  const [searchStatus, setSearchStatus] = useState("");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
 
@@ -33,17 +39,30 @@ export default function JournalsPage() {
   const vendorAC = useVendorAutocomplete(tenantId, form.lines, form.setLines, form.updateLine);
   const summaryAC = useSummaryAutocomplete(tenantId, form.journalType, form.setDescription);
 
-  // 전표 목록 조회 (페이지네이션)
+  // 검색용 마스터 데이터
+  const { data: searchAccounts = [] } = useQuery({
+    queryKey: ["accounts-search"],
+    queryFn: () => apiGet<Account[]>(`/accounts?tenantId=${tenantId}`),
+    enabled: !!tenantId,
+  });
+
+  // 전표 목록 조회 (복합 검색 + 페이지네이션)
   const queryParams = [
     filterStart && `startDate=${filterStart}`,
     filterEnd && `endDate=${filterEnd}`,
     activeTab && `journalType=${activeTab}`,
+    searchAccountId && `accountId=${searchAccountId}`,
+    searchVendorId && `vendorId=${searchVendorId}`,
+    searchKeyword && `keyword=${encodeURIComponent(searchKeyword)}`,
+    searchMinAmount && `minAmount=${searchMinAmount}`,
+    searchMaxAmount && `maxAmount=${searchMaxAmount}`,
+    searchStatus && `status=${searchStatus}`,
     `page=${page}`,
     `limit=${PAGE_SIZE}`,
   ].filter(Boolean).join("&");
 
   const { data: journalResult } = useQuery({
-    queryKey: ["journals", filterStart, filterEnd, activeTab, page],
+    queryKey: ["journals", filterStart, filterEnd, activeTab, searchAccountId, searchVendorId, searchKeyword, searchMinAmount, searchMaxAmount, searchStatus, page],
     queryFn: () => apiGet<{ data: JournalEntry[]; total: number; page: number; totalPages: number }>(
       `/journals?tenantId=${tenantId}&${queryParams}`,
     ),
@@ -180,6 +199,17 @@ export default function JournalsPage() {
         filterEnd={filterEnd}
         setFilterStart={(v: string) => { setFilterStart(v); setPage(1); }}
         setFilterEnd={(v: string) => { setFilterEnd(v); setPage(1); }}
+        searchAccounts={searchAccounts}
+        searchAccountId={searchAccountId}
+        setSearchAccountId={(v: string) => { setSearchAccountId(v); setPage(1); }}
+        searchKeyword={searchKeyword}
+        setSearchKeyword={(v: string) => { setSearchKeyword(v); setPage(1); }}
+        searchMinAmount={searchMinAmount}
+        setSearchMinAmount={(v: string) => { setSearchMinAmount(v); setPage(1); }}
+        searchMaxAmount={searchMaxAmount}
+        setSearchMaxAmount={(v: string) => { setSearchMaxAmount(v); setPage(1); }}
+        searchStatus={searchStatus}
+        setSearchStatus={(v: string) => { setSearchStatus(v); setPage(1); }}
         journalImportRef={actions.journalImportRef}
         journalImportResult={actions.journalImportResult}
         setJournalImportResult={actions.setJournalImportResult}
