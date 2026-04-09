@@ -221,4 +221,80 @@ describe("Journal API (e2e)", () => {
         .expect(404);
     });
   });
+
+  // ── 전표 유형 + 자동채번 ──
+
+  describe("전표 유형 및 자동채번", () => {
+    it("매입전표 생성 시 자동채번", async () => {
+      const res = await request(app.getHttpServer())
+        .post("/journals")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          tenantId,
+          journalType: "PURCHASE",
+          date: "2025-08-01",
+          description: "매입전표 테스트",
+          lines: [
+            { accountId: cashAccountId, ...vendorInfo, debit: 50000, credit: 0 },
+            { accountId: salesAccountId, ...vendorInfo, debit: 0, credit: 50000 },
+          ],
+        })
+        .expect(201);
+
+      expect(res.body.journalType).toBe("PURCHASE");
+      expect(res.body.journalNumber).toMatch(/^매입-\d{8}-\d{4}$/);
+    });
+
+    it("부가세 필드 저장", async () => {
+      const res = await request(app.getHttpServer())
+        .post("/journals")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          tenantId,
+          journalType: "PURCHASE",
+          evidenceType: "TAX_INVOICE",
+          supplyAmount: 100000,
+          vatAmount: 10000,
+          date: "2025-08-02",
+          description: "부가세 테스트",
+          lines: [
+            { accountId: cashAccountId, ...vendorInfo, debit: 110000, credit: 0 },
+            { accountId: salesAccountId, ...vendorInfo, debit: 0, credit: 110000 },
+          ],
+        })
+        .expect(201);
+
+      expect(res.body.evidenceType).toBe("TAX_INVOICE");
+      expect(Number(res.body.supplyAmount)).toBe(100000);
+      expect(Number(res.body.vatAmount)).toBe(10000);
+    });
+
+    it("유형별 필터", async () => {
+      const res = await request(app.getHttpServer())
+        .get("/journals")
+        .query({ tenantId, journalType: "PURCHASE" })
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.body.data.every((j: { journalType: string }) => j.journalType === "PURCHASE")).toBe(true);
+    });
+  });
+
+  // ── 페이지네이션 ──
+
+  describe("페이지네이션", () => {
+    it("page/limit 파라미터", async () => {
+      const res = await request(app.getHttpServer())
+        .get("/journals")
+        .query({ tenantId, page: 1, limit: 2 })
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.body.data.length).toBeLessThanOrEqual(2);
+      expect(res.body.page).toBe(1);
+      expect(res.body.limit).toBe(2);
+      expect(typeof res.body.total).toBe("number");
+      expect(typeof res.body.totalPages).toBe("number");
+    });
+  });
 });

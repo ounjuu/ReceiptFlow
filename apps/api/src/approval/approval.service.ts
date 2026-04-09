@@ -1,10 +1,12 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from "@nestjs/common";
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { MailService } from "../mail/mail.service";
 import { SetApprovalLinesDto } from "./dto/set-approval-lines.dto";
 
 @Injectable()
 export class ApprovalService {
+  private readonly logger = new Logger(ApprovalService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
@@ -144,8 +146,8 @@ export class ApprovalService {
           submitter?.name || "요청자",
         );
       }
-    } catch (err) {
-      // 메일 발송 실패가 결재 흐름을 중단하지 않도록 무시
+    } catch (err: any) {
+      this.logger.warn(`결재 요청 메일 발송 실패: ${err?.message || err}`);
     }
 
     return approvalRequest;
@@ -293,8 +295,8 @@ export class ApprovalService {
             );
           }
         }
-      } catch (err) {
-        // 메일 발송 실패가 결재 흐름을 중단하지 않도록 무시
+      } catch (err: any) {
+        this.logger.warn(`다음 결재자 메일 발송 실패: ${err?.message || err}`);
       }
 
       return {
@@ -454,7 +456,9 @@ export class ApprovalService {
         action,
         comment,
       );
-    })().catch(() => {});
+    })().catch((err) => {
+      this.logger.warn(`결재 결과 메일 발송 실패: ${err?.message || err}`);
+    });
   }
 
   /** 문서 설명 조회 헬퍼 */

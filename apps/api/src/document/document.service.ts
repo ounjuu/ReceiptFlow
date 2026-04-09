@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { JournalRuleService } from "../journal-rule/journal-rule.service";
 import { JournalService } from "../journal/journal.service";
@@ -12,6 +12,8 @@ const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
 
 @Injectable()
 export class DocumentService {
+  private readonly logger = new Logger(DocumentService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly journalRuleService: JournalRuleService,
@@ -138,7 +140,7 @@ export class DocumentService {
         return await res.json();
       }
     } catch (err: any) {
-      console.error("OCR 서비스 연결 실패:", err?.message || err);
+      this.logger.warn(`OCR 서비스 연결 실패: ${err?.message || err}`);
     }
 
     return {
@@ -185,8 +187,14 @@ export class DocumentService {
         where: { tenantId_code: { tenantId: dto.tenantId, code: "10100" } },
       });
 
-      debitAccountId = finalAccount!.id;
-      creditAccountId = cashAccount!.id;
+      if (!finalAccount) {
+        throw new BadRequestException("비용 계정(51200)을 찾을 수 없습니다. 계정과목을 확인하세요.");
+      }
+      if (!cashAccount) {
+        throw new BadRequestException("현금 계정(10100)을 찾을 수 없습니다. 계정과목을 확인하세요.");
+      }
+      debitAccountId = finalAccount.id;
+      creditAccountId = cashAccount.id;
     }
 
     // 3. Document + JournalEntry + JournalLine 트랜잭션으로 생성
