@@ -8,15 +8,18 @@ import {
   Query,
   Body,
   Req,
+  Res,
   UseGuards,
   UseInterceptors,
   UploadedFile,
 } from "@nestjs/common";
+import { Response } from "express";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
 import { extname } from "path";
 import { JournalService } from "./journal.service";
+import { JournalPdfService } from "./journal-pdf.service";
 import { CreateJournalDto } from "./dto/create-journal.dto";
 import { UpdateJournalDto } from "./dto/update-journal.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -26,7 +29,10 @@ import { Roles } from "../auth/roles.decorator";
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("journals")
 export class JournalController {
-  constructor(private readonly journalService: JournalService) {}
+  constructor(
+    private readonly journalService: JournalService,
+    private readonly journalPdfService: JournalPdfService,
+  ) {}
 
   @Post()
   @Roles("ADMIN", "ACCOUNTANT")
@@ -106,6 +112,17 @@ export class JournalController {
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,
     });
+  }
+
+  @Get(":id/export-pdf")
+  async exportPdf(@Param("id") id: string, @Res() res: Response) {
+    const journal = await this.journalService.findOne(id);
+    const buffer = await this.journalPdfService.generatePdf(journal);
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="journal-${journal.journalNumber || id}.pdf"`,
+    });
+    res.end(buffer);
   }
 
   @Get(":id")

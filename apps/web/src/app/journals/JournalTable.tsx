@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef } from "react";
 import { UseMutationResult } from "@tanstack/react-query";
 import { exportToXlsx } from "@/lib/export-xlsx";
 import { downloadTemplate } from "@/lib/import-xlsx";
+import { apiDownload } from "@/lib/api";
 import styles from "./Journals.module.css";
 import {
   JournalEntry,
@@ -501,6 +502,18 @@ export default function JournalTable({
                         복사
                       </button>
                     )}
+                    <button
+                      className={styles.editBtn}
+                      onClick={() => {
+                        apiDownload(
+                          `/journals/${j.id}/export-pdf`,
+                          `journal-${j.journalNumber || j.id}.pdf`,
+                        ).catch((err) => alert((err as Error).message));
+                      }}
+                      style={{ fontSize: "0.75rem" }}
+                    >
+                      PDF
+                    </button>
                     {canEdit && j.status === "POSTED" && (
                       <button
                         className={styles.statusBtn}
