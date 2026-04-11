@@ -223,6 +223,7 @@ export default function JournalsPage() {
         selectedJournals={selectedJournals}
         statusMutation={actions.statusMutation}
         batchMutation={actions.batchMutation}
+        batchUpdateMutation={actions.batchUpdateMutation}
         submitApprovalMutation={actions.submitApprovalMutation}
         deleteMutation={actions.deleteMutation}
         uploadAttachmentMut={actions.uploadAttachmentMut}

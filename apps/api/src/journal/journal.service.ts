@@ -651,6 +651,61 @@ export class JournalService {
     });
   }
 
+  // 일괄 수정 (적요/날짜 변경)
+  async batchUpdate(
+    ids: string[],
+    data: { description?: string; date?: string },
+    userId?: string,
+  ) {
+    if (data.description === undefined && data.date === undefined) {
+      throw new BadRequestException("수정할 필드가 없습니다");
+    }
+
+    const entries = await this.prisma.journalEntry.findMany({
+      where: { id: { in: ids } },
+    });
+
+    if (entries.length !== ids.length) {
+      throw new BadRequestException("일부 전표를 찾을 수 없습니다");
+    }
+
+    // POSTED 상태는 수정 불가, 마감 기간 체크
+    for (const entry of entries) {
+      if (entry.status === "POSTED") {
+        throw new BadRequestException(`전표(${entry.journalNumber || entry.id})는 확정 상태라 수정할 수 없습니다`);
+      }
+      await this.checkClosedPeriod(entry.tenantId, entry.date);
+      if (data.date) {
+        await this.checkClosedPeriod(entry.tenantId, new Date(data.date));
+      }
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const result = await tx.journalEntry.updateMany({
+        where: { id: { in: ids } },
+        data: {
+          ...(data.description !== undefined && { description: data.description }),
+          ...(data.date !== undefined && { date: new Date(data.date) }),
+        },
+      });
+
+      if (userId && entries.length > 0) {
+        await this.auditLogService.log({
+          tenantId: entries[0].tenantId,
+          userId,
+          action: "JOURNAL_BATCH_UPDATE",
+          entityType: "JournalEntry",
+          entityId: ids.join(","),
+          description: `일괄 수정 (${result.count}건)`,
+          oldValue: { ids },
+          newValue: { ...data, count: result.count },
+        });
+      }
+
+      return { count: result.count };
+    });
+  }
+
   // 첨부파일 추가
   async addAttachment(journalEntryId: string, file: { filename: string; originalname: string }) {
     const entry = await this.prisma.journalEntry.findUnique({ where: { id: journalEntryId } });

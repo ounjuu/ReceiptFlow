@@ -38,6 +38,15 @@ export function useJournalActions(tenantId: string | null) {
     },
   });
 
+  const batchUpdateMutation = useMutation({
+    mutationFn: (body: { ids: string[]; description?: string; date?: string }) =>
+      apiPatch<{ count: number }>("/journals/batch/update", body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["journals"] });
+      setSelectedIds(new Set());
+    },
+  });
+
   const submitApprovalMutation = useMutation({
     mutationFn: (documentId: string) =>
       apiPost("/approvals/submit", { tenantId, documentType: "JOURNAL", documentId }),
@@ -160,7 +169,7 @@ export function useJournalActions(tenantId: string | null) {
     focusedRowId, setFocusedRowId,
     journalImportRef, journalImportResult, setJournalImportResult,
     hasApprovalLine,
-    deleteMutation, statusMutation, batchMutation,
+    deleteMutation, statusMutation, batchMutation, batchUpdateMutation,
     submitApprovalMutation, uploadAttachmentMut, deleteAttachmentMut,
     journalImportMutation,
     handleDelete, handleCopy, handleReverse, handleJournalImport,

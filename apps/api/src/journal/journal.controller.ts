@@ -89,6 +89,16 @@ export class JournalController {
     return this.journalService.batchUpdateStatus(body.ids, body.status, req.user.sub);
   }
 
+  // 일괄 수정 (적요/날짜)
+  @Patch("batch/update")
+  @Roles("ADMIN", "ACCOUNTANT")
+  async batchUpdate(
+    @Body() body: { ids: string[]; description?: string; date?: string },
+    @Req() req: { user: { sub: string } },
+  ) {
+    return this.journalService.batchUpdate(body.ids, { description: body.description, date: body.date }, req.user.sub);
+  }
+
   @Get()
   async findAll(
     @CurrentTenant() tenantId: string,

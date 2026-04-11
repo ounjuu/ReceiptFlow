@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { UseMutationResult } from "@tanstack/react-query";
 import { exportToXlsx } from "@/lib/export-xlsx";
 import { downloadTemplate } from "@/lib/import-xlsx";
@@ -54,6 +54,7 @@ export interface JournalTableProps {
   selectedJournals: JournalEntry[];
   statusMutation: UseMutationResult<JournalEntry, Error, { id: string; status: string }>;
   batchMutation: UseMutationResult<{ count: number }, Error, { ids: string[]; status: string }>;
+  batchUpdateMutation: UseMutationResult<{ count: number }, Error, { ids: string[]; description?: string; date?: string }>;
   submitApprovalMutation: UseMutationResult<unknown, Error, string>;
   deleteMutation: UseMutationResult<unknown, Error, string>;
   uploadAttachmentMut: UseMutationResult<JournalAttachment, Error, { journalId: string; file: File }>;
@@ -109,6 +110,7 @@ export default function JournalTable({
   selectedJournals,
   statusMutation,
   batchMutation,
+  batchUpdateMutation,
   submitApprovalMutation,
   deleteMutation,
   uploadAttachmentMut,
@@ -129,6 +131,39 @@ export default function JournalTable({
   API_BASE,
 }: JournalTableProps) {
   const tableRef = useRef<HTMLTableSectionElement>(null);
+
+  // 일괄 수정 모달
+  const [batchUpdateOpen, setBatchUpdateOpen] = useState(false);
+  const [batchEditDescription, setBatchEditDescription] = useState("");
+  const [batchEditDate, setBatchEditDate] = useState("");
+
+  const handleBatchUpdateSubmit = () => {
+    const editableIds = selectedJournals
+      .filter((j) => j.status !== "POSTED")
+      .map((j) => j.id);
+    if (editableIds.length === 0) {
+      alert("수정 가능한 전표가 없습니다 (확정된 전표 제외)");
+      return;
+    }
+    if (!batchEditDescription && !batchEditDate) {
+      alert("수정할 항목을 입력해주세요");
+      return;
+    }
+    batchUpdateMutation.mutate(
+      {
+        ids: editableIds,
+        ...(batchEditDescription && { description: batchEditDescription }),
+        ...(batchEditDate && { date: batchEditDate }),
+      },
+      {
+        onSuccess: () => {
+          setBatchUpdateOpen(false);
+          setBatchEditDescription("");
+          setBatchEditDate("");
+        },
+      },
+    );
+  };
 
   // 테이블 키보드 단축키
   const handleTableKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -374,6 +409,13 @@ export default function JournalTable({
             </button>
           )}
           <button
+            className={styles.batchApproveBtn}
+            disabled={batchUpdateMutation.isPending}
+            onClick={() => setBatchUpdateOpen(true)}
+          >
+            일괄 수정
+          </button>
+          <button
             className={styles.batchClearBtn}
             onClick={onClearSelection}
           >
@@ -384,6 +426,59 @@ export default function JournalTable({
               {(batchMutation.error as Error).message}
             </span>
           )}
+        </div>
+      )}
+
+      {/* 일괄 수정 모달 */}
+      {batchUpdateOpen && (
+        <div className={styles.modalOverlay} onClick={() => setBatchUpdateOpen(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>일괄 수정 ({selectedIds.size}건)</h3>
+            <div className={styles.modalBody}>
+              <div className={styles.modalField}>
+                <label>적요</label>
+                <input
+                  type="text"
+                  value={batchEditDescription}
+                  onChange={(e) => setBatchEditDescription(e.target.value)}
+                  placeholder="비워두면 변경 안 함"
+                  className={styles.modalInput}
+                />
+              </div>
+              <div className={styles.modalField}>
+                <label>날짜</label>
+                <input
+                  type="date"
+                  value={batchEditDate}
+                  onChange={(e) => setBatchEditDate(e.target.value)}
+                  className={styles.modalInput}
+                />
+              </div>
+              <p className={styles.modalNote}>
+                * 확정(POSTED) 상태 전표는 수정되지 않습니다.
+              </p>
+            </div>
+            <div className={styles.modalActions}>
+              <button
+                className={styles.batchApproveBtn}
+                disabled={batchUpdateMutation.isPending}
+                onClick={handleBatchUpdateSubmit}
+              >
+                {batchUpdateMutation.isPending ? "수정 중..." : "수정 적용"}
+              </button>
+              <button
+                className={styles.batchClearBtn}
+                onClick={() => setBatchUpdateOpen(false)}
+              >
+                취소
+              </button>
+            </div>
+            {batchUpdateMutation.isError && (
+              <p className={styles.batchError}>
+                {(batchUpdateMutation.error as Error).message}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
