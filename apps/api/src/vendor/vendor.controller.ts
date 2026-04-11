@@ -51,6 +51,14 @@ export class VendorController {
     return this.vendorService.getBalanceSummary(tenantId);
   }
 
+  @Get(":id/credit-check")
+  async creditCheck(
+    @Param("id") id: string,
+    @CurrentTenant() tenantId: string,
+  ) {
+    return this.vendorService.checkCreditLimit(tenantId, id);
+  }
+
   @Get(":id/ledger")
   async vendorLedger(
     @Param("id") id: string,

@@ -231,9 +231,37 @@ export class VendorService {
       data: {
         name: dto.name,
         bizNo: dto.bizNo,
+        creditRating: dto.creditRating,
+        creditLimit: dto.creditLimit ?? 0,
+        note: dto.note,
         tenantId: dto.tenantId,
       },
     });
+  }
+
+  // 신용한도 체크: 현재 채권잔액이 한도를 초과하는지 확인
+  async checkCreditLimit(tenantId: string, vendorId: string) {
+    const vendor = await this.prisma.vendor.findUnique({ where: { id: vendorId } });
+    if (!vendor || Number(vendor.creditLimit) === 0) {
+      return { exceeded: false, balance: 0, limit: 0, available: 0 };
+    }
+
+    const lines = await this.prisma.journalLine.findMany({
+      where: {
+        vendorId,
+        journalEntry: { status: "POSTED", tenantId },
+      },
+      select: { debit: true, credit: true },
+    });
+
+    const balance = lines.reduce((s, l) => s + Number(l.debit) - Number(l.credit), 0);
+    const limit = Number(vendor.creditLimit);
+    return {
+      exceeded: balance > limit,
+      balance,
+      limit,
+      available: Math.max(0, limit - balance),
+    };
   }
 
   async update(id: string, dto: UpdateVendorDto) {

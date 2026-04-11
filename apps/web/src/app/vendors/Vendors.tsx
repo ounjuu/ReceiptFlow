@@ -6,10 +6,28 @@ import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { exportToXlsx } from "@/lib/export-xlsx";
 import { parseXlsx, downloadTemplate } from "@/lib/import-xlsx";
-import type { Vendor, ImportResult } from "./types";
+import { creditRatingLabel, type Vendor, type ImportResult } from "./types";
 import VendorForm from "./VendorForm";
 import VendorTable from "./VendorTable";
 import styles from "./Vendors.module.css";
+
+interface VendorCreateBody {
+  tenantId: string;
+  name: string;
+  bizNo?: string;
+  creditRating?: string;
+  creditLimit?: number;
+  note?: string;
+}
+
+interface VendorUpdateBody {
+  id: string;
+  name: string;
+  bizNo?: string;
+  creditRating?: string | null;
+  creditLimit?: number;
+  note?: string | null;
+}
 
 export default function VendorsPage() {
   const { tenantId, canEdit, canDelete } = useAuth();
@@ -17,6 +35,9 @@ export default function VendorsPage() {
 
   const [name, setName] = useState("");
   const [bizNo, setBizNo] = useState("");
+  const [creditRating, setCreditRating] = useState("");
+  const [creditLimit, setCreditLimit] = useState("");
+  const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const importRef = useRef<HTMLInputElement>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -25,6 +46,9 @@ export default function VendorsPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editBizNo, setEditBizNo] = useState("");
+  const [editCreditRating, setEditCreditRating] = useState("");
+  const [editCreditLimit, setEditCreditLimit] = useState("");
+  const [editNote, setEditNote] = useState("");
 
   const { data: vendors = [] } = useQuery({
     queryKey: ["vendors", tenantId],
@@ -33,19 +57,22 @@ export default function VendorsPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (body: { tenantId: string; name: string; bizNo?: string }) =>
+    mutationFn: (body: VendorCreateBody) =>
       apiPost<Vendor>("/vendors", body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendors"] });
       setName("");
       setBizNo("");
+      setCreditRating("");
+      setCreditLimit("");
+      setNote("");
       setError("");
     },
     onError: (err: Error) => setError(err.message),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...body }: { id: string; name: string; bizNo?: string }) =>
+    mutationFn: ({ id, ...body }: VendorUpdateBody) =>
       apiPatch<Vendor>(`/vendors/${id}`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendors"] });
@@ -68,6 +95,9 @@ export default function VendorsPage() {
       tenantId: tenantId!,
       name: name.trim(),
       bizNo: bizNo.trim() || undefined,
+      creditRating: creditRating || undefined,
+      creditLimit: creditLimit ? Number(creditLimit) : undefined,
+      note: note.trim() || undefined,
     });
   };
 
@@ -75,6 +105,9 @@ export default function VendorsPage() {
     setEditId(vendor.id);
     setEditName(vendor.name);
     setEditBizNo(vendor.bizNo || "");
+    setEditCreditRating(vendor.creditRating || "");
+    setEditCreditLimit(vendor.creditLimit ? String(vendor.creditLimit) : "");
+    setEditNote(vendor.note || "");
   };
 
   const handleUpdate = () => {
@@ -83,6 +116,9 @@ export default function VendorsPage() {
       id: editId,
       name: editName.trim(),
       bizNo: editBizNo.trim() || undefined,
+      creditRating: editCreditRating || null,
+      creditLimit: editCreditLimit ? Number(editCreditLimit) : 0,
+      note: editNote.trim() || null,
     });
   };
 
@@ -129,8 +165,14 @@ export default function VendorsPage() {
         <VendorForm
           name={name}
           bizNo={bizNo}
+          creditRating={creditRating}
+          creditLimit={creditLimit}
+          note={note}
           onNameChange={setName}
           onBizNoChange={setBizNo}
+          onCreditRatingChange={setCreditRating}
+          onCreditLimitChange={setCreditLimit}
+          onNoteChange={setNote}
           onSubmit={handleCreate}
           isPending={createMutation.isPending}
           error={error}
@@ -144,8 +186,14 @@ export default function VendorsPage() {
         editId={editId}
         editName={editName}
         editBizNo={editBizNo}
+        editCreditRating={editCreditRating}
+        editCreditLimit={editCreditLimit}
+        editNote={editNote}
         onEditNameChange={setEditName}
         onEditBizNoChange={setEditBizNo}
+        onEditCreditRatingChange={setEditCreditRating}
+        onEditCreditLimitChange={setEditCreditLimit}
+        onEditNoteChange={setEditNote}
         onStartEdit={startEdit}
         onUpdate={handleUpdate}
         onCancelEdit={() => setEditId(null)}
@@ -158,11 +206,19 @@ export default function VendorsPage() {
         onClearImportResult={() => setImportResult(null)}
         onDownloadTemplate={() => downloadTemplate("거래처_템플릿", ["거래처명", "사업자등록번호"])}
         onExport={() => {
-          exportToXlsx("거래처목록", "거래처", ["거래처명", "사업자등록번호", "등록일"], vendors.map((v) => [
-            v.name,
-            v.bizNo || "",
-            new Date(v.createdAt).toLocaleDateString("ko-KR"),
-          ]));
+          exportToXlsx(
+            "거래처목록",
+            "거래처",
+            ["거래처명", "사업자등록번호", "신용등급", "거래한도", "메모", "등록일"],
+            vendors.map((v) => [
+              v.name,
+              v.bizNo || "",
+              creditRatingLabel(v.creditRating),
+              Number(v.creditLimit || 0).toLocaleString(),
+              v.note || "",
+              new Date(v.createdAt).toLocaleDateString("ko-KR"),
+            ])
+          );
         }}
       />
     </div>

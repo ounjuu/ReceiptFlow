@@ -1,7 +1,7 @@
 "use client";
 
 import type { RefObject } from "react";
-import type { Vendor, ImportResult } from "./types";
+import { CREDIT_RATINGS, creditRatingLabel, creditRatingColor, type Vendor, type ImportResult } from "./types";
 import styles from "./Vendors.module.css";
 
 interface VendorTableProps {
@@ -11,8 +11,14 @@ interface VendorTableProps {
   editId: string | null;
   editName: string;
   editBizNo: string;
+  editCreditRating: string;
+  editCreditLimit: string;
+  editNote: string;
   onEditNameChange: (value: string) => void;
   onEditBizNoChange: (value: string) => void;
+  onEditCreditRatingChange: (value: string) => void;
+  onEditCreditLimitChange: (value: string) => void;
+  onEditNoteChange: (value: string) => void;
   onStartEdit: (vendor: Vendor) => void;
   onUpdate: () => void;
   onCancelEdit: () => void;
@@ -34,8 +40,14 @@ export default function VendorTable({
   editId,
   editName,
   editBizNo,
+  editCreditRating,
+  editCreditLimit,
+  editNote,
   onEditNameChange,
   onEditBizNoChange,
+  onEditCreditRatingChange,
+  onEditCreditLimitChange,
+  onEditNoteChange,
   onStartEdit,
   onUpdate,
   onCancelEdit,
@@ -49,6 +61,7 @@ export default function VendorTable({
   onDownloadTemplate,
   onExport,
 }: VendorTableProps) {
+  const colSpan = 6 + (canEdit || canDelete ? 1 : 0);
   return (
     <div className={styles.tableSection}>
       <div className={styles.tableHeader}>
@@ -99,6 +112,9 @@ export default function VendorTable({
           <tr>
             <th>거래처명</th>
             <th>사업자등록번호</th>
+            <th>신용등급</th>
+            <th>거래한도</th>
+            <th>메모</th>
             <th>등록일</th>
             {(canEdit || canDelete) && <th>관리</th>}
           </tr>
@@ -126,6 +142,62 @@ export default function VendorTable({
                   />
                 ) : (
                   vendor.bizNo || "-"
+                )}
+              </td>
+              <td>
+                {editId === vendor.id ? (
+                  <select
+                    className={styles.editInput}
+                    value={editCreditRating}
+                    onChange={(e) => onEditCreditRatingChange(e.target.value)}
+                  >
+                    <option value="">-</option>
+                    {CREDIT_RATINGS.map((r) => (
+                      <option key={r.code} value={r.code}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : vendor.creditRating ? (
+                  <span
+                    style={{
+                      display: "inline-block",
+                      padding: "2px 8px",
+                      borderRadius: 4,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: "#fff",
+                      backgroundColor: creditRatingColor(vendor.creditRating),
+                    }}
+                  >
+                    {creditRatingLabel(vendor.creditRating)}
+                  </span>
+                ) : (
+                  "-"
+                )}
+              </td>
+              <td style={{ textAlign: "right" }}>
+                {editId === vendor.id ? (
+                  <input
+                    className={styles.editInput}
+                    type="number"
+                    min="0"
+                    value={editCreditLimit}
+                    onChange={(e) => onEditCreditLimitChange(e.target.value)}
+                  />
+                ) : (
+                  Number(vendor.creditLimit || 0).toLocaleString()
+                )}
+              </td>
+              <td>
+                {editId === vendor.id ? (
+                  <input
+                    className={styles.editInput}
+                    value={editNote}
+                    onChange={(e) => onEditNoteChange(e.target.value)}
+                  />
+                ) : (
+                  vendor.note || "-"
                 )}
               </td>
               <td>{new Date(vendor.createdAt).toLocaleDateString("ko-KR")}</td>
@@ -176,7 +248,7 @@ export default function VendorTable({
           {vendors.length === 0 && (
             <tr>
               <td
-                colSpan={canEdit || canDelete ? 4 : 3}
+                colSpan={colSpan}
                 style={{ textAlign: "center", color: "var(--text-muted)" }}
               >
                 등록된 거래처가 없습니다
