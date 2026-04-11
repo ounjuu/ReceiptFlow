@@ -1,6 +1,30 @@
 // 자금 관리 관련 타입, 상수, 헬퍼
 
-export type Tab = "daily" | "cashflow";
+export type Tab = "daily" | "cashflow" | "forecast";
+
+export interface CashForecastHistory {
+  month: string;
+  inflow: number;
+  outflow: number;
+  net: number;
+}
+
+export interface CashForecastFuture {
+  month: string;
+  inflow: number;
+  outflow: number;
+  net: number;
+  balance: number;
+}
+
+export interface CashForecast {
+  currentBalance: number;
+  history: CashForecastHistory[];
+  forecast: CashForecastFuture[];
+  avgInflow: number;
+  avgOutflow: number;
+  avgNet: number;
+}
 
 export interface DayDetail {
   description: string;

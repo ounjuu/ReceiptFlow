@@ -78,6 +78,10 @@ export class ReportService {
     return this.financialReport.getCashFlowStatement(tenantId, startDate, endDate);
   }
 
+  getCashForecast(tenantId: string, monthsAhead?: number) {
+    return this.financialReport.getCashForecast(tenantId, monthsAhead);
+  }
+
   vendorSummary(tenantId: string, startDate?: string, endDate?: string) {
     return this.financialReport.vendorSummary(tenantId, startDate, endDate);
   }

@@ -696,4 +696,106 @@ export class FinancialReportService {
       totals,
     };
   }
+
+  // 자금 예측: 최근 6개월 평균 + 향후 N개월 예측
+  async getCashForecast(tenantId: string, monthsAhead = 3) {
+    const now = new Date();
+    const startMonth = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+    // 현금성 계정 (현금 10100, 보통예금 10300, 당좌예금 10200)
+    const cashAccounts = await this.prisma.account.findMany({
+      where: {
+        tenantId,
+        OR: [
+          { code: "10100" },
+          { code: "10200" },
+          { code: "10300" },
+        ],
+      },
+    });
+    const cashAccountIds = cashAccounts.map((a) => a.id);
+
+    if (cashAccountIds.length === 0) {
+      return {
+        currentBalance: 0,
+        history: [],
+        forecast: [],
+        avgInflow: 0,
+        avgOutflow: 0,
+        avgNet: 0,
+      };
+    }
+
+    // 현재 잔액 (전체 누적)
+    const allLines = await this.prisma.journalLine.findMany({
+      where: {
+        accountId: { in: cashAccountIds },
+        journalEntry: { status: "POSTED", tenantId },
+      },
+      select: { debit: true, credit: true },
+    });
+    const currentBalance = allLines.reduce(
+      (s, l) => s + Number(l.debit) - Number(l.credit),
+      0,
+    );
+
+    // 최근 6개월 월별 입출금 (raw SQL)
+    const monthly = await this.prisma.$queryRaw<
+      { month: string; inflow: number; outflow: number }[]
+    >(Prisma.sql`
+      SELECT
+        TO_CHAR(je."date", 'YYYY-MM') as month,
+        COALESCE(SUM(jl."debit"), 0)::float as inflow,
+        COALESCE(SUM(jl."credit"), 0)::float as outflow
+      FROM "JournalLine" jl
+      JOIN "JournalEntry" je ON jl."journalEntryId" = je."id"
+      WHERE jl."accountId" = ANY(${cashAccountIds})
+        AND je."tenantId" = ${tenantId}
+        AND je."status" = 'POSTED'
+        AND je."date" >= ${startMonth}
+      GROUP BY month
+      ORDER BY month ASC
+    `);
+
+    // 6개월 모두 채우기 (데이터 없는 월은 0)
+    const history: { month: string; inflow: number; outflow: number; net: number }[] = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const found = monthly.find((m) => m.month === monthKey);
+      const inflow = found ? Number(found.inflow) : 0;
+      const outflow = found ? Number(found.outflow) : 0;
+      history.push({ month: monthKey, inflow, outflow, net: inflow - outflow });
+    }
+
+    // 평균 계산
+    const avgInflow = history.reduce((s, h) => s + h.inflow, 0) / 6;
+    const avgOutflow = history.reduce((s, h) => s + h.outflow, 0) / 6;
+    const avgNet = avgInflow - avgOutflow;
+
+    // 향후 N개월 예측
+    const forecast: { month: string; inflow: number; outflow: number; net: number; balance: number }[] = [];
+    let runningBalance = currentBalance;
+    for (let i = 1; i <= monthsAhead; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      runningBalance += avgNet;
+      forecast.push({
+        month: monthKey,
+        inflow: Math.round(avgInflow),
+        outflow: Math.round(avgOutflow),
+        net: Math.round(avgNet),
+        balance: Math.round(runningBalance),
+      });
+    }
+
+    return {
+      currentBalance: Math.round(currentBalance),
+      history,
+      forecast,
+      avgInflow: Math.round(avgInflow),
+      avgOutflow: Math.round(avgOutflow),
+      avgNet: Math.round(avgNet),
+    };
+  }
 }

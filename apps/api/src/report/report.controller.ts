@@ -116,6 +116,14 @@ export class ReportController {
     return this.reportService.getCashFlowStatement(tenantId, startDate, endDate);
   }
 
+  @Get("cash-forecast")
+  async cashForecast(
+    @CurrentTenant() tenantId: string,
+    @Query("months") months?: string,
+  ) {
+    return this.reportService.getCashForecast(tenantId, months ? Number(months) : undefined);
+  }
+
   @Get("dashboard-kpi")
   async dashboardKpi(@CurrentTenant() tenantId: string) {
     return this.reportService.getDashboardKpi(tenantId);

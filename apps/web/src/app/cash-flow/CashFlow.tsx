@@ -6,7 +6,8 @@ import { apiGet } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import styles from "./CashFlow.module.css";
 import { DailyCashView, CashFlowView } from "./CashFlowTable";
-import type { Tab, DailyCashReport, CashFlowStatement } from "./types";
+import { CashForecastView } from "./CashForecast";
+import type { Tab, DailyCashReport, CashFlowStatement, CashForecast } from "./types";
 
 export default function CashFlowPage() {
   const { tenantId } = useAuth();
@@ -39,6 +40,13 @@ export default function CashFlowPage() {
     queryFn: () =>
       apiGet<CashFlowStatement>(`/reports/cash-flow?tenantId=${tenantId}${dateParams ? `&${dateParams}` : ""}`),
     enabled: !!tenantId && activeTab === "cashflow",
+  });
+
+  // 자금 예측 데이터
+  const { data: forecastData } = useQuery({
+    queryKey: ["reports", "cash-forecast"],
+    queryFn: () => apiGet<CashForecast>(`/reports/cash-forecast?tenantId=${tenantId}&months=3`),
+    enabled: !!tenantId && activeTab === "forecast",
   });
 
   return (
@@ -84,6 +92,12 @@ export default function CashFlowPage() {
         >
           현금 흐름표
         </button>
+        <button
+          className={`${styles.tab} ${activeTab === "forecast" ? styles.tabActive : ""}`}
+          onClick={() => setActiveTab("forecast")}
+        >
+          자금 예측
+        </button>
       </div>
 
       {activeTab === "daily" && (
@@ -91,6 +105,9 @@ export default function CashFlowPage() {
       )}
       {activeTab === "cashflow" && (
         cashFlowData ? <CashFlowView data={cashFlowData} /> : <p>불러오는 중...</p>
+      )}
+      {activeTab === "forecast" && (
+        forecastData ? <CashForecastView data={forecastData} /> : <p>불러오는 중...</p>
       )}
     </div>
   );
