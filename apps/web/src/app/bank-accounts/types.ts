@@ -50,5 +50,4 @@ export const TX_TYPE_STYLE: Record<string, string> = {
   TRANSFER: "badgeTransfer",
 };
 
-export const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();
-export const today = () => new Date().toISOString().slice(0, 10);
+export { fmt, today } from "@/lib/formatters";

@@ -25,7 +25,6 @@ export default function JournalsPage() {
   const [filterStart, setFilterStart] = useState("");
   const [filterEnd, setFilterEnd] = useState("");
   const [searchAccountId, setSearchAccountId] = useState("");
-  const [searchVendorId, setSearchVendorId] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [searchMinAmount, setSearchMinAmount] = useState("");
   const [searchMaxAmount, setSearchMaxAmount] = useState("");
@@ -52,7 +51,6 @@ export default function JournalsPage() {
     filterEnd && `endDate=${filterEnd}`,
     activeTab && `journalType=${activeTab}`,
     searchAccountId && `accountId=${searchAccountId}`,
-    searchVendorId && `vendorId=${searchVendorId}`,
     searchKeyword && `keyword=${encodeURIComponent(searchKeyword)}`,
     searchMinAmount && `minAmount=${searchMinAmount}`,
     searchMaxAmount && `maxAmount=${searchMaxAmount}`,
@@ -62,7 +60,7 @@ export default function JournalsPage() {
   ].filter(Boolean).join("&");
 
   const { data: journalResult } = useQuery({
-    queryKey: ["journals", filterStart, filterEnd, activeTab, searchAccountId, searchVendorId, searchKeyword, searchMinAmount, searchMaxAmount, searchStatus, page],
+    queryKey: ["journals", filterStart, filterEnd, activeTab, searchAccountId, searchKeyword, searchMinAmount, searchMaxAmount, searchStatus, page],
     queryFn: () => apiGet<{ data: JournalEntry[]; total: number; page: number; totalPages: number }>(
       `/journals?tenantId=${tenantId}&${queryParams}`,
     ),

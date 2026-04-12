@@ -39,4 +39,5 @@ export interface Vendor {
 }
 
 /** 숫자를 로케일 포맷 문자열로 변환 */
-export const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();
+
+export { fmt, today } from "@/lib/formatters";

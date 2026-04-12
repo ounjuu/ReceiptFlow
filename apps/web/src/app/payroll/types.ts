@@ -53,6 +53,7 @@ export interface ProcessResult {
   details: { employeeId: string; employeeName: string; grossPay: number; netPay: number }[];
 }
 
-export const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();
 
 export const now = new Date();
+
+export { fmt, today } from "@/lib/formatters";

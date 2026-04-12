@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPatch, apiDelete, API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import styles from "./TaxFiling.module.css";
+import { fmtKR as fmt } from "@/lib/formatters";
 
 // 타입 정의
 interface FilingGroup {
@@ -37,7 +38,6 @@ interface Filing {
 
 type TabType = "overview" | "vat" | "withholding" | "corporate";
 
-const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString("ko-KR");
 
 const now = new Date();
 

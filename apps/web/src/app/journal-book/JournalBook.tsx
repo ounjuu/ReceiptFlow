@@ -8,6 +8,7 @@ import { exportToXlsx } from "@/lib/export-xlsx";
 import { usePagination } from "@/lib/usePagination";
 import { Pagination } from "@/lib/Pagination";
 import styles from "./JournalBook.module.css";
+import { fmtKR as fmt } from "@/lib/formatters";
 
 interface JournalLine {
   accountCode: string;
@@ -33,7 +34,6 @@ interface JournalBookData {
   entryCount: number;
 }
 
-const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString("ko-KR");
 
 export default function JournalBook() {
   const { tenantId } = useAuth();

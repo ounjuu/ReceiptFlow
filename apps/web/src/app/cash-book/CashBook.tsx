@@ -8,6 +8,7 @@ import { exportToXlsx } from "@/lib/export-xlsx";
 import { usePagination } from "@/lib/usePagination";
 import { Pagination } from "@/lib/Pagination";
 import styles from "./CashBook.module.css";
+import { fmtKR as fmt } from "@/lib/formatters";
 
 interface CashBookEntry {
   date: string;
@@ -34,7 +35,6 @@ interface CashBookData {
   totalExpense: number;
 }
 
-const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString("ko-KR");
 
 export default function CashBook() {
   const { tenantId } = useAuth();

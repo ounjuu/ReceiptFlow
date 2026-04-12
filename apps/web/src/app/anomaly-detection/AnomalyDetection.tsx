@@ -6,6 +6,7 @@ import { apiGet } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/lib/locale";
 import styles from "./AnomalyDetection.module.css";
+import { fmt } from "@/lib/formatters";
 
 interface AmountAnomaly {
   journalEntryId: string;
@@ -86,8 +87,7 @@ export default function AnomalyDetection() {
     }
   };
 
-  const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString("ko-KR");
+    const fmtDate = (d: string) => new Date(d).toLocaleDateString("ko-KR");
 
   const tabs: { key: TabKey; label: string; count: number }[] = [
     {

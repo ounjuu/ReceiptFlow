@@ -3,9 +3,6 @@ import { LedgerReportService } from "./ledger-report.service";
 import { FinancialReportService } from "./financial-report.service";
 import { DashboardReportService } from "./dashboard-report.service";
 
-// 타입 재export (기존 import 호환)
-export { TrialBalanceRow } from "./report.types";
-
 @Injectable()
 export class ReportService {
   constructor(

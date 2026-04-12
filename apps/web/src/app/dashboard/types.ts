@@ -143,7 +143,6 @@ export const ACTION_LABELS: Record<string, string> = {
   PERIOD_REOPENED: "마감 취소",
 };
 
-export const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();
 
 export function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -155,3 +154,5 @@ export function timeAgo(dateStr: string) {
   const days = Math.floor(hours / 24);
   return `${days}일 전`;
 }
+
+export { fmt, today } from "@/lib/formatters";

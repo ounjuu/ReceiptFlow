@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/lib/locale";
 import { apiGet } from "@/lib/api";
 import styles from "./ComparativeReports.module.css";
+import { fmt } from "@/lib/formatters";
 
 type Tab = "income" | "balance";
 
@@ -63,7 +64,6 @@ interface ComparativeBalanceData {
   };
 }
 
-const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();
 
 const fmtRate = (rate: number | null) => {
   if (rate === null) return "-";

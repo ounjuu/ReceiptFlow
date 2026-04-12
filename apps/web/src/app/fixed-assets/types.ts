@@ -71,7 +71,6 @@ export interface DepResult {
   details: { assetId: string; assetName: string; amount: number }[];
 }
 
-export const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();
 
 export const METHOD_LABEL: Record<string, string> = {
   STRAIGHT_LINE: "정액법",
@@ -83,3 +82,5 @@ export const STATUS_LABEL: Record<string, string> = {
   DISPOSED: "처분",
   FULLY_DEPRECIATED: "상각완료",
 };
+
+export { fmt, today } from "@/lib/formatters";

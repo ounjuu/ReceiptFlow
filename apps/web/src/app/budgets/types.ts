@@ -42,7 +42,6 @@ export interface BudgetGridRow {
   months: Record<number, { id: string; amount: number }>;
 }
 
-export const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();
 
 export const now = new Date();
 
@@ -57,3 +56,5 @@ export const getProgressColor = (rate: number) => {
   if (rate > 80) return "#f59e0b";
   return "#22c55e";
 };
+
+export { fmt, today } from "@/lib/formatters";

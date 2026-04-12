@@ -74,4 +74,4 @@ export const COLORS = {
   withdraw: "#d95454",
 };
 
-export const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();
+export { fmt, today } from "@/lib/formatters";

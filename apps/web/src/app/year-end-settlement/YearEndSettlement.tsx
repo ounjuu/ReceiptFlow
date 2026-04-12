@@ -6,6 +6,7 @@ import { apiGet, apiPost, apiPatch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { exportToXlsx } from "@/lib/export-xlsx";
 import styles from "./YearEndSettlement.module.css";
+import { fmtKR as fmt } from "@/lib/formatters";
 
 interface Settlement {
   id: string;
@@ -57,7 +58,6 @@ interface SettlementSummary {
   totalPayment: number;
 }
 
-const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString("ko-KR");
 
 const now = new Date();
 

@@ -9,6 +9,7 @@ import { exportToXlsx } from "@/lib/export-xlsx";
 import { usePagination } from "@/lib/usePagination";
 import { Pagination } from "@/lib/Pagination";
 import styles from "./VendorSummary.module.css";
+import { fmtKR as fmt } from "@/lib/formatters";
 
 interface VendorRow {
   vendorId: string;
@@ -27,7 +28,6 @@ interface VendorSummaryData {
   totalNet: number;
 }
 
-const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString("ko-KR");
 
 export default function VendorSummary() {
   const { tenantId } = useAuth();

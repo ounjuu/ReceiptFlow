@@ -8,6 +8,7 @@ import { exportToXlsx } from "@/lib/export-xlsx";
 import { usePagination } from "@/lib/usePagination";
 import { Pagination } from "@/lib/Pagination";
 import styles from "./AccountLedger.module.css";
+import { fmtKR as fmt } from "@/lib/formatters";
 
 interface AccountLedgerEntry {
   date: string;
@@ -42,7 +43,6 @@ interface AccountOption {
   name: string;
 }
 
-const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString("ko-KR");
 
 const TYPE_LABELS: Record<string, string> = {
   ASSET: "자산",
