@@ -10,15 +10,7 @@ import type {
   BatchResult,
   OcrData,
 } from "./types";
-
-const CURRENCY_OPTIONS = [
-  { code: "KRW", name: "원 (KRW)" },
-  { code: "USD", name: "달러 (USD)" },
-  { code: "EUR", name: "유로 (EUR)" },
-  { code: "JPY", name: "엔 (JPY)" },
-  { code: "CNY", name: "위안 (CNY)" },
-  { code: "GBP", name: "파운드 (GBP)" },
-];
+import { CURRENCY_OPTIONS } from "./types";
 
 interface DocumentFormProps {
   // 탭
