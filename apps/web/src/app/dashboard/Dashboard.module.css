@@ -1,7 +1,115 @@
 .title {
   font-size: 1.4rem;
   font-weight: 700;
+  margin-bottom: 0;
+}
+
+.dashHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
+}
+
+.settingsBtn {
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.settingsBtn:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* 위젯 설정 패널 */
+.widgetSettings {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.widgetSettingsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.resetBtn {
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.resetBtn:hover {
+  background: var(--bg);
+}
+
+.widgetSettingRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.widgetSettingRow:last-child {
+  border-bottom: none;
+}
+
+.widgetToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.widgetToggle input {
+  accent-color: var(--primary);
+}
+
+.widgetMoveButtons {
+  display: flex;
+  gap: 4px;
+}
+
+.moveBtn {
+  width: 28px;
+  height: 28px;
+  font-size: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.moveBtn:hover:not(:disabled) {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.moveBtn:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
 /* KPI 카드 */
