@@ -1,6 +1,7 @@
 "use client";
 
 import type { InvoiceItem } from "./types";
+import { vatFmt as fmt } from "./types";
 import styles from "./VatReturns.module.css";
 
 function statusLabel(status: string) {
@@ -10,10 +11,6 @@ function statusLabel(status: string) {
     case "FINALIZED": return { text: "확정", cls: styles.statusFinalized };
     default: return { text: status, cls: "" };
   }
-}
-
-function fmt(n: number | null | undefined) {
-  return `₩${(n ?? 0).toLocaleString()}`;
 }
 
 interface VatReturnsTableProps {

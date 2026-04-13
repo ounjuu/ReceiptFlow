@@ -10,6 +10,12 @@ export interface InvoiceItem {
   status: string;
 }
 
+export { fmt } from "@/lib/formatters";
+
+export function vatFmt(n: number | null | undefined) {
+  return `₩${(n ?? 0).toLocaleString()}`;
+}
+
 export interface VatReturn {
   year: number;
   quarter: number;

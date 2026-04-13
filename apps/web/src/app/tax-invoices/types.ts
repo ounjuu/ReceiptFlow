@@ -1,4 +1,3 @@
-import { API_BASE } from "@/lib/api";
 import styles from "./TaxInvoices.module.css";
 
 export interface Vendor {
@@ -60,20 +59,7 @@ export function hometaxBadge(status: string | null) {
   }
 }
 
-/** 인증 헤더 포함 파일 다운로드 */
-export async function downloadFileWithAuth(url: string, filename: string) {
-  const token = localStorage.getItem("token");
-  const res = await fetch(`${API_BASE}${url}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) throw new Error("다운로드 실패");
-  const blob = await res.blob();
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
+export { apiDownload as downloadFileWithAuth } from "@/lib/api";
 
 export function nextStatus(current: string): { label: string; next: string } | null {
   switch (current) {

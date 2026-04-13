@@ -2,20 +2,7 @@
 
 import styles from "./Payroll.module.css";
 import { Employee, PayrollRecord, PayrollSummary, ProcessResult, fmt, now } from "./types";
-import { API_BASE } from "@/lib/api";
-
-const downloadPdf = async (url: string, filename: string) => {
-  const token = localStorage.getItem("token");
-  const res = await fetch(`${API_BASE}${url}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const blob = await res.blob();
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
-};
+import { apiDownload as downloadPdf } from "@/lib/api";
 
 /* ── 직원 목록 테이블 ── */
 

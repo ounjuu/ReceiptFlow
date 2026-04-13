@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { exportToXlsx } from "@/lib/export-xlsx";
 import { usePagination } from "@/lib/usePagination";
 import { Pagination } from "@/lib/Pagination";
+import { fmtKR as fmt } from "@/lib/formatters";
 import styles from "./DepreciationSchedule.module.css";
 
 interface DepreciationAsset {
@@ -57,8 +58,6 @@ const STATUS_CLASS: Record<string, string> = {
   FULLY_DEPRECIATED: "badgeFully",
   DISPOSED: "badgeDisposed",
 };
-
-const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString("ko-KR", { maximumFractionDigits: 0 });
 
 const now = new Date();
 

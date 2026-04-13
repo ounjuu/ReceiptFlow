@@ -6,6 +6,7 @@ import { apiGet } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import * as XLSX from "xlsx";
 import type { VatReturn } from "./types";
+import { vatFmt as fmt } from "./types";
 import VatReturnsTable from "./VatReturnsTable";
 import styles from "./VatReturns.module.css";
 
@@ -16,10 +17,6 @@ function statusLabel(status: string) {
     case "FINALIZED": return { text: "확정", cls: styles.statusFinalized };
     default: return { text: status, cls: "" };
   }
-}
-
-function fmt(n: number | null | undefined) {
-  return `₩${(n ?? 0).toLocaleString()}`;
 }
 
 export default function VatReturnsPage() {

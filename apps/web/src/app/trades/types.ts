@@ -1,4 +1,3 @@
-import { API_BASE } from "@/lib/api";
 import styles from "./Trades.module.css";
 
 export interface Vendor {
@@ -103,17 +102,6 @@ export const emptyItem = (): ItemInput => ({
   unitPrice: 0,
 });
 
-export const downloadPdf = async (url: string, filename: string) => {
-  const token = localStorage.getItem("token");
-  const res = await fetch(`${API_BASE}${url}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const blob = await res.blob();
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
-};
+export { apiDownload as downloadPdf } from "@/lib/api";
 
 export { fmt, today } from "@/lib/formatters";
