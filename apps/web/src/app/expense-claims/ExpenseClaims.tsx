@@ -121,10 +121,9 @@ export default function ExpenseClaimsPage() {
   };
 
   const handleItemChange = (idx: number, field: keyof ExpenseItem, value: string | number) => {
-    const updated = [...formItems];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (updated[idx] as any)[field] = value;
-    setFormItems(updated);
+    setFormItems((prev) => prev.map((item, i) =>
+      i === idx ? { ...item, [field]: value } : item,
+    ));
   };
 
   const totalAmount = formItems.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
