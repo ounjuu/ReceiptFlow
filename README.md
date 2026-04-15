@@ -6,8 +6,8 @@ AI 기반 영수증 자동 처리 및 전표 자동 생성 웹 ERP 시스템
 
 | 영역 | 기술 |
 |------|------|
-| Frontend | Next.js 15 (App Router), React Query, CSS Modules |
-| Backend | NestJS, Prisma ORM |
+| Frontend | Next.js 15 (App Router), React Query, Recharts, CSS Modules, Pretendard |
+| Backend | NestJS, Prisma ORM, PDFKit |
 | AI | FastAPI (Python), Tesseract OCR, 키워드 기반 계정 분류 |
 | DB | PostgreSQL, Redis |
 | 구조 | npm workspaces 모노레포, 멀티 테넌트 |
@@ -31,14 +31,18 @@ prisma/
 | 기능 | 설명 |
 |------|------|
 | 영수증 관리 | OCR 인식, AI 계정 분류, 자동 전표 생성, 일괄 업로드 |
-| 전표 관리 | 유형별 분리(일반/매입/매출/자금), 자동채번(유형-YYYYMMDD-순번), 키보드 네비게이션, 복사/역분개 |
+| 전표 관리 | 유형별 분리(일반/매입/매출/자금), 자동채번(유형-YYYYMMDD-순번), 키보드 네비게이션 |
+| 전표 검색 | 계정과목/상태/적요/금액범위 복합 검색, 서버 페이지네이션 |
+| 전표 일괄 처리 | 일괄 승인/확정/수정(적요·날짜), 복사/역분개 |
+| 전표 PDF | 단건 전표 PDF 출력 (한글 폰트, 부가세 포함) |
+| 부가세 처리 | 매입/매출 전표 공급가액 입력 시 부가세(10%) 자동 계산, 증빙 유형 관리 |
 | 적요 코드 | 코드 사전 등록, 전표 입력 시 자동완성, 카테고리별 관리 |
 | 계정과목 | 더존 표준 5자리 코드 체계 (55개 기본 계정) |
 | 총계정원장 | 계정별 거래 내역 + 전기이월 + 누적잔액 |
 | 계정별원장 | 상대계정 표시, 거래처 연동, 전기이월 |
 | 분개장 | 전표 일자순 분개 내역 조회 |
 | 일/월계표 | 일별/월별 계정 합계 + 누적 집계 |
-| 거래처 | 사업자번호 기반 자동완성, 거래처 원장, 채권/채무 연령 분석 |
+| 거래처 | 사업자번호 자동완성, 신용등급(A/B/C/D), 거래한도 관리, 한도 초과 체크 |
 | 반복 전표 | 템플릿 등록, 일괄 생성 |
 | 자동 전표 규칙 | 거래처/금액/키워드 조건 매칭, 규칙 우선 → AI fallback |
 | 전자결재 | 다단계 승인 워크플로우, 이메일 알림 |
@@ -63,6 +67,7 @@ prisma/
 | 재무제표 | 시산표, 손익계산서, 재무상태표 |
 | 비교 재무제표 | 전기/당기 손익계산서, 대차대조표 비교 (증감률) |
 | 자금 관리 | 자금일보, 현금흐름표 |
+| 자금 예측 | 최근 6개월 평균 기반 향후 3개월 현금 흐름 예측 차트 |
 | 현금출납장 | 현금 계정 입출금 내역 장부 |
 | 예산 관리 | 계정별 월 예산, 실적 대비 분석, 소진율 |
 | 은행/계좌 | 계좌별 입출금/이체, 잔액 추적, 자동 전표 |
@@ -90,6 +95,7 @@ prisma/
 
 | 기능 | 설명 |
 |------|------|
+| 대시보드 | 위젯 커스터마이징 (표시/숨김, 순서 변경, localStorage 저장) |
 | 멤버 관리 | 초대, 역할 변경 (ADMIN/ACCOUNTANT/VIEWER) |
 | 권한 관리 | 역할별 메뉴 필터링, 모듈별 읽기/쓰기/삭제 권한 매트릭스 |
 | 감사 로그 | 회계 처리 이력 추적 |
@@ -152,14 +158,17 @@ cd apps/web && PORT=3002 npm run dev    # :3002
 ## 테스트
 
 ```bash
+# 전체 테스트 (77개)
+npm run test
+
 # AI 서비스 테스트 (48개)
 cd apps/ai && source venv/bin/activate && python -m pytest tests/ -v
 
-# 백엔드 API 테스트 (32개)
-cd apps/api && npx jest --config jest.config.ts --runInBand
+# 백엔드 API 테스트 (44개)
+npm run test:api
 
-# 프론트엔드 테스트 (27개)
-cd apps/web && npx jest
+# 프론트엔드 테스트 (33개)
+npm run test:web
 ```
 
 ## 주요 API
@@ -170,10 +179,15 @@ cd apps/web && npx jest
 | POST | `/auth/signup` | 회원가입 |
 | POST | `/documents/upload` | 영수증 업로드 (OCR + 자동 전표) |
 | POST | `/journals` | 전표 생성 (유형별 자동채번) |
-| GET | `/summary-codes` | 적요 코드 목록 |
-| GET | `/summary-codes/search` | 적요 코드 검색 (자동완성) |
+| GET | `/journals` | 전표 목록 (복합 검색 + 페이지네이션) |
+| GET | `/journals/:id/export-pdf` | 전표 PDF 출력 |
+| PATCH | `/journals/batch/update` | 전표 일괄 수정 (적요/날짜) |
+| PATCH | `/journals/batch/status` | 전표 일괄 상태 변경 |
 | POST | `/journals/:id/copy` | 전표 복사 |
 | POST | `/journals/:id/reverse` | 역분개 |
+| GET | `/summary-codes` | 적요 코드 목록 |
+| GET | `/summary-codes/search` | 적요 코드 검색 (자동완성) |
+| GET | `/vendors/:id/credit-check` | 거래처 신용한도 체크 |
 | GET | `/reports/trial-balance` | 시산표 |
 | GET | `/reports/income-statement` | 손익계산서 |
 | GET | `/reports/balance-sheet` | 재무상태표 |
@@ -183,6 +197,7 @@ cd apps/web && npx jest
 | GET | `/reports/daily-summary` | 일계표 |
 | GET | `/reports/monthly-summary` | 월계표 |
 | GET | `/reports/cash-book` | 현금출납장 |
+| GET | `/reports/cash-forecast` | 자금 예측 (향후 3개월) |
 | GET | `/reports/vendor-summary` | 거래처별 현황 |
 | GET | `/reports/comparative-income` | 비교 손익계산서 |
 | GET | `/reports/comparative-balance` | 비교 대차대조표 |
@@ -210,7 +225,13 @@ cd apps/web && npx jest
 | 이상거래 감지 | 없음 | 금액/거래처/시간/중복 자동 감지 |
 | 전표 유형 | 일반전표만 | 일반/매입/매출/자금 유형 분리 + 자동채번 |
 | 전표 입력 | 마우스 중심 | 키보드 네비게이션 (Enter/방향키/F2/F3) |
+| 전표 검색 | 기간/유형만 | 계정/거래처/금액/적요 복합 검색 |
+| 전표 PDF | 별도 출력 | 단건 PDF 다운로드 |
+| 부가세 | 수동 입력 | 공급가액 입력 시 자동 계산 |
 | 적요 관리 | 직접 입력 | 코드 사전 등록 + 자동완성 |
+| 거래처 신용 | 별도 관리 | 신용등급/한도 통합 + 한도 초과 체크 API |
+| 자금 예측 | 없음 | 6개월 평균 기반 3개월 예측 차트 |
+| 대시보드 | 고정 | 위젯 표시/순서 커스터마이징 |
 | 다국어 | 한국어만 | 한국어/영어 |
 | 다크모드 | 없음 | 라이트/다크/시스템 |
 | 모바일 | 별도 앱 | 반응형 웹 (모바일 브라우저) |
