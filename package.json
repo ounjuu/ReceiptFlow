@@ -15,7 +15,7 @@
     "build:api": "npm run build --workspace=apps/api",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test:web && npm run test:api",
-    "test:web": "cd apps/web && npx jest --passWithNoTests",
+    "test:web": "cd apps/web && npx jest --passWithNoTests --forceExit",
     "test:api": "cd apps/api && npx jest --config jest.config.ts --passWithNoTests --runInBand --forceExit"
   },
   "devDependencies": {
