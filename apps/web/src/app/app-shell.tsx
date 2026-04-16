@@ -323,7 +323,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {sidebarOpen && <div className={styles.sidebarOverlay} onClick={() => setSidebarOpen(false)} />}
       <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}>
         <div className={styles.logo}>LedgerFlow</div>
-        <nav className={styles.nav}>
+        <nav className={styles.nav} aria-label="주 메뉴">
           {navGroups.map((group) => {
             const visibleItems = group.items.filter(
               (item) => !item.roles || item.roles.includes(role || ""),
@@ -339,6 +339,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <button
                   className={`${styles.navGroupLabel} ${isActiveGroup ? styles.navGroupActive : ""}`}
                   onClick={() => toggleGroup(group.groupKey)}
+                  aria-expanded={!isCollapsed}
                 >
                   <span>{t(group.labelKey)}</span>
                   <svg
@@ -364,7 +365,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
       <div className={styles.main}>
         <header className={styles.header}>
-          <button className={styles.hamburger} onClick={() => setSidebarOpen((v) => !v)}>
+          <button className={styles.hamburger} onClick={() => setSidebarOpen((v) => !v)} aria-label="메뉴 열기">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
             </svg>
@@ -382,7 +383,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             />
             {searching && <span className={styles.searchSpinner}>{t("header_searching")}</span>}
             {showDropdown && searchResults.length > 0 && (
-              <div className={styles.searchDropdown}>
+              <div className={styles.searchDropdown} role="listbox" aria-expanded={showDropdown}>
                 {searchResults.map((group) => (
                   <div key={group.entity} className={styles.searchGroup}>
                     <div className={styles.searchGroupLabel}>{group.label}</div>
@@ -390,6 +391,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       <div
                         key={item.id}
                         className={styles.searchItem}
+                        role="option"
+                        tabIndex={0}
                         onClick={() => handleItemClick(item.link)}
                       >
                         <span className={styles.searchItemTitle}>{item.title}</span>
@@ -416,6 +419,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
               className={styles.notifBtn}
               onClick={() => setShowNotif((v) => !v)}
+              aria-label="알림"
+              aria-expanded={showNotif}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -426,7 +431,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               )}
             </button>
             {showNotif && (
-              <div className={styles.notifDropdown}>
+              <div className={styles.notifDropdown} role="menu" aria-expanded={showNotif}>
                 <div className={styles.notifHeader}>{t("header_notifications")}</div>
                 {notifications.length === 0 ? (
                   <div className={styles.notifEmpty}>{t("header_noNotifications")}</div>
@@ -453,6 +458,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className={styles.themeBtn}
             onClick={() => setTheme(isDark ? "light" : "dark")}
             title={isDark ? t("header_lightMode") : t("header_darkMode")}
+            aria-label="테마 변경"
           >
             {isDark ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

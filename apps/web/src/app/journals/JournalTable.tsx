@@ -432,7 +432,7 @@ export default function JournalTable({
       {/* 일괄 수정 모달 */}
       {batchUpdateOpen && (
         <div className={styles.modalOverlay} onClick={() => setBatchUpdateOpen(false)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.modalContent} role="dialog" aria-modal="true" aria-label="일괄 수정" onClick={(e) => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>일괄 수정 ({selectedIds.size}건)</h3>
             <div className={styles.modalBody}>
               <div className={styles.modalField}>
@@ -483,10 +483,11 @@ export default function JournalTable({
       )}
 
       <table>
+        <caption className={styles.srOnly}>전표 목록</caption>
         <thead>
           <tr>
             {canEdit && (
-              <th style={{ width: 36 }}>
+              <th scope="col" style={{ width: 36 }}>
                 <input
                   type="checkbox"
                   checked={allSelectableChecked}
@@ -494,17 +495,17 @@ export default function JournalTable({
                 />
               </th>
             )}
-            <th>전표번호</th>
-            <th>유형</th>
-            <th>날짜</th>
-            <th>거래처</th>
-            <th>설명</th>
-            <th>상태</th>
-            <th>차변 합계</th>
-            <th>대변 합계</th>
-            <th>영수증</th>
-            <th>첨부</th>
-            <th>관리</th>
+            <th scope="col">전표번호</th>
+            <th scope="col">유형</th>
+            <th scope="col">날짜</th>
+            <th scope="col">거래처</th>
+            <th scope="col">설명</th>
+            <th scope="col">상태</th>
+            <th scope="col">차변 합계</th>
+            <th scope="col">대변 합계</th>
+            <th scope="col">영수증</th>
+            <th scope="col">첨부</th>
+            <th scope="col">관리</th>
           </tr>
         </thead>
         <tbody ref={tableRef}>
@@ -552,6 +553,7 @@ export default function JournalTable({
                 <td>
                   <button
                     className={styles.attachToggle}
+                    aria-label="첨부파일 보기"
                     onClick={() => setExpandedId(expandedId === j.id ? null : j.id)}
                   >
                     {(j.attachments?.length || 0)}건
@@ -652,6 +654,7 @@ export default function JournalTable({
                                     deleteAttachmentMut.mutate({ journalId: j.id, attachmentId: att.id });
                                   }
                                 }}
+                                aria-label="삭제"
                               >
                                 X
                               </button>
