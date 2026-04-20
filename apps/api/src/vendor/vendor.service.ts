@@ -33,18 +33,6 @@ export class VendorService {
     });
   }
 
-  // 사업자등록번호로 조회 → 없으면 자동 생성
-  async findOrCreate(tenantId: string, bizNo: string, name: string) {
-    const existing = await this.prisma.vendor.findFirst({
-      where: { tenantId, bizNo },
-    });
-    if (existing) return existing;
-
-    return this.prisma.vendor.create({
-      data: { tenantId, bizNo, name },
-    });
-  }
-
   // 거래처별 잔액 요약
   async getBalanceSummary(tenantId: string) {
     const vendors = await this.prisma.vendor.findMany({
