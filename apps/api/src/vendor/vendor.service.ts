@@ -222,6 +222,11 @@ export class VendorService {
         creditRating: dto.creditRating,
         creditLimit: dto.creditLimit ?? 0,
         note: dto.note,
+        contactName: dto.contactName,
+        contactPhone: dto.contactPhone,
+        contactEmail: dto.contactEmail,
+        address: dto.address,
+        category: dto.category,
         tenantId: dto.tenantId,
       },
     });
@@ -261,5 +266,43 @@ export class VendorService {
 
   async remove(id: string) {
     return this.prisma.vendor.delete({ where: { id } });
+  }
+
+  // ── CRM: 메모/활동 히스토리 ──
+
+  async getMemos(vendorId: string) {
+    return this.prisma.vendorMemo.findMany({
+      where: { vendorId },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async addMemo(vendorId: string, data: { content: string; memoType?: string; userId?: string; userName?: string }) {
+    return this.prisma.vendorMemo.create({
+      data: {
+        vendorId,
+        content: data.content,
+        memoType: data.memoType || "NOTE",
+        userId: data.userId,
+        userName: data.userName,
+      },
+    });
+  }
+
+  async deleteMemo(memoId: string) {
+    return this.prisma.vendorMemo.delete({ where: { id: memoId } });
+  }
+
+  // 거래처 상세 (CRM 정보 + 최근 메모 + 거래 요약)
+  async getDetail(tenantId: string, vendorId: string) {
+    const vendor = await this.prisma.vendor.findUnique({
+      where: { id: vendorId },
+      include: {
+        memos: { orderBy: { createdAt: "desc" }, take: 20 },
+        trades: { orderBy: { createdAt: "desc" }, take: 5, select: { id: true, tradeNo: true, tradeType: true, tradeDate: true, totalAmount: true, status: true } },
+        taxInvoices: { orderBy: { createdAt: "desc" }, take: 5, select: { id: true, invoiceNo: true, invoiceType: true, invoiceDate: true, totalAmount: true } },
+      },
+    });
+    return vendor;
   }
 }

@@ -5,4 +5,9 @@ export class CreateVendorDto {
   creditRating?: string; // A, B, C, D
   creditLimit?: number;
   note?: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  address?: string;
+  category?: string;
 }

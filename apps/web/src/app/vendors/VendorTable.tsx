@@ -1,6 +1,7 @@
 "use client";
 
 import type { RefObject } from "react";
+import Link from "next/link";
 import { CREDIT_RATINGS, creditRatingLabel, creditRatingColor, type Vendor, type ImportResult } from "./types";
 import styles from "./Vendors.module.css";
 
@@ -130,7 +131,12 @@ export default function VendorTable({
                     onChange={(e) => onEditNameChange(e.target.value)}
                   />
                 ) : (
-                  vendor.name
+                  <Link
+                    href={`/vendors/${vendor.id}`}
+                    style={{ color: "var(--primary)", fontWeight: 500 }}
+                  >
+                    {vendor.name}
+                  </Link>
                 )}
               </td>
               <td>

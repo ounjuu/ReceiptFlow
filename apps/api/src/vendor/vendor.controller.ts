@@ -7,6 +7,7 @@ import {
   Param,
   Query,
   Body,
+  Req,
   UseGuards,
 } from "@nestjs/common";
 import { VendorService } from "./vendor.service";
@@ -57,6 +58,40 @@ export class VendorController {
     @CurrentTenant() tenantId: string,
   ) {
     return this.vendorService.checkCreditLimit(tenantId, id);
+  }
+
+  @Get(":id/detail")
+  async getDetail(
+    @Param("id") id: string,
+    @CurrentTenant() tenantId: string,
+  ) {
+    return this.vendorService.getDetail(tenantId, id);
+  }
+
+  @Get(":id/memos")
+  async getMemos(@Param("id") id: string) {
+    return this.vendorService.getMemos(id);
+  }
+
+  @Post(":id/memos")
+  @Roles("ADMIN", "ACCOUNTANT")
+  async addMemo(
+    @Param("id") id: string,
+    @Body() body: { content: string; memoType?: string },
+    @Req() req: { user: { sub: string; name?: string } },
+  ) {
+    return this.vendorService.addMemo(id, {
+      content: body.content,
+      memoType: body.memoType,
+      userId: req.user.sub,
+      userName: req.user.name,
+    });
+  }
+
+  @Delete("memos/:memoId")
+  @Roles("ADMIN", "ACCOUNTANT")
+  async deleteMemo(@Param("memoId") memoId: string) {
+    return this.vendorService.deleteMemo(memoId);
   }
 
   @Get(":id/ledger")
