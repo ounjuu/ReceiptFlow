@@ -41,6 +41,7 @@ const en: Record<TranslationKey, string> = {
   nav_vendorSummary: "Vendor Summary",
   nav_comparativeReports: "Comparative Reports",
   nav_anomalyDetection: "AI Anomaly Detection",
+  nav_bom: "BOM Management",
   nav_settings: "Settings",
 
   // Navigation Groups

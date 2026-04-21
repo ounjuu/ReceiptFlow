@@ -700,9 +700,28 @@ model Product {
   updatedAt     DateTime  @updatedAt
 
   inventoryTransactions InventoryTransaction[]
+  bomParent             BomItem[]    @relation("BomParent")
+  bomChild              BomItem[]    @relation("BomChild")
 
   @@unique([tenantId, code])
   @@index([tenantId])
+}
+
+// BOM (부품 구성표)
+model BomItem {
+  id            String   @id @default(uuid())
+  parentId      String   // 조립품 (완제품)
+  parent        Product  @relation("BomParent", fields: [parentId], references: [id], onDelete: Cascade)
+  childId       String   // 부품 (자재)
+  child         Product  @relation("BomChild", fields: [childId], references: [id])
+  quantity      Decimal  @db.Decimal(18, 4) // 필요 수량
+  unit          String?  // 단위 (EA, KG 등)
+  note          String?
+  createdAt     DateTime @default(now())
+
+  @@unique([parentId, childId])
+  @@index([parentId])
+  @@index([childId])
 }
 
 // ──────────────────────────────────

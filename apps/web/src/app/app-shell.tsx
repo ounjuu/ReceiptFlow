@@ -63,6 +63,7 @@ const navGroups: NavGroup[] = [
       { href: "/expense-claims", labelKey: "nav_expenseClaims", roles: ["ADMIN", "ACCOUNTANT"] },
       { href: "/inventory", labelKey: "nav_inventory", roles: ["ADMIN", "ACCOUNTANT"] },
       { href: "/cost-management", labelKey: "nav_costManagement", roles: ["ADMIN", "ACCOUNTANT"] },
+      { href: "/bom", labelKey: "nav_bom" as TranslationKey, roles: ["ADMIN", "ACCOUNTANT"] },
     ],
   },
   {

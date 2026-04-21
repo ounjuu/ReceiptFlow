@@ -39,6 +39,7 @@ const ko = {
   nav_vendorSummary: "거래처별 현황",
   nav_comparativeReports: "비교 재무제표",
   nav_anomalyDetection: "AI 이상거래 감지",
+  nav_bom: "BOM 관리",
   nav_settings: "설정",
 
   // 네비게이션 그룹

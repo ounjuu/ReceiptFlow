@@ -1,0 +1,337 @@
+.title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+}
+
+/* 레이아웃: 좌측 조립품 목록 + 우측 BOM 상세 */
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 좌측 패널 */
+.leftPanel {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.panelTitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  background: #fff;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.assemblyList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.assemblyItem {
+  padding: 8px 10px;
+  cursor: pointer;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: background 0.15s;
+}
+
+.assemblyItem:hover {
+  background: var(--bg);
+}
+
+.assemblyItemActive {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.assemblyCode {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.assemblyItemActive .assemblyCode {
+  color: var(--primary);
+  opacity: 0.8;
+}
+
+.emptyList {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 20px 0;
+}
+
+/* 전체 품목에서 선택 드롭다운 */
+.allProductsSection {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.allProductsLabel {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.allProductsSelect {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+/* 우측 패널 */
+.rightPanel {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.rightPanelEmpty {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.totalCost {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.totalCostValue {
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 1.05rem;
+}
+
+/* BOM 추가 폼 */
+.addForm {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.formLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.formInput, .formSelect {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  background: #fff;
+}
+
+.formInput:focus, .formSelect:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.formInputSmall {
+  width: 80px;
+}
+
+.formInputMemo {
+  width: 140px;
+}
+
+/* 버튼 */
+.primaryBtn {
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.primaryBtn:hover { opacity: 0.9; }
+.primaryBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.secondaryBtn {
+  background: #fff;
+  color: var(--text);
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.secondaryBtn:hover { background: var(--bg); }
+
+.dangerBtn {
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.dangerBtn:hover { background: #fecaca; }
+
+.saveBtn {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.saveBtn:hover { background: var(--primary); color: #fff; }
+
+.cancelBtn {
+  background: #fff;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.cancelBtn:hover { background: var(--bg); }
+
+/* 인라인 편집 입력 */
+.inlineInput {
+  width: 70px;
+  padding: 4px 6px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  text-align: right;
+  background: #fff;
+}
+
+.inlineInput:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+/* 에러 메시지 */
+.errorMsg {
+  color: #dc2626;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  background: #fee2e2;
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+}
+
+/* 자재소요량 섹션 */
+.requirementSection {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.requirementTitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.requirementForm {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+
+/* 부족분 표시 */
+.shortage {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.sufficient {
+  color: #166534;
+  font-weight: 600;
+}
+
+/* 액션 버튼 그룹 */
+.actionBtns {
+  display: flex;
+  gap: 4px;
+}
