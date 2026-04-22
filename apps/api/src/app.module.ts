@@ -29,9 +29,10 @@ import { TaxFilingModule } from "./tax-filing/tax-filing.module";
 import { MailModule } from "./mail/mail.module";
 import { SummaryCodeModule } from "./summary-code/summary-code.module";
 import { BomModule } from "./bom/bom.module";
+import { NotificationModule } from "./notification/notification.module";
 
 @Module({
-  imports: [PrismaModule, AuthModule, DocumentModule, JournalModule, ReportModule, AccountModule, VendorModule, ClosingModule, AuditLogModule, JournalTemplateModule, ExchangeRateModule, TaxInvoiceModule, FixedAssetModule, ApprovalModule, PayrollModule, BudgetModule, ProjectModule, TradeModule, DepartmentModule, CostModule, ExpenseClaimModule, InventoryModule, BankAccountModule, SearchModule, JournalRuleModule, YearEndSettlementModule, TaxFilingModule, MailModule, SummaryCodeModule, BomModule],
+  imports: [PrismaModule, AuthModule, NotificationModule, DocumentModule, JournalModule, ReportModule, AccountModule, VendorModule, ClosingModule, AuditLogModule, JournalTemplateModule, ExchangeRateModule, TaxInvoiceModule, FixedAssetModule, ApprovalModule, PayrollModule, BudgetModule, ProjectModule, TradeModule, DepartmentModule, CostModule, ExpenseClaimModule, InventoryModule, BankAccountModule, SearchModule, JournalRuleModule, YearEndSettlementModule, TaxFilingModule, MailModule, SummaryCodeModule, BomModule],
   controllers: [],
   providers: [],
 })

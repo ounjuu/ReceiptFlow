@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { MailService } from "../mail/mail.service";
+import { NotificationService } from "../notification/notification.service";
 import { SetApprovalLinesDto } from "./dto/set-approval-lines.dto";
 
 @Injectable()
@@ -10,6 +11,7 @@ export class ApprovalService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   // 결재선 조회
@@ -146,6 +148,13 @@ export class ApprovalService {
           submitter?.name || "요청자",
         );
       }
+      // 슬랙/카카오 알림
+      this.notificationService.notifyApprovalRequest({
+        documentType,
+        documentId,
+        submitterName: submitter?.name || "요청자",
+        approverName: approver?.name || "결재자",
+      }).catch((err) => this.logger.warn(`결재 요청 알림 전송 실패: ${err?.message}`));
     } catch (err: any) {
       this.logger.warn(`결재 요청 메일 발송 실패: ${err?.message || err}`);
     }
@@ -225,6 +234,21 @@ export class ApprovalService {
       // 반려 결과 메일 발송 (fire-and-forget)
       this.sendResultEmail(request.submittedBy, request.documentType, request.documentId, "REJECTED", comment);
 
+      // 슬랙/카카오 알림
+      (async () => {
+        const [approverInfo, submitterInfo] = await Promise.all([
+          this.prisma.user.findUnique({ where: { id: approverId }, select: { name: true } }),
+          this.prisma.user.findUnique({ where: { id: request.submittedBy }, select: { name: true } }),
+        ]);
+        this.notificationService.notifyApprovalRejected({
+          documentType: request.documentType,
+          documentId: request.documentId,
+          approverName: approverInfo?.name || "결재자",
+          submitterName: submitterInfo?.name || "요청자",
+          comment: comment || undefined,
+        });
+      })().catch((err) => this.logger.warn(`반려 알림 전송 실패: ${(err as Error)?.message}`));
+
       return { status: "REJECTED", message: "결재가 반려되었습니다" };
     }
 
@@ -256,6 +280,21 @@ export class ApprovalService {
 
       // 최종 승인 결과 메일 발송 (fire-and-forget)
       this.sendResultEmail(request.submittedBy, request.documentType, request.documentId, "APPROVED", comment);
+
+      // 슬랙/카카오 알림
+      (async () => {
+        const [approverInfo, submitterInfo] = await Promise.all([
+          this.prisma.user.findUnique({ where: { id: approverId }, select: { name: true } }),
+          this.prisma.user.findUnique({ where: { id: request.submittedBy }, select: { name: true } }),
+        ]);
+        this.notificationService.notifyApprovalApproved({
+          documentType: request.documentType,
+          documentId: request.documentId,
+          approverName: approverInfo?.name || "결재자",
+          submitterName: submitterInfo?.name || "요청자",
+          comment: comment || undefined,
+        });
+      })().catch((err) => this.logger.warn(`승인 알림 전송 실패: ${(err as Error)?.message}`));
 
       return { status: "APPROVED", message: "최종 승인되었습니다" };
     } else {
