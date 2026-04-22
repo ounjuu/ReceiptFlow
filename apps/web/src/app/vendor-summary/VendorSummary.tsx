@@ -8,6 +8,10 @@ import { useLocale } from "@/lib/locale";
 import { exportToXlsx } from "@/lib/export-xlsx";
 import { usePagination } from "@/lib/usePagination";
 import { Pagination } from "@/lib/Pagination";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, Cell,
+} from "recharts";
 import styles from "./VendorSummary.module.css";
 import { fmtKR as fmt } from "@/lib/formatters";
 
@@ -135,6 +139,66 @@ export default function VendorSummary() {
             <div className={`${styles.summaryCardValue} ${data.totalNet >= 0 ? styles.blue : styles.red}`}>
               {fmt(data.totalNet)}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 차트 섹션 */}
+      {data && data.vendors.length > 0 && (
+        <div className={styles.chartGrid}>
+          {/* 매출 TOP 10 */}
+          <div className={styles.chartSection}>
+            <h2 className={styles.chartTitle}>매출 TOP 10</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={[...data.vendors]
+                  .sort((a, b) => b.salesAmount - a.salesAmount)
+                  .slice(0, 10)
+                  .map((v) => ({
+                    name: v.vendorName.length > 8 ? v.vendorName.slice(0, 8) + "…" : v.vendorName,
+                    매출: v.salesAmount,
+                  }))}
+                layout="vertical"
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8e4f0" />
+                <XAxis type="number" fontSize={11} tickFormatter={(v) => `₩${(v / 10000).toFixed(0)}만`} />
+                <YAxis type="category" dataKey="name" width={90} fontSize={11} />
+                <Tooltip formatter={(v) => [`₩${fmt(Number(v))}`, "매출"]} />
+                <Bar dataKey="매출" radius={[0, 4, 4, 0]}>
+                  {[...data.vendors]
+                    .sort((a, b) => b.salesAmount - a.salesAmount)
+                    .slice(0, 10)
+                    .map((_, i) => (
+                      <Cell key={i} fill={i === 0 ? "#2563eb" : i < 3 ? "#60a5fa" : "#93c5fd"} />
+                    ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* 매출 vs 매입 비교 */}
+          <div className={styles.chartSection}>
+            <h2 className={styles.chartTitle}>거래처별 매출 vs 매입</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={[...data.vendors]
+                  .sort((a, b) => (b.salesAmount + b.purchaseAmount) - (a.salesAmount + a.purchaseAmount))
+                  .slice(0, 10)
+                  .map((v) => ({
+                    name: v.vendorName.length > 6 ? v.vendorName.slice(0, 6) + "…" : v.vendorName,
+                    매출: v.salesAmount,
+                    매입: v.purchaseAmount,
+                  }))}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8e4f0" />
+                <XAxis dataKey="name" fontSize={11} />
+                <YAxis fontSize={11} tickFormatter={(v) => `₩${(v / 10000).toFixed(0)}만`} />
+                <Tooltip formatter={(v) => [`₩${fmt(Number(v))}`, ""]} />
+                <Legend />
+                <Bar dataKey="매출" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="매입" fill="#dc2626" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       )}

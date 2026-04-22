@@ -186,4 +186,28 @@
   .summaryCards {
     grid-template-columns: repeat(2, 1fr);
   }
+  .chartGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 차트 영역 */
+.chartGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.chartSection {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.chartTitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 12px;
 }
