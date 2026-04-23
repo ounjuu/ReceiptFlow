@@ -337,4 +337,72 @@
   .permSection {
     padding: 12px;
   }
+  .backupActions {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 백업 섹션 */
+.sectionDesc {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.backupActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.backupCard {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.backupCard h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.backupCard p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.primaryBtn {
+  background: var(--primary);
+  color: #fff;
+  padding: 8px 20px;
+  font-size: 0.85rem;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.primaryBtn:hover {
+  opacity: 0.9;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.successMsg {
+  color: #16a34a;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.errorMsg {
+  color: #dc2626;
+  font-size: 0.85rem;
+  font-weight: 500;
 }

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { useLocale } from "@/lib/locale";
-import { apiGet, apiPatch, apiPut } from "@/lib/api";
+import { apiGet, apiPatch, apiPut, apiDownload, apiPost } from "@/lib/api";
 import type { Tab } from "./types";
 import { NOTIF_KEYS } from "./types";
 import SettingsForm from "./SettingsForm";
@@ -161,6 +161,14 @@ export default function Settings() {
             {t("settings_permissions")}
           </button>
         )}
+        {isAdmin && (
+          <button
+            className={`${styles.tab} ${tab === "backup" ? styles.tabActive : ""}`}
+            onClick={() => setTab("backup")}
+          >
+            데이터 백업
+          </button>
+        )}
       </div>
 
       {tab === "profile" && (
@@ -220,6 +228,89 @@ export default function Settings() {
             t={t}
           />
         )
+      )}
+
+      {tab === "backup" && isAdmin && <BackupSection />}
+    </div>
+  );
+}
+
+// 백업/복원 섹션
+function BackupSection() {
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [result, setResult] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const importRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = async () => {
+    setExporting(true);
+    setResult(null);
+    try {
+      await apiDownload("/backup/export", `ledgerflow-backup-${new Date().toISOString().slice(0, 10)}.json`);
+      setResult({ type: "success", text: "백업 파일이 다운로드되었습니다." });
+    } catch (err) {
+      setResult({ type: "error", text: (err as Error).message });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setResult(null);
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text);
+      const res = await apiPost<{ restored: number; message: string }>("/backup/import", backup);
+      setResult({ type: "success", text: res.message });
+    } catch (err) {
+      setResult({ type: "error", text: (err as Error).message || "복원 실패" });
+    } finally {
+      setImporting(false);
+      if (importRef.current) importRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className={styles.section}>
+      <h2 className={styles.sectionTitle}>데이터 백업 / 복원</h2>
+      <p className={styles.sectionDesc}>
+        현재 테넌트의 모든 데이터를 JSON 파일로 백업하거나 복원합니다.
+      </p>
+
+      <div className={styles.backupActions}>
+        <div className={styles.backupCard}>
+          <h3>백업 (내보내기)</h3>
+          <p>계정과목, 전표, 거래처, 거래, 직원, 급여 등 전체 데이터를 JSON으로 다운로드합니다.</p>
+          <button
+            className={styles.primaryBtn}
+            onClick={handleExport}
+            disabled={exporting}
+          >
+            {exporting ? "백업 중..." : "백업 다운로드"}
+          </button>
+        </div>
+
+        <div className={styles.backupCard}>
+          <h3>복원 (가져오기)</h3>
+          <p>백업 JSON 파일을 업로드하여 데이터를 복원합니다. 기존 데이터와 중복되는 항목은 건너뜁니다.</p>
+          <input type="file" ref={importRef} accept=".json" onChange={handleImport} hidden />
+          <button
+            className={styles.primaryBtn}
+            onClick={() => importRef.current?.click()}
+            disabled={importing}
+          >
+            {importing ? "복원 중..." : "백업 파일 업로드"}
+          </button>
+        </div>
+      </div>
+
+      {result && (
+        <p className={result.type === "success" ? styles.successMsg : styles.errorMsg}>
+          {result.text}
+        </p>
       )}
     </div>
   );
