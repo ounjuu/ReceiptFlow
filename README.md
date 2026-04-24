@@ -100,6 +100,7 @@ prisma/
 | 멤버 관리 | 초대, 역할 변경 (ADMIN/ACCOUNTANT/VIEWER) |
 | 권한 관리 | 역할별 메뉴 필터링, 모듈별 읽기/쓰기/삭제 권한 매트릭스 |
 | 감사 로그 | 회계 처리 이력 추적 |
+| 데이터 백업/복원 | 테넌트 전체 데이터 JSON export/import, 관리자 전용 |
 | 다국어 | 한국어/영어 전환 |
 | 다크모드 | 라이트/다크/시스템 테마 |
 | 모바일 반응형 | 햄버거 메뉴, 사이드바 토글, 테이블 스크롤 |
@@ -221,6 +222,8 @@ npm run test:web
 | GET | `/payroll/records/:id/payslip-pdf` | 급여명세서 PDF |
 | GET | `/reports/depreciation-schedule` | 감가상각 명세서 |
 | GET | `/reports/anomalies` | AI 이상거래 감지 |
+| GET | `/backup/export` | 데이터 백업 (JSON 다운로드) |
+| POST | `/backup/import` | 데이터 복원 (JSON 업로드) |
 | POST | `/ocr` | AI OCR (AI 서비스) |
 | POST | `/classify` | AI 계정 분류 (AI 서비스) |
 
