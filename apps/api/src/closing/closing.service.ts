@@ -36,18 +36,18 @@ export class ClosingService {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0, 23, 59, 59);
 
-    // 미확정 전표 확인
-    const unpostedCount = await this.prisma.journalEntry.count({
+    // 미처리 전표 확인 (DRAFT, PENDING_APPROVAL만 차단, APPROVED/POSTED는 허용)
+    const pendingCount = await this.prisma.journalEntry.count({
       where: {
         tenantId,
         date: { gte: startDate, lte: endDate },
-        status: { not: "POSTED" },
+        status: { in: ["DRAFT", "PENDING_APPROVAL"] },
       },
     });
 
-    if (unpostedCount > 0) {
+    if (pendingCount > 0) {
       throw new BadRequestException(
-        `${year}년 ${month}월에 미확정 전표가 ${unpostedCount}건 있습니다. 모든 전표를 확정한 후 마감하세요.`,
+        `${year}년 ${month}월에 미처리 전표가 ${pendingCount}건 있습니다. 임시/결재중 전표를 처리한 후 마감하세요.`,
       );
     }
 

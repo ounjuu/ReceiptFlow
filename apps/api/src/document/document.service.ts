@@ -225,6 +225,7 @@ export class DocumentService {
         tenantId: dto.tenantId,
         date: new Date(dto.transactionAt),
         description: `${dto.vendorName} 결제`,
+        status: "DRAFT", // 결재 프로세스를 거치도록 DRAFT로 생성
         lines: [
           {
             accountId: debitAccountId,

@@ -493,6 +493,14 @@ export class JournalService {
         include: { lines: { include: { account: true, vendor: true } } },
       });
 
+      // 전표가 POSTED로 변경되면 연결된 Document 상태도 동기화
+      if (dto.status === "POSTED" && entry.documentId) {
+        await tx.document.update({
+          where: { id: entry.documentId },
+          data: { status: "POSTED" },
+        }).catch(() => {}); // Document가 없거나 이미 처리된 경우 무시
+      }
+
       // 감사 로그
       if (userId) {
         const action = dto.status && !dto.lines && !dto.date

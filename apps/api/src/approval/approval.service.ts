@@ -260,11 +260,11 @@ export class ApprovalService {
         data: { status: "APPROVED" },
       });
 
-      // 문서 상태 → APPROVED
+      // 문서 상태 → POSTED (결재 완료 시 자동 확정하여 보고서에 즉시 반영)
       if (request.documentType === "JOURNAL") {
         await this.prisma.journalEntry.update({
           where: { id: request.documentId },
-          data: { status: "APPROVED" },
+          data: { status: "POSTED" },
         });
       } else if (request.documentType === "TAX_INVOICE") {
         await this.prisma.taxInvoice.update({
