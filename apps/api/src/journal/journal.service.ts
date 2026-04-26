@@ -9,7 +9,7 @@ import * as path from "path";
 
 // 상태 전이 규칙
 const STATUS_TRANSITIONS: Record<string, string[]> = {
-  DRAFT: ["APPROVED", "PENDING_APPROVAL"],
+  DRAFT: ["APPROVED", "PENDING_APPROVAL", "POSTED"],
   PENDING_APPROVAL: ["APPROVED", "DRAFT"],
   APPROVED: ["POSTED", "DRAFT"],
   POSTED: [],

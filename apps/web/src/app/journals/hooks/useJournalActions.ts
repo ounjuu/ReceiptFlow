@@ -138,11 +138,11 @@ export function useJournalActions(tenantId: string | null) {
 
   const nextStatus = useCallback((current: string): { label: string; next: string } | null => {
     switch (current) {
-      case "DRAFT": return { label: "승인", next: "APPROVED" };
+      case "DRAFT": return hasApprovalLine ? null : { label: "확정", next: "POSTED" };
       case "APPROVED": return { label: "확정", next: "POSTED" };
       default: return null;
     }
-  }, []);
+  }, [hasApprovalLine]);
 
   const toggleAll = useCallback((journals: JournalEntry[]) => {
     const selectable = journals.filter((j) => j.status !== "POSTED");
