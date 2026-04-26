@@ -36,8 +36,8 @@ export function CashForecastView({ data }: Props) {
     });
   }
 
-  const lastForecast = data.forecast[data.forecast.length - 1];
-  const isLowBalance = lastForecast && lastForecast.balance < 0;
+  const lastForecast = data.forecast.at(-1);
+  const isLowBalance = (lastForecast?.balance ?? 0) < 0;
 
   return (
     <div>

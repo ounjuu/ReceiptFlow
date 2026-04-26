@@ -27,7 +27,7 @@ export default function CashFlowPage() {
   ].filter(Boolean).join("&");
 
   // 자금 일보 데이터
-  const { data: dailyData } = useQuery({
+  const { data: dailyData, isError: dailyError } = useQuery({
     queryKey: ["reports", "daily-cash", dateParams],
     queryFn: () =>
       apiGet<DailyCashReport>(`/reports/daily-cash?tenantId=${tenantId}${dateParams ? `&${dateParams}` : ""}`),
@@ -35,7 +35,7 @@ export default function CashFlowPage() {
   });
 
   // 현금 흐름표 데이터
-  const { data: cashFlowData } = useQuery({
+  const { data: cashFlowData, isError: cashFlowError } = useQuery({
     queryKey: ["reports", "cash-flow", dateParams],
     queryFn: () =>
       apiGet<CashFlowStatement>(`/reports/cash-flow?tenantId=${tenantId}${dateParams ? `&${dateParams}` : ""}`),
@@ -43,7 +43,7 @@ export default function CashFlowPage() {
   });
 
   // 자금 예측 데이터
-  const { data: forecastData } = useQuery({
+  const { data: forecastData, isError: forecastError } = useQuery({
     queryKey: ["reports", "cash-forecast"],
     queryFn: () => apiGet<CashForecast>(`/reports/cash-forecast?tenantId=${tenantId}&months=3`),
     enabled: !!tenantId && activeTab === "forecast",
@@ -101,12 +101,15 @@ export default function CashFlowPage() {
       </div>
 
       {activeTab === "daily" && (
+        dailyError ? <p style={{ color: "var(--danger)" }}>데이터를 불러오지 못했습니다.</p> :
         dailyData ? <DailyCashView data={dailyData} /> : <p>불러오는 중...</p>
       )}
       {activeTab === "cashflow" && (
+        cashFlowError ? <p style={{ color: "var(--danger)" }}>데이터를 불러오지 못했습니다.</p> :
         cashFlowData ? <CashFlowView data={cashFlowData} /> : <p>불러오는 중...</p>
       )}
       {activeTab === "forecast" && (
+        forecastError ? <p style={{ color: "var(--danger)" }}>데이터를 불러오지 못했습니다.</p> :
         forecastData ? <CashForecastView data={forecastData} /> : <p>불러오는 중...</p>
       )}
     </div>

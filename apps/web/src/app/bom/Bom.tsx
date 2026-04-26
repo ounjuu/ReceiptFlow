@@ -126,6 +126,7 @@ export default function BomPage() {
       queryClient.invalidateQueries({ queryKey: ["bom-detail", selectedId] });
       setEditingItemId(null);
     },
+    onError: (err: Error) => alert(err.message),
   });
 
   const deleteItemMutation = useMutation({
@@ -134,6 +135,7 @@ export default function BomPage() {
       queryClient.invalidateQueries({ queryKey: ["bom-detail", selectedId] });
       queryClient.invalidateQueries({ queryKey: ["bom-assemblies"] });
     },
+    onError: (err: Error) => alert(err.message),
   });
 
   // ─── 핸들러 ───

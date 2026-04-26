@@ -87,6 +87,7 @@ export default function VendorDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["vendor-detail", id] });
       setMemoContent("");
     },
+    onError: (err: Error) => alert(err.message),
   });
 
   const deleteMemoMutation = useMutation({
@@ -94,6 +95,7 @@ export default function VendorDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendor-detail", id] });
     },
+    onError: (err: Error) => alert(err.message),
   });
 
   const handleAddMemo = (e: React.FormEvent) => {
