@@ -498,7 +498,7 @@ export class JournalService {
         await tx.document.update({
           where: { id: entry.documentId },
           data: { status: "POSTED" },
-        }).catch(() => {}); // Document가 없거나 이미 처리된 경우 무시
+        }).catch(() => { /* Document가 없거나 이미 처리된 경우 무시 */ });
       }
 
       // 감사 로그

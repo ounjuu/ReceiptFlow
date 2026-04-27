@@ -230,7 +230,8 @@ export class CostService {
         });
       }
       const rate = Number(line.journalEntry.exchangeRate);
-      projectMap.get(key)!.totalCost += (Number(line.debit) - Number(line.credit)) * rate;
+      const proj = projectMap.get(key);
+      if (proj) proj.totalCost += (Number(line.debit) - Number(line.credit)) * rate;
     }
 
     const projects = [...projectMap.values()].sort((a, b) => b.totalCost - a.totalCost);
@@ -276,7 +277,8 @@ export class CostService {
         });
       }
       const rate = Number(line.journalEntry.exchangeRate);
-      deptMap.get(key)!.totalCost += (Number(line.debit) - Number(line.credit)) * rate;
+      const dept = deptMap.get(key);
+      if (dept) dept.totalCost += (Number(line.debit) - Number(line.credit)) * rate;
     }
 
     const departments = [...deptMap.values()].sort((a, b) => b.totalCost - a.totalCost);
