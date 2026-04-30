@@ -16,9 +16,12 @@ export class NotificationService {
     if (!this.slackWebhookUrl) return;
 
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
       await fetch(this.slackWebhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           attachments: [
             {
@@ -31,6 +34,7 @@ export class NotificationService {
           ],
         }),
       });
+      clearTimeout(timeout);
     } catch (err) {
       this.logger.warn(`슬랙 알림 전송 실패: ${(err as Error).message}`);
     }
@@ -41,11 +45,15 @@ export class NotificationService {
     if (!this.kakaoWebhookUrl) return;
 
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
       await fetch(this.kakaoWebhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({ text: message.text }),
       });
+      clearTimeout(timeout);
     } catch (err) {
       this.logger.warn(`카카오 알림 전송 실패: ${(err as Error).message}`);
     }

@@ -19,23 +19,7 @@ export class BomController {
     return this.bomService.getAssemblyProducts(tenantId);
   }
 
-  // 특정 제품의 BOM 조회
-  @Get(":parentId")
-  async getBom(@Param("parentId") parentId: string) {
-    return this.bomService.getBom(parentId);
-  }
-
-  // BOM 항목 추가
-  @Post(":parentId/items")
-  @Roles("ADMIN", "ACCOUNTANT")
-  async addItem(
-    @Param("parentId") parentId: string,
-    @Body() body: { childId: string; quantity: number; unit?: string; note?: string },
-  ) {
-    return this.bomService.addItem(parentId, body);
-  }
-
-  // BOM 항목 수정
+  // BOM 항목 수정 (`:parentId`보다 먼저 선언)
   @Patch("items/:itemId")
   @Roles("ADMIN", "ACCOUNTANT")
   async updateItem(
@@ -52,12 +36,28 @@ export class BomController {
     return this.bomService.removeItem(itemId);
   }
 
-  // 자재소요량 계산
+  // 자재소요량 계산 (`:parentId`보다 먼저 선언)
   @Get(":parentId/requirement")
   async calculateRequirement(
     @Param("parentId") parentId: string,
     @Query("qty") qty: string,
   ) {
     return this.bomService.calculateRequirement(parentId, Number(qty) || 1);
+  }
+
+  // BOM 항목 추가
+  @Post(":parentId/items")
+  @Roles("ADMIN", "ACCOUNTANT")
+  async addItem(
+    @Param("parentId") parentId: string,
+    @Body() body: { childId: string; quantity: number; unit?: string; note?: string },
+  ) {
+    return this.bomService.addItem(parentId, body);
+  }
+
+  // 특정 제품의 BOM 조회 (와일드카드 라우트는 마지막에)
+  @Get(":parentId")
+  async getBom(@Param("parentId") parentId: string) {
+    return this.bomService.getBom(parentId);
   }
 }

@@ -153,6 +153,38 @@ export class BackupService {
         await tx.budget.createMany({ data: data.budgets as never[], skipDuplicates: true });
         restored += (data.budgets as never[]).length;
       }
+      // 이하 의존성 순서대로 복원
+      const restoreTable = async (key: string, model: { createMany: (args: { data: never[]; skipDuplicates: boolean }) => Promise<unknown> }) => {
+        if (data[key]?.length) {
+          await model.createMany({ data: data[key] as never[], skipDuplicates: true });
+          restored += (data[key] as never[]).length;
+        }
+      };
+      await restoreTable("vendorMemos", tx.vendorMemo);
+      await restoreTable("journalAttachments", tx.journalAttachment);
+      await restoreTable("journalTemplates", tx.journalTemplate);
+      await restoreTable("journalTemplateLines", tx.journalTemplateLine);
+      await restoreTable("journalRules", tx.journalRule);
+      await restoreTable("exchangeRates", tx.exchangeRate);
+      await restoreTable("taxInvoices", tx.taxInvoice);
+      await restoreTable("taxInvoiceItems", tx.taxInvoiceItem);
+      await restoreTable("fixedAssets", tx.fixedAsset);
+      await restoreTable("depreciationRecords", tx.depreciationRecord);
+      await restoreTable("approvalLines", tx.approvalLine);
+      await restoreTable("approvalRequests", tx.approvalRequest);
+      await restoreTable("approvalActions", tx.approvalAction);
+      await restoreTable("payrollRecords", tx.payrollRecord);
+      await restoreTable("bomItems", tx.bomItem);
+      await restoreTable("trades", tx.trade);
+      await restoreTable("tradeItems", tx.tradeItem);
+      await restoreTable("payments", tx.payment);
+      await restoreTable("expenseClaims", tx.expenseClaim);
+      await restoreTable("expenseClaimItems", tx.expenseClaimItem);
+      await restoreTable("inventoryTransactions", tx.inventoryTransaction);
+      await restoreTable("bankTransactions", tx.bankTransaction);
+      await restoreTable("yearEndSettlements", tx.yearEndSettlement);
+      await restoreTable("taxFilings", tx.taxFiling);
+      await restoreTable("accountingPeriods", tx.accountingPeriod);
 
       this.logger.log(`백업 복원 완료: ${restored}건 (tenantId: ${tenantId})`);
     });

@@ -768,9 +768,9 @@ export class FinancialReportService {
       history.push({ month: monthKey, inflow, outflow, net: inflow - outflow });
     }
 
-    // 평균 계산
-    const avgInflow = history.reduce((s, h) => s + h.inflow, 0) / 6;
-    const avgOutflow = history.reduce((s, h) => s + h.outflow, 0) / 6;
+    // 평균 계산 (정수로 반올림하여 소수점 오차 방지)
+    const avgInflow = Math.round(history.reduce((s, h) => s + h.inflow, 0) / 6);
+    const avgOutflow = Math.round(history.reduce((s, h) => s + h.outflow, 0) / 6);
     const avgNet = avgInflow - avgOutflow;
 
     // 향후 N개월 예측
