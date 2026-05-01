@@ -13,6 +13,8 @@ export async function createTestApp(): Promise<INestApplication> {
 
   const app = moduleFixture.createNestApplication();
   await app.init();
+  // DB 커넥션 풀 안정화 대기
+  await new Promise((r) => setTimeout(r, 100));
   return app;
 }
 
