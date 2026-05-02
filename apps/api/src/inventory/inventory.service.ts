@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { JournalService } from "../journal/journal.service";
 import { CreateInventoryTxDto } from "./dto/create-inventory-tx.dto";
+import { nextSequenceNumber } from "../common/sequence.util";
 
 @Injectable()
 export class InventoryService {
@@ -13,21 +14,14 @@ export class InventoryService {
 
   // 자동 채번 (IV-YYYYMMDD-NNN)
   private async generateTxNo(tenantId: string, txDate: string): Promise<string> {
-    const dateStr = txDate.replace(/-/g, "");
-    const prefix = `IV-${dateStr}-`;
+    const prefix = `IV-${txDate.replace(/-/g, "")}-`;
 
     const last = await this.prisma.inventoryTransaction.findFirst({
       where: { tenantId, txNo: { startsWith: prefix } },
       orderBy: { txNo: "desc" },
     });
 
-    let seq = 1;
-    if (last) {
-      const lastSeq = parseInt(last.txNo.split("-").pop() || "0", 10);
-      seq = lastSeq + 1;
-    }
-
-    return `${prefix}${String(seq).padStart(3, "0")}`;
+    return nextSequenceNumber(prefix, last?.txNo, 3);
   }
 
   // 요약 통계

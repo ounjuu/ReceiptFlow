@@ -4,6 +4,7 @@ import { ClosingService } from "../closing/closing.service";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { CreateJournalDto, JournalLineDto } from "./dto/create-journal.dto";
 import { UpdateJournalDto } from "./dto/update-journal.dto";
+import { nextSequenceNumber, formatDateYYYYMMDD } from "../common/sequence.util";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -48,8 +49,7 @@ export class JournalService {
   ): Promise<string> {
     const db = tx || this.prisma;
     const prefix = JournalService.TYPE_PREFIX[journalType] || "일반";
-    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, "");
-    const pattern = `${prefix}-${dateStr}-`;
+    const pattern = `${prefix}-${formatDateYYYYMMDD(date)}-`;
 
     // 같은 테넌트, 같은 유형, 같은 날짜의 마지막 번호 조회
     const last = await db.journalEntry.findFirst({
@@ -61,13 +61,7 @@ export class JournalService {
       select: { journalNumber: true },
     });
 
-    let seq = 1;
-    if (last?.journalNumber) {
-      const lastSeq = parseInt(last.journalNumber.split("-").pop() || "0", 10);
-      seq = lastSeq + 1;
-    }
-
-    return `${pattern}${String(seq).padStart(4, "0")}`;
+    return nextSequenceNumber(pattern, last?.journalNumber, 4);
   }
 
   // 차대변 균형 검증

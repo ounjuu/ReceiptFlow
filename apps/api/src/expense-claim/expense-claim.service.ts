@@ -4,6 +4,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { JournalService } from "../journal/journal.service";
 import { CreateExpenseClaimDto } from "./dto/create-expense-claim.dto";
 import { UpdateExpenseClaimDto } from "./dto/update-expense-claim.dto";
+import { nextSequenceNumber } from "../common/sequence.util";
 
 @Injectable()
 export class ExpenseClaimService {
@@ -14,21 +15,14 @@ export class ExpenseClaimService {
 
   // 자동 채번 (EC-YYYYMMDD-NNN)
   private async generateClaimNo(tenantId: string, claimDate: string): Promise<string> {
-    const dateStr = claimDate.replace(/-/g, "");
-    const prefix = `EC-${dateStr}-`;
+    const prefix = `EC-${claimDate.replace(/-/g, "")}-`;
 
     const last = await this.prisma.expenseClaim.findFirst({
       where: { tenantId, claimNo: { startsWith: prefix } },
       orderBy: { claimNo: "desc" },
     });
 
-    let seq = 1;
-    if (last) {
-      const lastSeq = parseInt(last.claimNo.split("-").pop() || "0", 10);
-      seq = lastSeq + 1;
-    }
-
-    return `${prefix}${String(seq).padStart(3, "0")}`;
+    return nextSequenceNumber(prefix, last?.claimNo, 3);
   }
 
   // 목록 조회
