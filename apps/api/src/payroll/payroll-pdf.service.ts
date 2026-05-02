@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import PDFDocument from "pdfkit";
-import { join } from "path";
+import { generatePdfBuffer } from "../common/pdf-generator";
 
 @Injectable()
 export class PayrollPdfService {
@@ -23,24 +22,7 @@ export class PayrollPdfService {
     totalDeduction: number;
     netPay: number;
   }): Promise<Buffer> {
-    const fontPath = join(process.cwd(), "apps/api/assets/fonts/NanumGothic-Regular.ttf");
-    const fontBoldPath = join(process.cwd(), "apps/api/assets/fonts/NanumGothic-Bold.ttf");
-
-    const doc = new PDFDocument({ size: "A4", margin: 40 });
-
-    doc.registerFont("NanumGothic", fontPath);
-    doc.registerFont("NanumGothic-Bold", fontBoldPath);
-
-    return new Promise<Buffer>((resolve, reject) => {
-      const chunks: Buffer[] = [];
-      doc.on("data", (chunk) => chunks.push(chunk));
-      doc.on("end", () => resolve(Buffer.concat(chunks)));
-      doc.on("error", reject);
-
-      const pageWidth = doc.page.width;
-      const margin = 40;
-      const contentWidth = pageWidth - margin * 2;
-
+    return generatePdfBuffer((doc, { pageWidth, margin, contentWidth }) => {
       const fmt = (n: number) => n.toLocaleString("ko-KR");
 
       // 기간 파싱
@@ -156,7 +138,6 @@ export class PayrollPdfService {
         width: pageWidth,
       });
 
-      doc.end();
     });
   }
 }
