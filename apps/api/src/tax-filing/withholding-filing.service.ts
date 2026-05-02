@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { FilingExportService } from "./filing-export.service";
+import { formatYearMonth } from "../common/date.util";
 
 // 사업주 부담 보험 요율
 const EMPLOYER_RATES = {
@@ -20,7 +21,7 @@ export class WithholdingFilingService {
 
   // 원천징수이행상황신고서 생성
   async generate(tenantId: string, year: number, month: number) {
-    const period = `${year}-${month.toString().padStart(2, "0")}`;
+    const period = formatYearMonth(year, month);
 
     // 해당 월 급여 레코드 조회
     const records = await this.prisma.payrollRecord.findMany({

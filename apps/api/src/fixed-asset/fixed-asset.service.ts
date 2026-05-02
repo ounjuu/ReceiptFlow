@@ -3,6 +3,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { JournalService } from "../journal/journal.service";
 import { CreateFixedAssetDto } from "./dto/create-fixed-asset.dto";
 import { UpdateFixedAssetDto } from "./dto/update-fixed-asset.dto";
+import { formatYearMonth, formatDateYearMonth } from "../common/date.util";
 
 @Injectable()
 export class FixedAssetService {
@@ -158,7 +159,7 @@ export class FixedAssetService {
     year: number,
     month: number,
   ) {
-    const period = `${year}-${String(month).padStart(2, "0")}`;
+    const period = formatYearMonth(year, month);
     const periodEndDate = new Date(year, month, 0); // 해당 월 말일
 
     // ACTIVE 상태 자산 조회
@@ -181,7 +182,7 @@ export class FixedAssetService {
 
       // 취득일 이전 월은 건너뜀
       const acqDate = new Date(asset.acquisitionDate);
-      const acqPeriod = `${acqDate.getFullYear()}-${String(acqDate.getMonth() + 1).padStart(2, "0")}`;
+      const acqPeriod = formatDateYearMonth(acqDate);
       if (period < acqPeriod) continue;
 
       const acquisitionCost = Number(asset.acquisitionCost);
@@ -322,7 +323,7 @@ export class FixedAssetService {
     for (let i = 0; i < maxMonths && currentBookValue > residualValue + 0.01; i++) {
       const year = startDate.getFullYear();
       const month = startDate.getMonth() + 1;
-      const period = `${year}-${String(month).padStart(2, "0")}`;
+      const period = formatYearMonth(year, month);
 
       const depAmount = this.calculateMonthlyDepreciation(
         acquisitionCost,

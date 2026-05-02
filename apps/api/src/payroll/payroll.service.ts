@@ -3,6 +3,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { JournalService } from "../journal/journal.service";
 import { CreateEmployeeDto } from "./dto/create-employee.dto";
 import { UpdateEmployeeDto } from "./dto/update-employee.dto";
+import { formatYearMonth, formatDateYearMonth } from "../common/date.util";
 
 // 4대보험 요율 (2026 기준 근사값)
 const RATES = {
@@ -141,7 +142,7 @@ export class PayrollService {
   // --- 월별 급여 처리 ---
 
   async runMonthlyPayroll(tenantId: string, year: number, month: number) {
-    const period = `${year}-${String(month).padStart(2, "0")}`;
+    const period = formatYearMonth(year, month);
     const periodEndDate = new Date(year, month, 0); // 해당 월 말일
 
     // ACTIVE 직원 조회
@@ -189,7 +190,7 @@ export class PayrollService {
       if (processedEmployeeIds.has(emp.id)) continue;
 
       // 입사일 이전 월은 건너뜀
-      const joinPeriod = `${emp.joinDate.getFullYear()}-${String(emp.joinDate.getMonth() + 1).padStart(2, "0")}`;
+      const joinPeriod = formatDateYearMonth(emp.joinDate);
       if (period < joinPeriod) continue;
 
       const baseSalary = Number(emp.baseSalary);
@@ -281,7 +282,7 @@ export class PayrollService {
 
   // 월별 급여 현황 조회
   async getPayrollRecords(tenantId: string, year: number, month: number) {
-    const period = `${year}-${String(month).padStart(2, "0")}`;
+    const period = formatYearMonth(year, month);
 
     const records = await this.prisma.payrollRecord.findMany({
       where: {
@@ -332,7 +333,7 @@ export class PayrollService {
     const totalLocalTax = records.reduce((s, r) => s + r.localIncomeTax, 0);
 
     return {
-      period: `${year}-${String(month).padStart(2, "0")}`,
+      period: formatYearMonth(year, month),
       employeeCount,
       totalGross,
       totalDeduction,

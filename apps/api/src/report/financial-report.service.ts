@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { TrialBalanceRow } from "./report.types";
 import { LedgerReportService } from "./ledger-report.service";
+import { formatDateYearMonth } from "../common/date.util";
 
 @Injectable()
 export class FinancialReportService {
@@ -761,7 +762,7 @@ export class FinancialReportService {
     const history: { month: string; inflow: number; outflow: number; net: number }[] = [];
     for (let i = 0; i < 6; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
-      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const monthKey = formatDateYearMonth(d);
       const found = monthly.find((m) => m.month === monthKey);
       const inflow = found ? Number(found.inflow) : 0;
       const outflow = found ? Number(found.outflow) : 0;
@@ -778,7 +779,7 @@ export class FinancialReportService {
     let runningBalance = currentBalance;
     for (let i = 1; i <= monthsAhead; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const monthKey = formatDateYearMonth(d);
       runningBalance += avgNet;
       forecast.push({
         month: monthKey,
