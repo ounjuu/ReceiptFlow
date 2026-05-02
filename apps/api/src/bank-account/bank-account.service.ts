@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
+import { Injectable, BadRequestException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { JournalService } from "../journal/journal.service";
@@ -6,6 +6,7 @@ import { CreateBankAccountDto } from "./dto/create-bank-account.dto";
 import { UpdateBankAccountDto } from "./dto/update-bank-account.dto";
 import { CreateBankTxDto } from "./dto/create-bank-tx.dto";
 import { nextSequenceNumber } from "../common/sequence.util";
+import { throwNotFound } from "../common/errors";
 
 @Injectable()
 export class BankAccountService {
@@ -78,7 +79,7 @@ export class BankAccountService {
       where: { id },
       include: { account: { select: { code: true, name: true } } },
     });
-    if (!account) throw new NotFoundException("계좌를 찾을 수 없습니다");
+    if (!account) throwNotFound("계좌를 찾을 수 없습니다");
     return { ...account, balance: Number(account.balance) };
   }
 
@@ -108,7 +109,7 @@ export class BankAccountService {
   // 계좌 수정
   async update(id: string, dto: UpdateBankAccountDto) {
     const existing = await this.prisma.bankAccount.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException("계좌를 찾을 수 없습니다");
+    if (!existing) throwNotFound("계좌를 찾을 수 없습니다");
 
     const data: Record<string, unknown> = {};
     if (dto.bankName !== undefined) data.bankName = dto.bankName;
@@ -130,7 +131,7 @@ export class BankAccountService {
   // 계좌 삭제
   async remove(id: string) {
     const existing = await this.prisma.bankAccount.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException("계좌를 찾을 수 없습니다");
+    if (!existing) throwNotFound("계좌를 찾을 수 없습니다");
 
     const txCount = await this.prisma.bankTransaction.count({ where: { bankAccountId: id } });
     if (txCount > 0) {
@@ -180,7 +181,7 @@ export class BankAccountService {
       where: { id: bankAccountId },
       include: { account: true },
     });
-    if (!bankAccount) throw new NotFoundException("계좌를 찾을 수 없습니다");
+    if (!bankAccount) throwNotFound("계좌를 찾을 수 없습니다");
     if (bankAccount.status !== "ACTIVE") {
       throw new BadRequestException("비활성 계좌에는 거래를 등록할 수 없습니다");
     }
@@ -286,7 +287,7 @@ export class BankAccountService {
       where: { id: dto.targetBankAccountId },
       include: { account: true },
     });
-    if (!targetAccount) throw new NotFoundException("대상 계좌를 찾을 수 없습니다");
+    if (!targetAccount) throwNotFound("대상 계좌를 찾을 수 없습니다");
     if (targetAccount.status !== "ACTIVE") {
       throw new BadRequestException("비활성 계좌로 이체할 수 없습니다");
     }
@@ -361,7 +362,7 @@ export class BankAccountService {
   // 거래 삭제 (최근 건만)
   async deleteTransaction(bankAccountId: string, txId: string) {
     const tx = await this.prisma.bankTransaction.findUnique({ where: { id: txId } });
-    if (!tx) throw new NotFoundException("거래를 찾을 수 없습니다");
+    if (!tx) throwNotFound("거래를 찾을 수 없습니다");
     if (tx.bankAccountId !== bankAccountId) {
       throw new BadRequestException("해당 계좌의 거래가 아닙니다");
     }

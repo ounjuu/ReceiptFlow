@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { Decimal } from "@prisma/client/runtime/library";
+import { throwNotFound } from "../common/errors";
 
 @Injectable()
 export class JournalRuleService {
@@ -59,7 +60,7 @@ export class JournalRuleService {
     enabled?: boolean;
   }) {
     const rule = await this.prisma.journalRule.findUnique({ where: { id } });
-    if (!rule) throw new NotFoundException("규칙을 찾을 수 없습니다");
+    if (!rule) throwNotFound("규칙을 찾을 수 없습니다");
 
     return this.prisma.journalRule.update({
       where: { id },
@@ -73,7 +74,7 @@ export class JournalRuleService {
 
   async remove(id: string) {
     const rule = await this.prisma.journalRule.findUnique({ where: { id } });
-    if (!rule) throw new NotFoundException("규칙을 찾을 수 없습니다");
+    if (!rule) throwNotFound("규칙을 찾을 수 없습니다");
 
     await this.prisma.journalRule.delete({ where: { id } });
     return { success: true };

@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
+import { Injectable, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateTaxFilingDto } from "./dto/update-tax-filing.dto";
+import { throwNotFound } from "../common/errors";
 
 @Injectable()
 export class TaxFilingService {
@@ -28,7 +29,7 @@ export class TaxFilingService {
   // 단건 조회
   async findOne(id: string) {
     const filing = await this.prisma.taxFiling.findUnique({ where: { id } });
-    if (!filing) throw new NotFoundException("신고 데이터를 찾을 수 없습니다");
+    if (!filing) throwNotFound("신고 데이터를 찾을 수 없습니다");
     return {
       ...filing,
       taxableAmount: Number(filing.taxableAmount),
@@ -39,7 +40,7 @@ export class TaxFilingService {
   // 신고 데이터 수정
   async update(id: string, dto: UpdateTaxFilingDto) {
     const existing = await this.prisma.taxFiling.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException("신고 데이터를 찾을 수 없습니다");
+    if (!existing) throwNotFound("신고 데이터를 찾을 수 없습니다");
 
     if (existing.status === "FILED" || existing.status === "ACCEPTED") {
       throw new BadRequestException("이미 신고 완료된 데이터는 수정할 수 없습니다");
@@ -66,7 +67,7 @@ export class TaxFilingService {
   // 상태 전이 (검증 포함)
   async updateStatus(id: string, status: string, filingReference?: string) {
     const existing = await this.prisma.taxFiling.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException("신고 데이터를 찾을 수 없습니다");
+    if (!existing) throwNotFound("신고 데이터를 찾을 수 없습니다");
 
     // 상태 전이 규칙
     const validTransitions: Record<string, string[]> = {
@@ -133,7 +134,7 @@ export class TaxFilingService {
   // DRAFT 상태만 삭제 가능
   async delete(id: string) {
     const existing = await this.prisma.taxFiling.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException("신고 데이터를 찾을 수 없습니다");
+    if (!existing) throwNotFound("신고 데이터를 찾을 수 없습니다");
     if (existing.status !== "DRAFT") {
       throw new BadRequestException("DRAFT 상태의 신고만 삭제할 수 있습니다");
     }

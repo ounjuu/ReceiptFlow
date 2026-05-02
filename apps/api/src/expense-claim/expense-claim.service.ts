@@ -1,10 +1,11 @@
-import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
+import { Injectable, BadRequestException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { JournalService } from "../journal/journal.service";
 import { CreateExpenseClaimDto } from "./dto/create-expense-claim.dto";
 import { UpdateExpenseClaimDto } from "./dto/update-expense-claim.dto";
 import { nextSequenceNumber } from "../common/sequence.util";
+import { throwNotFound } from "../common/errors";
 
 @Injectable()
 export class ExpenseClaimService {
@@ -67,7 +68,7 @@ export class ExpenseClaimService {
       },
     });
 
-    if (!claim) throw new NotFoundException("경비 정산을 찾을 수 없습니다");
+    if (!claim) throwNotFound("경비 정산을 찾을 수 없습니다");
 
     return {
       ...claim,
@@ -120,7 +121,7 @@ export class ExpenseClaimService {
   // 수정 (DRAFT만)
   async update(id: string, dto: UpdateExpenseClaimDto) {
     const existing = await this.prisma.expenseClaim.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException("경비 정산을 찾을 수 없습니다");
+    if (!existing) throwNotFound("경비 정산을 찾을 수 없습니다");
     if (existing.status !== "DRAFT") {
       throw new BadRequestException("임시저장 상태에서만 수정할 수 있습니다");
     }
@@ -160,7 +161,7 @@ export class ExpenseClaimService {
   // 삭제 (DRAFT만)
   async remove(id: string) {
     const existing = await this.prisma.expenseClaim.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException("경비 정산을 찾을 수 없습니다");
+    if (!existing) throwNotFound("경비 정산을 찾을 수 없습니다");
     if (existing.status !== "DRAFT") {
       throw new BadRequestException("임시저장 상태에서만 삭제할 수 있습니다");
     }
@@ -175,7 +176,7 @@ export class ExpenseClaimService {
       where: { id },
       include: { items: true },
     });
-    if (!existing) throw new NotFoundException("경비 정산을 찾을 수 없습니다");
+    if (!existing) throwNotFound("경비 정산을 찾을 수 없습니다");
     if (existing.status !== "DRAFT") {
       throw new BadRequestException("임시저장 상태에서만 결재 요청할 수 있습니다");
     }
@@ -199,7 +200,7 @@ export class ExpenseClaimService {
       where: { id },
       include: { items: true },
     });
-    if (!claim) throw new NotFoundException("경비 정산을 찾을 수 없습니다");
+    if (!claim) throwNotFound("경비 정산을 찾을 수 없습니다");
     if (claim.status !== "APPROVED") {
       throw new BadRequestException("승인 상태에서만 정산할 수 있습니다");
     }

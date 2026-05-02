@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
+import { Injectable, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateTaxInvoiceDto } from "./dto/create-tax-invoice.dto";
 import { UpdateTaxInvoiceDto } from "./dto/update-tax-invoice.dto";
 import { HometaxXmlService } from "./hometax-xml.service";
+import { throwNotFound } from "../common/errors";
 
 @Injectable()
 export class TaxInvoiceService {
@@ -80,13 +81,13 @@ export class TaxInvoiceService {
       where: { id },
       include: { vendor: true, journalEntry: true, items: true },
     });
-    if (!invoice) throw new NotFoundException("세금계산서를 찾을 수 없습니다");
+    if (!invoice) throwNotFound("세금계산서를 찾을 수 없습니다");
     return invoice;
   }
 
   async update(id: string, dto: UpdateTaxInvoiceDto) {
     const existing = await this.prisma.taxInvoice.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException("세금계산서를 찾을 수 없습니다");
+    if (!existing) throwNotFound("세금계산서를 찾을 수 없습니다");
 
     if (existing.status === "FINALIZED") {
       throw new BadRequestException("확정된 세금계산서는 수정할 수 없습니다");
@@ -133,7 +134,7 @@ export class TaxInvoiceService {
 
   async remove(id: string) {
     const existing = await this.prisma.taxInvoice.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException("세금계산서를 찾을 수 없습니다");
+    if (!existing) throwNotFound("세금계산서를 찾을 수 없습니다");
     if (existing.status === "FINALIZED") {
       throw new BadRequestException("확정된 세금계산서는 삭제할 수 없습니다");
     }
@@ -386,7 +387,7 @@ export class TaxInvoiceService {
       where: { id },
       include: { items: true },
     });
-    if (!invoice) throw new NotFoundException("세금계산서를 찾을 수 없습니다");
+    if (!invoice) throwNotFound("세금계산서를 찾을 수 없습니다");
 
     const xml = this.hometaxXmlService.generateXml({
       approvalNo: invoice.approvalNo,

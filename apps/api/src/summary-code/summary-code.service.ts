@@ -1,5 +1,6 @@
-import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
+import { Injectable, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { throwNotFound } from "../common/errors";
 
 @Injectable()
 export class SummaryCodeService {
@@ -54,7 +55,7 @@ export class SummaryCodeService {
   // 적요 코드 수정
   async update(id: string, data: { description?: string; category?: string }) {
     const existing = await this.prisma.summaryCode.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException("적요 코드를 찾을 수 없습니다");
+    if (!existing) throwNotFound("적요 코드를 찾을 수 없습니다");
 
     return this.prisma.summaryCode.update({
       where: { id },
@@ -68,7 +69,7 @@ export class SummaryCodeService {
   // 적요 코드 삭제
   async remove(id: string) {
     const existing = await this.prisma.summaryCode.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException("적요 코드를 찾을 수 없습니다");
+    if (!existing) throwNotFound("적요 코드를 찾을 수 없습니다");
 
     return this.prisma.summaryCode.delete({ where: { id } });
   }

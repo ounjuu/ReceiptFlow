@@ -1,13 +1,13 @@
 import {
   Injectable,
   BadRequestException,
-  NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { JournalService } from "../journal/journal.service";
 import { CreateTradeDto } from "./dto/create-trade.dto";
 import { UpdateTradeDto } from "./dto/update-trade.dto";
 import { CreatePaymentDto } from "./dto/create-payment.dto";
+import { throwNotFound } from "../common/errors";
 
 @Injectable()
 export class TradeService {
@@ -95,7 +95,7 @@ export class TradeService {
         payments: { orderBy: { paymentDate: "desc" } },
       },
     });
-    if (!trade) throw new NotFoundException("거래를 찾을 수 없습니다");
+    if (!trade) throwNotFound("거래를 찾을 수 없습니다");
 
     return {
       ...trade,
@@ -162,7 +162,7 @@ export class TradeService {
   // 거래 수정 (DRAFT만)
   async updateTrade(id: string, dto: UpdateTradeDto) {
     const trade = await this.prisma.trade.findUnique({ where: { id } });
-    if (!trade) throw new NotFoundException("거래를 찾을 수 없습니다");
+    if (!trade) throwNotFound("거래를 찾을 수 없습니다");
     if (trade.status !== "DRAFT") {
       throw new BadRequestException("임시 상태의 거래만 수정할 수 있습니다");
     }
@@ -218,7 +218,7 @@ export class TradeService {
   // 거래 삭제 (DRAFT만)
   async deleteTrade(id: string) {
     const trade = await this.prisma.trade.findUnique({ where: { id } });
-    if (!trade) throw new NotFoundException("거래를 찾을 수 없습니다");
+    if (!trade) throwNotFound("거래를 찾을 수 없습니다");
     if (trade.status !== "DRAFT") {
       throw new BadRequestException("임시 상태의 거래만 삭제할 수 있습니다");
     }
@@ -231,7 +231,7 @@ export class TradeService {
       where: { id },
       include: { vendor: true },
     });
-    if (!trade) throw new NotFoundException("거래를 찾을 수 없습니다");
+    if (!trade) throwNotFound("거래를 찾을 수 없습니다");
     if (trade.status !== "DRAFT") {
       throw new BadRequestException("임시 상태의 거래만 확정할 수 있습니다");
     }
@@ -341,7 +341,7 @@ export class TradeService {
   // 거래 취소
   async cancelTrade(id: string) {
     const trade = await this.prisma.trade.findUnique({ where: { id } });
-    if (!trade) throw new NotFoundException("거래를 찾을 수 없습니다");
+    if (!trade) throwNotFound("거래를 찾을 수 없습니다");
     if (trade.status === "CANCELLED") {
       throw new BadRequestException("이미 취소된 거래입니다");
     }
@@ -364,7 +364,7 @@ export class TradeService {
       where: { id: tradeId },
       include: { vendor: true },
     });
-    if (!trade) throw new NotFoundException("거래를 찾을 수 없습니다");
+    if (!trade) throwNotFound("거래를 찾을 수 없습니다");
     if (!["CONFIRMED", "PARTIAL_PAID"].includes(trade.status)) {
       throw new BadRequestException(
         "확정 또는 부분수금 상태의 거래만 입금/출금 처리할 수 있습니다",
@@ -490,7 +490,7 @@ export class TradeService {
       where: { id: paymentId },
       include: { trade: true },
     });
-    if (!payment) throw new NotFoundException("입금/출금 내역을 찾을 수 없습니다");
+    if (!payment) throwNotFound("입금/출금 내역을 찾을 수 없습니다");
 
     return this.prisma.$transaction(async (tx) => {
       // 전표 삭제
