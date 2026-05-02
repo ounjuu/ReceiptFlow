@@ -1,32 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import PDFDocument from "pdfkit";
 import { join } from "path";
-
-// 전표유형 한글 라벨
-const JOURNAL_TYPE_LABEL: Record<string, string> = {
-  GENERAL: "일반",
-  PURCHASE: "매입",
-  SALES: "매출",
-  CASH: "자금",
-};
-
-// 상태 한글 라벨
-const STATUS_LABEL: Record<string, string> = {
-  DRAFT: "임시",
-  PENDING_APPROVAL: "결재중",
-  APPROVED: "승인",
-  POSTED: "확정",
-};
-
-// 증빙유형 한글 라벨
-const EVIDENCE_TYPE_LABEL: Record<string, string> = {
-  TAX_INVOICE: "세금계산서",
-  INVOICE: "계산서",
-  CARD: "신용카드",
-  CASH_RECEIPT: "현금영수증",
-  RECEIPT: "간이영수증",
-  NONE: "증빙없음",
-};
+import {
+  JOURNAL_TYPE_LABEL,
+  STATUS_LABEL,
+  EVIDENCE_TYPE_LABEL,
+} from "./journal.constants";
 
 @Injectable()
 export class JournalPdfService {

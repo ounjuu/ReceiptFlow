@@ -5,16 +5,9 @@ import { AuditLogService } from "../audit-log/audit-log.service";
 import { CreateJournalDto, JournalLineDto } from "./dto/create-journal.dto";
 import { UpdateJournalDto } from "./dto/update-journal.dto";
 import { nextSequenceNumber, formatDateYYYYMMDD } from "../common/sequence.util";
+import { STATUS_TRANSITIONS, JOURNAL_TYPE_LABEL } from "./journal.constants";
 import * as fs from "fs";
 import * as path from "path";
-
-// 상태 전이 규칙
-const STATUS_TRANSITIONS: Record<string, string[]> = {
-  DRAFT: ["APPROVED", "PENDING_APPROVAL", "POSTED"],
-  PENDING_APPROVAL: ["APPROVED", "DRAFT"],
-  APPROVED: ["POSTED", "DRAFT"],
-  POSTED: [],
-};
 
 // 전표 조회 시 공통 include
 const ENTRY_INCLUDE = {
@@ -32,14 +25,6 @@ export class JournalService {
     private readonly auditLogService: AuditLogService,
   ) {}
 
-  // 전표유형 한글 접두사
-  private static readonly TYPE_PREFIX: Record<string, string> = {
-    GENERAL: "일반",
-    PURCHASE: "매입",
-    SALES: "매출",
-    CASH: "자금",
-  };
-
   // 전표번호 자동채번: 유형-YYYYMMDD-0001
   private async generateJournalNumber(
     tenantId: string,
@@ -48,7 +33,7 @@ export class JournalService {
     tx?: any,
   ): Promise<string> {
     const db = tx || this.prisma;
-    const prefix = JournalService.TYPE_PREFIX[journalType] || "일반";
+    const prefix = JOURNAL_TYPE_LABEL[journalType] || "일반";
     const pattern = `${prefix}-${formatDateYYYYMMDD(date)}-`;
 
     // 같은 테넌트, 같은 유형, 같은 날짜의 마지막 번호 조회
