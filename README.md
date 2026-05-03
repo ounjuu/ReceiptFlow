@@ -158,15 +158,24 @@ cd apps/web && PORT=3002 npm run dev    # :3002
 ### 환경변수 (.env)
 
 ```bash
+# 필수
 DATABASE_URL="postgresql://user@localhost:5432/ledgerflow"
+JWT_SECRET="change-me-in-prod"                  # 인증 토큰 서명 키
 
 # 선택사항
 AI_SERVICE_URL="http://localhost:8000"          # AI 서비스 주소
-SMTP_HOST="smtp.gmail.com"                      # 이메일 SMTP
+PORT="3001"                                     # API 포트 (기본 3001)
+
+# 이메일 알림
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
 SMTP_USER="your@gmail.com"
 SMTP_PASS="app-password"
-SLACK_WEBHOOK_URL="https://hooks.slack.com/..." # 슬랙 알림
-KAKAO_WEBHOOK_URL="https://..."                 # 카카오 알림
+SMTP_FROM="LedgerFlow <noreply@ledgerflow.dev>"
+
+# 외부 알림
+SLACK_WEBHOOK_URL="https://hooks.slack.com/..."
+KAKAO_WEBHOOK_URL="https://..."
 ```
 
 ### 테스트 계정
@@ -188,15 +197,17 @@ KAKAO_WEBHOOK_URL="https://..."                 # 카카오 알림
 
 ## 테스트
 
+총 125개 (Node 77개 + AI 48개).
+
 ```bash
-# 전체 테스트 (77개)
+# Node 전체 (web 33 + api 44)
 npm run test
 
 # 개별 실행
 npm run test:web    # 프론트엔드 33개
-npm run test:api    # 백엔드 API 44개
+npm run test:api    # 백엔드 API e2e 44개
 
-# AI 서비스 (별도)
+# AI 서비스 (별도, venv 필요)
 cd apps/ai && source venv/bin/activate && python -m pytest tests/ -v  # 48개
 ```
 
