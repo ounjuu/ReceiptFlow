@@ -31,3 +31,6 @@ uploads/
 
 # Prisma
 prisma/*.db
+
+# Fonts (postinstall로 자동 다운로드)
+apps/api/assets/fonts/*.ttf
