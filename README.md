@@ -17,12 +17,15 @@ AI 기반 영수증 자동 처리 및 전표 자동 생성 웹 ERP 시스템
 
 ```
 apps/
-  web/    # Next.js 프론트엔드 (:3002)
-  api/    # NestJS 백엔드 API (:3001)
-  ai/     # FastAPI AI 서비스 (:8000)
+  web/                    # Next.js 프론트엔드 (:3002)
+  api/                    # NestJS 백엔드 API (:3001)
+    src/common/           # 공통 유틸 (채번, 날짜 포맷, NotFound 헬퍼, PDF 생성)
+    scripts/              # postinstall 폰트 다운로드 스크립트
+    assets/fonts/         # NanumGothic ttf (npm install 시 자동 설치)
+  ai/                     # FastAPI AI 서비스 (:8000)
 prisma/
-  schema.prisma   # DB 스키마
-  seed.ts         # 초기 데이터
+  schema.prisma           # DB 스키마
+  seed.ts                 # 초기 데이터
 ```
 
 ## 전표 → 결산 흐름
@@ -139,7 +142,7 @@ prisma/
 ### 설치 및 실행
 
 ```bash
-# 의존성 설치
+# 의존성 설치 (postinstall 단계에서 NanumGothic ttf 자동 다운로드)
 npm install
 cd apps/ai && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt
 
@@ -210,6 +213,16 @@ npm run test:api    # 백엔드 API e2e 44개
 # AI 서비스 (별도, venv 필요)
 cd apps/ai && source venv/bin/activate && python -m pytest tests/ -v  # 48개
 ```
+
+## 트러블슈팅
+
+| 증상 | 해결 |
+|------|------|
+| PDF 다운로드 시 `Unknown font format` | `cd apps/api && npm run fonts` 로 NanumGothic ttf 재다운로드 |
+| `npm install` 후에도 폰트 미설치 | postinstall 네트워크 실패 가능 — 위 명령으로 수동 재시도 |
+| API 시작 시 `EADDRINUSE :3001` | `lsof -i :3001` 로 점유 프로세스 확인 후 종료, 또는 `PORT=3011 npm run start:dev` |
+| `JWT_SECRET is not defined` | `.env`에 `JWT_SECRET` 추가 후 API 재기동 |
+| `prisma migrate` 시 DB 접속 실패 | `DATABASE_URL` 의 user/host/port 확인, `createdb ledgerflow` 선행 |
 
 ## 주요 API
 
