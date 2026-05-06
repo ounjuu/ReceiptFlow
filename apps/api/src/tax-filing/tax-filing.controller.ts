@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Patch, Delete,
-  Param, Query, Body, UseGuards, Res, NotFoundException,
+  Param, Query, Body, UseGuards, Res, BadRequestException,
 } from "@nestjs/common";
 import { Response } from "express";
 import { TaxFilingService } from "./tax-filing.service";
@@ -112,13 +112,13 @@ export class TaxFilingController {
     const filingData = filing.filingData as Record<string, unknown>;
 
     if (!filingData) {
-      throw new NotFoundException("내보낼 신고 데이터가 없습니다");
+      throw new BadRequestException("내보낼 신고 데이터가 없습니다");
     }
 
     if (format === "xml") {
       // XML은 부가세만 지원
       if (filing.filingType !== "VAT") {
-        throw new NotFoundException("XML 내보내기는 부가세 신고만 지원합니다");
+        throw new BadRequestException("XML 내보내기는 부가세 신고만 지원합니다");
       }
       const xml = this.exportService.generateVatXml(filingData);
       res.set({
@@ -141,7 +141,7 @@ export class TaxFilingController {
         csv = this.corporateFilingService.exportCsv(filingData);
         break;
       default:
-        throw new NotFoundException("지원하지 않는 신고 유형입니다");
+        throw new BadRequestException("지원하지 않는 신고 유형입니다");
     }
 
     res.set({
