@@ -7,6 +7,7 @@ import {
   type PendingApproval,
   type Submission,
 } from "./types";
+import { fmtDate } from "@/lib/formatters";
 
 // --- 결재 대기 테이블 ---
 
@@ -60,7 +61,7 @@ export function PendingTable({
                     : "-")}
               </td>
               <td>{a.submitterName}</td>
-              <td>{new Date(a.createdAt).toLocaleDateString("ko-KR")}</td>
+              <td>{fmtDate(a.createdAt)}</td>
               <td>
                 {a.currentStep}/{a.totalSteps}단계
               </td>
@@ -146,7 +147,7 @@ export function SubmissionsTable({ submissions }: SubmissionsTableProps) {
                     ? new Date(s.documentInfo.date).toLocaleDateString("ko-KR")
                     : "-")}
               </td>
-              <td>{new Date(s.createdAt).toLocaleDateString("ko-KR")}</td>
+              <td>{fmtDate(s.createdAt)}</td>
               <td>
                 <span
                   className={`${styles.badge} ${

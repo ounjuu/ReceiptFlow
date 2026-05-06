@@ -11,6 +11,7 @@ import {
   fmt,
 } from "./types";
 import styles from "./Inventory.module.css";
+import { fmtDate } from "@/lib/formatters";
 
 /* ─── 현재 재고 ─── */
 
@@ -188,7 +189,7 @@ export function TransactionHistory({
                   {TX_TYPE_LABEL[t.txType] || t.txType}
                 </span>
               </td>
-              <td>{new Date(t.txDate).toLocaleDateString("ko-KR")}</td>
+              <td>{fmtDate(t.txDate)}</td>
               <td>{t.product.name}</td>
               <td style={{ textAlign: "right" }}>{fmt(t.quantity)}</td>
               <td style={{ textAlign: "right" }}>{fmt(t.unitCost)}원</td>

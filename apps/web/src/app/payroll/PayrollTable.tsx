@@ -3,6 +3,7 @@
 import styles from "./Payroll.module.css";
 import { Employee, PayrollRecord, PayrollSummary, ProcessResult, fmt, now } from "./types";
 import { apiDownload as downloadPdf } from "@/lib/api";
+import { fmtDate } from "@/lib/formatters";
 
 /* ── 직원 목록 테이블 ── */
 
@@ -35,7 +36,7 @@ export function EmployeeTable({ employees, canEdit, onUpdateStatus }: EmployeeTa
             <td>{emp.department || "-"}</td>
             <td>{emp.position || "-"}</td>
             <td>
-              {new Date(emp.joinDate).toLocaleDateString("ko-KR")}
+              {fmtDate(emp.joinDate)}
             </td>
             <td style={{ textAlign: "right" }}>
               {fmt(Number(emp.baseSalary))}원

@@ -2,6 +2,7 @@
 
 import styles from "./TaxInvoices.module.css";
 import { TaxInvoice, TaxSummary, statusLabel, typeLabel, hometaxBadge, downloadFileWithAuth, nextStatus } from "./types";
+import { fmtDate } from "@/lib/formatters";
 
 export interface TaxInvoiceTableProps {
   invoices: TaxInvoice[];
@@ -203,7 +204,7 @@ export default function TaxInvoiceTable({
                     <span className={`${styles.status} ${t.cls}`}>{t.text}</span>
                   </td>
                   <td>{inv.invoiceNo || "-"}</td>
-                  <td>{new Date(inv.invoiceDate).toLocaleDateString("ko-KR")}</td>
+                  <td>{fmtDate(inv.invoiceDate)}</td>
                   <td title={inv.issuerBizNo}>{inv.issuerName}</td>
                   <td title={inv.recipientBizNo}>{inv.recipientName}</td>
                   <td>₩{Number(inv.supplyAmount).toLocaleString()}</td>

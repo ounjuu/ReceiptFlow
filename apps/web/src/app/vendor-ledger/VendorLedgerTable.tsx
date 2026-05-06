@@ -3,6 +3,7 @@
 import styles from "./VendorLedger.module.css";
 import { fmt } from "./types";
 import type { BalanceSummary, Vendor, VendorLedgerData } from "./types";
+import { fmtDate } from "@/lib/formatters";
 
 /* ── 잔액 요약 카드 ── */
 
@@ -217,7 +218,7 @@ export function VendorLedgerDetail({
                 </tr>
                 {ledger.entries.map((e, i) => (
                   <tr key={i}>
-                    <td>{new Date(e.date).toLocaleDateString("ko-KR")}</td>
+                    <td>{fmtDate(e.date)}</td>
                     <td>{e.description || "-"}</td>
                     <td>{e.accountCode} {e.accountName}</td>
                     <td style={{ textAlign: "right", color: e.debit > 0 ? "var(--success)" : undefined }}>

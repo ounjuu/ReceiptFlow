@@ -1,6 +1,7 @@
 "use client";
 
 import type { AccountingPeriod } from "./types";
+import { fmtDate } from "@/lib/formatters";
 import styles from "./Closings.module.css";
 
 interface ClosingsTableProps {
@@ -37,11 +38,7 @@ export default function ClosingsTable({ periods }: ClosingsTableProps) {
                 {p.status === "CLOSED" ? "🔒 마감" : "🔓 미마감"}
               </span>
             </td>
-            <td>
-              {p.closedAt
-                ? new Date(p.closedAt).toLocaleDateString("ko-KR")
-                : "-"}
-            </td>
+            <td>{fmtDate(p.closedAt)}</td>
           </tr>
         ))}
       </tbody>

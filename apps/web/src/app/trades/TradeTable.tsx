@@ -2,6 +2,7 @@
 
 import styles from "./Trades.module.css";
 import { Trade, fmt, statusLabel, downloadPdf } from "./types";
+import { fmtDate } from "@/lib/formatters";
 
 interface TradeTableProps {
   trades: Trade[];
@@ -46,7 +47,7 @@ export default function TradeTable({
           return (
             <tr key={t.id}>
               <td>{t.tradeNo}</td>
-              <td>{new Date(t.tradeDate).toLocaleDateString("ko-KR")}</td>
+              <td>{fmtDate(t.tradeDate)}</td>
               <td>{t.vendor.name}</td>
               <td>{t.description || "-"}</td>
               <td><span className={`${styles.status} ${s.cls}`}>{s.text}</span></td>

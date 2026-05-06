@@ -3,6 +3,7 @@
 import type { RefObject } from "react";
 import Link from "next/link";
 import { CREDIT_RATINGS, creditRatingLabel, creditRatingColor, type Vendor, type ImportResult } from "./types";
+import { fmtDate } from "@/lib/formatters";
 import styles from "./Vendors.module.css";
 
 interface VendorTableProps {
@@ -206,7 +207,7 @@ export default function VendorTable({
                   vendor.note || "-"
                 )}
               </td>
-              <td>{new Date(vendor.createdAt).toLocaleDateString("ko-KR")}</td>
+              <td>{fmtDate(vendor.createdAt)}</td>
               {(canEdit || canDelete) && (
                 <td>
                   <div className={styles.actions}>

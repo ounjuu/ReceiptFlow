@@ -2,6 +2,7 @@
 
 import styles from "./ExpenseClaims.module.css";
 import { ExpenseClaim, Summary, STATUS_LABEL, STATUS_STYLE, fmt } from "./types";
+import { fmtDate } from "@/lib/formatters";
 
 export interface ExpenseClaimTableProps {
   // 요약
@@ -148,7 +149,7 @@ export default function ExpenseClaimTable({
                   <td>{c.claimNo}</td>
                   <td>{c.title}</td>
                   <td>{c.employee.name}</td>
-                  <td>{new Date(c.claimDate).toLocaleDateString("ko-KR")}</td>
+                  <td>{fmtDate(c.claimDate)}</td>
                   <td style={{ textAlign: "right" }}>{fmt(c.totalAmount)}원</td>
                   <td>
                     <span className={`${styles.badge} ${styles[STATUS_STYLE[c.status]] || ""}`}>
@@ -253,7 +254,7 @@ export default function ExpenseClaimTable({
                     <td>{c.title}</td>
                     <td>{c.employee.name}</td>
                     <td style={{ textAlign: "right" }}>{fmt(c.totalAmount)}원</td>
-                    <td>{c.settledAt ? new Date(c.settledAt).toLocaleDateString("ko-KR") : "-"}</td>
+                    <td>{fmtDate(c.settledAt)}</td>
                   </tr>
                 ))}
                 {settledClaims.length === 0 && (

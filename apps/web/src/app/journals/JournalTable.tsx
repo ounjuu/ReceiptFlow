@@ -5,6 +5,7 @@ import { UseMutationResult } from "@tanstack/react-query";
 import { exportToXlsx } from "@/lib/export-xlsx";
 import { downloadTemplate } from "@/lib/import-xlsx";
 import { apiDownload } from "@/lib/api";
+import { fmtDate } from "@/lib/formatters";
 import styles from "./Journals.module.css";
 import {
   JournalEntry,
@@ -251,7 +252,7 @@ export default function JournalTable({
               exportToXlsx("전표목록", "전표", ["전표번호", "유형", "날짜", "거래처", "설명", "상태", "차변합계", "대변합계"], journals.map((j) => [
                 j.journalNumber || "",
                 journalTypeLabel(j.journalType),
-                new Date(j.date).toLocaleDateString("ko-KR"),
+                fmtDate(j.date),
                 [...new Set(j.lines.map((l) => l.vendor?.name).filter(Boolean))].join(", ") || "",
                 j.description || "",
                 statusText(j.status),
@@ -539,7 +540,7 @@ export default function JournalTable({
                 )}
                 <td className={styles.journalNumber}>{j.journalNumber || "-"}</td>
                 <td><span className={styles.journalType}>{journalTypeLabel(j.journalType)}</span></td>
-                <td>{new Date(j.date).toLocaleDateString("ko-KR")}</td>
+                <td>{fmtDate(j.date)}</td>
                 <td>
                   {[...new Set(j.lines.map((l) => l.vendor?.name).filter(Boolean))].join(", ") || "-"}
                 </td>

@@ -2,6 +2,7 @@
 
 import type { InvoiceItem } from "./types";
 import { vatFmt as fmt } from "./types";
+import { fmtDate } from "@/lib/formatters";
 import styles from "./VatReturns.module.css";
 
 function statusLabel(status: string) {
@@ -57,7 +58,7 @@ export default function VatReturnsTable({
               <tr key={inv.id}>
                 <td>{i + 1}</td>
                 <td>{inv.invoiceNo || "-"}</td>
-                <td>{new Date(inv.invoiceDate).toLocaleDateString("ko-KR")}</td>
+                <td>{fmtDate(inv.invoiceDate)}</td>
                 <td>{inv.bizNo}</td>
                 <td>{inv.name}</td>
                 <td>{fmt(inv.supplyAmount)}</td>

@@ -3,6 +3,7 @@
 import styles from "./FixedAssets.module.css";
 import type { FixedAssetSummary, FixedAssetDetail, ScheduleData, DepResult } from "./types";
 import { fmt, METHOD_LABEL, STATUS_LABEL } from "./types";
+import { fmtDate } from "@/lib/formatters";
 
 interface FixedAssetTableProps {
   // 목록 뷰 props
@@ -205,7 +206,7 @@ export default function FixedAssetTable({
                     {a.assetAccountCode} {a.assetAccountName}
                   </td>
                   <td>
-                    {new Date(a.acquisitionDate).toLocaleDateString("ko-KR")}
+                    {fmtDate(a.acquisitionDate)}
                   </td>
                   <td style={{ textAlign: "right" }}>
                     ₩{fmt(a.acquisitionCost)}
@@ -284,7 +285,7 @@ export default function FixedAssetTable({
               <div className={styles.detailItem}>
                 <span className={styles.detailLabel}>취득일</span>
                 <span className={styles.detailValue}>
-                  {new Date(detail.acquisitionDate).toLocaleDateString("ko-KR")}
+                  {fmtDate(detail.acquisitionDate)}
                 </span>
               </div>
               <div className={styles.detailItem}>

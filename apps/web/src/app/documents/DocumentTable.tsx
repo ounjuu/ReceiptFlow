@@ -5,6 +5,7 @@ import { exportToXlsx } from "@/lib/export-xlsx";
 import styles from "./Documents.module.css";
 import { CURRENCY_SYMBOLS, statusLabel } from "./types";
 import type { Document } from "./types";
+import { fmtDate } from "@/lib/formatters";
 
 interface DocumentTableProps {
   documents: Document[];
@@ -165,7 +166,7 @@ export default function DocumentTable(props: DocumentTableProps) {
                   <td>
                     <span className={`${styles.status} ${s.cls}`}>{s.text}</span>
                   </td>
-                  <td>{new Date(doc.createdAt).toLocaleDateString("ko-KR")}</td>
+                  <td>{fmtDate(doc.createdAt)}</td>
                   <td>
                     <div className={styles.actions}>
                       <button
@@ -200,11 +201,7 @@ export default function DocumentTable(props: DocumentTableProps) {
                   ) : "-"}
                 </td>
                 <td>{doc.vendorName || "-"}</td>
-                <td>
-                  {doc.transactionAt
-                    ? new Date(doc.transactionAt).toLocaleDateString("ko-KR")
-                    : "-"}
-                </td>
+                <td>{fmtDate(doc.transactionAt)}</td>
                 <td>
                   {doc.totalAmount
                     ? `${CURRENCY_SYMBOLS[doc.currency] || ""}${Number(doc.totalAmount).toLocaleString()}`
@@ -213,7 +210,7 @@ export default function DocumentTable(props: DocumentTableProps) {
                 <td>
                   <span className={`${styles.status} ${s.cls}`}>{s.text}</span>
                 </td>
-                <td>{new Date(doc.createdAt).toLocaleDateString("ko-KR")}</td>
+                <td>{fmtDate(doc.createdAt)}</td>
                 <td>
                   {(canEdit || canDelete) && (
                     <div className={styles.actions}>

@@ -2,6 +2,7 @@
 
 import styles from "./BankAccounts.module.css";
 import { BankAccount, BankTransaction, Summary, TX_TYPE_LABEL, TX_TYPE_STYLE, fmt } from "./types";
+import { fmtDate } from "@/lib/formatters";
 
 // --- 요약 카드 Props ---
 export interface SummaryCardsProps {
@@ -184,7 +185,7 @@ export function TransactionHistory({
                     {TX_TYPE_LABEL[t.txType] || t.txType}
                   </span>
                 </td>
-                <td>{new Date(t.txDate).toLocaleDateString("ko-KR")}</td>
+                <td>{fmtDate(t.txDate)}</td>
                 <td style={{ textAlign: "right" }}>
                   {t.txType === "DEPOSIT" ? <span className={styles.amountDeposit}>{fmt(t.amount)}</span> : ""}
                 </td>

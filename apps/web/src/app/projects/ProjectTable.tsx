@@ -2,6 +2,7 @@
 
 import styles from "./Projects.module.css";
 import { Project, PnLResult, ComparisonRow, fmt, statusLabel } from "./types";
+import { fmtDate } from "@/lib/formatters";
 
 // --- 프로젝트 관리 테이블 ---
 
@@ -44,8 +45,8 @@ export function ProjectListTable({
               <td>
                 <span className={`${styles.status} ${s.cls}`}>{s.text}</span>
               </td>
-              <td>{new Date(p.startDate).toLocaleDateString("ko-KR")}</td>
-              <td>{p.endDate ? new Date(p.endDate).toLocaleDateString("ko-KR") : "-"}</td>
+              <td>{fmtDate(p.startDate)}</td>
+              <td>{fmtDate(p.endDate)}</td>
               <td>{p.manager || "-"}</td>
               <td style={{ textAlign: "right" }}>
                 {p.budget != null ? `${fmt(p.budget)}원` : "-"}
