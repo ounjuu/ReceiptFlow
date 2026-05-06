@@ -7,8 +7,10 @@ export interface PdfContext {
   contentWidth: number;
 }
 
-const FONT_REG_PATH = join(process.cwd(), "apps/api/assets/fonts/NanumGothic-Regular.ttf");
-const FONT_BOLD_PATH = join(process.cwd(), "apps/api/assets/fonts/NanumGothic-Bold.ttf");
+// __dirname 기반 경로: src(ts-jest)와 dist(prod) 양쪽에서 동일하게 동작
+// src/common/* → ../../assets/fonts, dist/common/* → ../../assets/fonts
+const FONT_REG_PATH = join(__dirname, "..", "..", "assets", "fonts", "NanumGothic-Regular.ttf");
+const FONT_BOLD_PATH = join(__dirname, "..", "..", "assets", "fonts", "NanumGothic-Bold.ttf");
 
 /**
  * A4 PDF 문서를 생성하고 draw 콜백 안에서 본문을 그린 뒤 Buffer로 반환한다.
