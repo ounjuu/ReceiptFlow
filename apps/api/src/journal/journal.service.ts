@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef } from "@nestjs/common";
+import { Injectable, BadRequestException, Inject, forwardRef } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { ClosingService } from "../closing/closing.service";
 import { AuditLogService } from "../audit-log/audit-log.service";
@@ -6,6 +6,7 @@ import { CreateJournalDto, JournalLineDto } from "./dto/create-journal.dto";
 import { UpdateJournalDto } from "./dto/update-journal.dto";
 import { nextSequenceNumber, formatDateYYYYMMDD } from "../common/sequence.util";
 import { STATUS_TRANSITIONS, JOURNAL_TYPE_LABEL } from "./journal.constants";
+import { throwNotFound } from "../common/errors";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -77,7 +78,7 @@ export class JournalService {
       where: { id },
       include: include || ENTRY_INCLUDE,
     });
-    if (!entry) throw new NotFoundException(`JournalEntry ${id} not found`);
+    if (!entry) throwNotFound("전표를 찾을 수 없습니다");
     return entry;
   }
 
@@ -373,7 +374,7 @@ export class JournalService {
       where: { id },
       include: { lines: true },
     });
-    if (!original) throw new NotFoundException("원본 전표를 찾을 수 없습니다");
+    if (!original) throwNotFound("원본 전표를 찾을 수 없습니다");
 
     const newDate = opts.date ? new Date(opts.date) : new Date();
 
@@ -416,9 +417,7 @@ export class JournalService {
       include: { lines: true },
     });
 
-    if (!entry) {
-      throw new NotFoundException(`JournalEntry ${id} not found`);
-    }
+    if (!entry) throwNotFound("전표를 찾을 수 없습니다");
 
     // 마감 기간 체크
     await this.checkClosedPeriod(entry.tenantId, entry.date);
@@ -510,9 +509,7 @@ export class JournalService {
       include: { document: true },
     });
 
-    if (!entry) {
-      throw new NotFoundException(`JournalEntry ${id} not found`);
-    }
+    if (!entry) throwNotFound("전표를 찾을 수 없습니다");
 
     // 마감 기간 체크
     await this.checkClosedPeriod(entry.tenantId, entry.date);
@@ -553,9 +550,7 @@ export class JournalService {
       include: { vendor: true },
     });
 
-    if (!document) {
-      throw new NotFoundException(`Document ${documentId} not found`);
-    }
+    if (!document) throwNotFound("문서를 찾을 수 없습니다");
 
     if (!document.totalAmount) {
       throw new BadRequestException("영수증에 금액 정보가 없습니다");
@@ -696,7 +691,7 @@ export class JournalService {
   // 첨부파일 추가
   async addAttachment(journalEntryId: string, file: { filename: string; originalname: string }) {
     const entry = await this.prisma.journalEntry.findUnique({ where: { id: journalEntryId } });
-    if (!entry) throw new NotFoundException("전표를 찾을 수 없습니다");
+    if (!entry) throwNotFound("전표를 찾을 수 없습니다");
 
     return this.prisma.journalAttachment.create({
       data: {
@@ -710,7 +705,7 @@ export class JournalService {
   // 첨부파일 삭제
   async removeAttachment(attachmentId: string) {
     const attachment = await this.prisma.journalAttachment.findUnique({ where: { id: attachmentId } });
-    if (!attachment) throw new NotFoundException("첨부파일을 찾을 수 없습니다");
+    if (!attachment) throwNotFound("첨부파일을 찾을 수 없습니다");
 
     // 파일 삭제
     const filePath = path.join(process.cwd(), attachment.url);

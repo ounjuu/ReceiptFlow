@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from "@nestjs/common";
+import { Injectable, BadRequestException, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { JournalRuleService } from "../journal-rule/journal-rule.service";
 import { JournalService } from "../journal/journal.service";
 import { UploadDocumentDto } from "./dto/upload-document.dto";
 import { CreateDocumentDto } from "./dto/create-document.dto";
 import { UpdateDocumentDto } from "./dto/update-document.dto";
+import { throwNotFound } from "../common/errors";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
@@ -305,9 +306,7 @@ export class DocumentService {
   // 수정
   async update(id: string, dto: UpdateDocumentDto) {
     const document = await this.prisma.document.findUnique({ where: { id } });
-    if (!document) {
-      throw new NotFoundException(`Document ${id} not found`);
-    }
+    if (!document) throwNotFound("문서를 찾을 수 없습니다");
 
     return this.prisma.document.update({
       where: { id },
@@ -330,9 +329,7 @@ export class DocumentService {
       where: { id },
       include: { journalEntry: true },
     });
-    if (!document) {
-      throw new NotFoundException(`Document ${id} not found`);
-    }
+    if (!document) throwNotFound("문서를 찾을 수 없습니다");
 
     return this.prisma.$transaction(async (tx) => {
       if (document.journalEntry) {
@@ -351,9 +348,7 @@ export class DocumentService {
       include: { journalEntry: { include: { lines: { include: { account: true } } } } },
     });
 
-    if (!document) {
-      throw new NotFoundException(`Document ${id} not found`);
-    }
+    if (!document) throwNotFound("문서를 찾을 수 없습니다");
 
     return document;
   }
