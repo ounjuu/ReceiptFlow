@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  web:
+    name: Web (Next.js)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --workspaces --include-workspace-root
+
+      - name: Type check
+        working-directory: apps/web
+        run: npx tsc --noEmit
+
+      - name: Test
+        working-directory: apps/web
+        run: npx jest --ci
+
+  api:
+    name: API (NestJS)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ledgerflow
+          POSTGRES_PASSWORD: ledgerflow
+          POSTGRES_DB: ledgerflow_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://ledgerflow:ledgerflow@localhost:5432/ledgerflow_test
+      JWT_SECRET: ci-test-secret
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --workspaces --include-workspace-root
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Prisma migrate (test DB)
+        run: npx prisma migrate deploy
+
+      - name: Type check
+        working-directory: apps/api
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: apps/api
+        run: npm run build
+
+      - name: E2E test
+        working-directory: apps/api
+        run: npm run test:e2e -- --ci
+
+# AI job은 requirements.txt에 pytesseract/Pillow 누락된 상태라 보류.
+# 의존성 정리 후 별도 작업으로 활성화 예정.
