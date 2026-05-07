@@ -6,7 +6,7 @@ import { apiGet } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/lib/locale";
 import styles from "./AnomalyDetection.module.css";
-import { fmt } from "@/lib/formatters";
+import { fmt, fmtDateTime } from "@/lib/formatters";
 
 interface AmountAnomaly {
   journalEntryId: string;
@@ -138,7 +138,7 @@ export default function AnomalyDetection() {
               {t("anomaly_riskLevel")}: {RISK_LABEL[data.summary.riskLevel]}
             </span>
             <span className={styles.analyzedAt}>
-              {t("anomaly_analyzedAt")}: {new Date(data.analyzedAt).toLocaleString("ko-KR")}
+              {t("anomaly_analyzedAt")}: {fmtDateTime(data.analyzedAt)}
             </span>
           </>
         )}

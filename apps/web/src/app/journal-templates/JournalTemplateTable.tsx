@@ -2,6 +2,7 @@
 
 import styles from "./JournalTemplates.module.css";
 import { JournalTemplate } from "./types";
+import { fmtMoney } from "@/lib/formatters";
 
 export interface JournalTemplateTableProps {
   templates: JournalTemplate[];
@@ -42,7 +43,7 @@ export default function JournalTemplateTable({
                   <td style={{ fontWeight: 600 }}>{t.name}</td>
                   <td>{t.description || "-"}</td>
                   <td>{t.lines.length}건</td>
-                  <td>{tDebit.toLocaleString()}원</td>
+                  <td>{fmtMoney(tDebit)}</td>
                   <td>
                     <div className={styles.actions}>
                       {canEdit && (

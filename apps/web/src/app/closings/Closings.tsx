@@ -6,6 +6,7 @@ import { apiGet, apiPost, apiPatch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { PeriodSummary, AccountingPeriod, CarryForwardResult } from "./types";
 import ClosingsTable from "./ClosingsTable";
+import { fmtMoney, fmtDate } from "@/lib/formatters";
 import styles from "./Closings.module.css";
 
 const now = new Date();
@@ -158,7 +159,7 @@ export default function ClosingsPage() {
           </span>
           {isClosed && currentPeriod?.closedAt && (
             <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginLeft: 12 }}>
-              (마감일: {new Date(currentPeriod.closedAt).toLocaleDateString("ko-KR")})
+              (마감일: {fmtDate(currentPeriod.closedAt)})
             </span>
           )}
         </div>
@@ -264,21 +265,15 @@ export default function ClosingsPage() {
             <div className={styles.summaryCards} style={{ marginTop: 16 }}>
               <div className={styles.card}>
                 <div className={styles.cardLabel}>자산 잔액</div>
-                <div className={styles.cardValue}>
-                  {(cfResult.summary.assetBalance ?? 0).toLocaleString("ko-KR")}원
-                </div>
+                <div className={styles.cardValue}>{fmtMoney(cfResult.summary.assetBalance)}</div>
               </div>
               <div className={styles.card}>
                 <div className={styles.cardLabel}>부채 잔액</div>
-                <div className={styles.cardValue}>
-                  {(cfResult.summary.liabilityBalance ?? 0).toLocaleString("ko-KR")}원
-                </div>
+                <div className={styles.cardValue}>{fmtMoney(cfResult.summary.liabilityBalance)}</div>
               </div>
               <div className={styles.card}>
                 <div className={styles.cardLabel}>자본 잔액</div>
-                <div className={styles.cardValue}>
-                  {(cfResult.summary.equityBalance ?? 0).toLocaleString("ko-KR")}원
-                </div>
+                <div className={styles.cardValue}>{fmtMoney(cfResult.summary.equityBalance)}</div>
               </div>
               <div className={styles.card}>
                 <div className={styles.cardLabel}>당기순이익</div>
@@ -286,7 +281,7 @@ export default function ClosingsPage() {
                   className={styles.cardValue}
                   style={{ color: (cfResult.summary.netIncome ?? 0) >= 0 ? "#4caf82" : "#d95454" }}
                 >
-                  {(cfResult.summary.netIncome ?? 0).toLocaleString("ko-KR")}원
+                  {fmtMoney(cfResult.summary.netIncome)}
                 </div>
               </div>
             </div>

@@ -2,6 +2,7 @@
 
 import styles from "./JournalTemplates.module.css";
 import { Account, LineInput, emptyLine } from "./types";
+import { fmtMoney } from "@/lib/formatters";
 
 export interface JournalTemplateFormProps {
   formMode: "create" | "edit";
@@ -129,8 +130,8 @@ export default function JournalTemplateForm({
             + 라인 추가
           </button>
           <div className={styles.totals}>
-            <span>차변: {totalDebit.toLocaleString()}원</span>
-            <span>대변: {totalCredit.toLocaleString()}원</span>
+            <span>차변: {fmtMoney(totalDebit)}</span>
+            <span>대변: {fmtMoney(totalCredit)}</span>
             <span className={isBalanced ? styles.balanced : styles.unbalanced}>
               {isBalanced ? "균형" : "불균형"}
             </span>

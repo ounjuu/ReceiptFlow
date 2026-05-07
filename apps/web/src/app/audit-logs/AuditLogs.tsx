@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { fmtDateTime } from "@/lib/formatters";
 import styles from "./AuditLogs.module.css";
 
 interface AuditLog {
@@ -138,7 +139,7 @@ export default function AuditLogsPage() {
                   return (
                     <tr key={log.id}>
                       <td style={{ whiteSpace: "nowrap" }}>
-                        {new Date(log.createdAt).toLocaleString("ko-KR")}
+                        {fmtDateTime(log.createdAt)}
                       </td>
                       <td>
                         <span className={`${styles.actionBadge} ${info.cls}`}>
