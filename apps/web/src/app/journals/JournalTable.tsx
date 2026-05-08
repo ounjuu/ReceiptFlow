@@ -113,7 +113,6 @@ export default function JournalTable({
   batchMutation,
   batchUpdateMutation,
   submitApprovalMutation,
-  deleteMutation,
   uploadAttachmentMut,
   deleteAttachmentMut,
   startEdit,

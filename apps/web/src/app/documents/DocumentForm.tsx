@@ -8,7 +8,6 @@ import type {
   Vendor,
   CreateResult,
   BatchResult,
-  OcrData,
 } from "./types";
 import { CURRENCY_OPTIONS } from "./types";
 

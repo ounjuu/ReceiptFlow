@@ -10,7 +10,7 @@ import { PendingTable, SubmissionsTable } from "./ApprovalTable";
 import { ApprovalForm } from "./ApprovalForm";
 
 export default function ApprovalsPage() {
-  const { tenantId, user, isAdmin } = useAuth();
+  const { tenantId, isAdmin } = useAuth();
   const queryClient = useQueryClient();
 
   const [tab, setTab] = useState<"pending" | "submissions" | "settings">("pending");

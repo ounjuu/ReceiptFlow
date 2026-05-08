@@ -14,7 +14,6 @@ import {
   LowStockItem,
   Summary,
   TX_TYPE_LABEL,
-  fmt,
   today,
 } from "./types";
 import InventoryForm from "./InventoryForm";

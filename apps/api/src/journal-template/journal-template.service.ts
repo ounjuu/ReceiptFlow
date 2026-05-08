@@ -2,7 +2,6 @@ import { Injectable, BadRequestException, NotFoundException } from "@nestjs/comm
 import { PrismaService } from "../prisma/prisma.service";
 import { JournalService } from "../journal/journal.service";
 import { AuditLogService } from "../audit-log/audit-log.service";
-import { Prisma } from "@prisma/client";
 
 @Injectable()
 export class JournalTemplateService {

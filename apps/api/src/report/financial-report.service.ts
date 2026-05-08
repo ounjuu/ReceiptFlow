@@ -612,7 +612,6 @@ export class FinancialReportService {
       orderBy: { acquisitionDate: "asc" },
     });
 
-    const yearStr = String(year);
     const prevYearEnd = `${year - 1}-12`; // 전기말 기준
 
     const assetRows = assets.map((asset) => {

@@ -16,17 +16,6 @@ export class TradeService {
     private readonly journalService: JournalService,
   ) {}
 
-  // 계정 코드로 계정 ID 조회
-  private async getAccountId(tenantId: string, code: string): Promise<string> {
-    const account = await this.prisma.account.findUnique({
-      where: { tenantId_code: { tenantId, code } },
-    });
-    if (!account) {
-      throw new BadRequestException(`계정과목(${code})이 존재하지 않습니다`);
-    }
-    return account.id;
-  }
-
   // 거래번호 자동 채번
   private async generateTradeNo(
     tenantId: string,

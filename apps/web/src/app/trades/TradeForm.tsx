@@ -35,8 +35,6 @@ export default function TradeForm({
   setFormDueDate,
   formDesc,
   setFormDesc,
-  formNote,
-  setFormNote,
   formItems,
   setFormItems,
   formError,

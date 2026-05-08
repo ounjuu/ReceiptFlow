@@ -153,7 +153,7 @@ interface NotifItem {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, loading, logout, isAdmin, role, tenantId } = useAuth();
+  const { user, loading, logout, role, tenantId } = useAuth();
   const { isDark, setTheme } = useTheme();
   const { t } = useLocale();
   const pathname = usePathname();

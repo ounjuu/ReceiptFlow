@@ -2,7 +2,6 @@
 
 import type { Locale } from "@/lib/locale";
 import type { TranslationKey } from "@/lib/translations";
-import type { NotifKeyDef, ThemeOptDef } from "./types";
 import { NOTIF_KEYS, THEME_OPTIONS, LANG_OPTIONS } from "./types";
 import styles from "./Settings.module.css";
 

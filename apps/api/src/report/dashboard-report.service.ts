@@ -164,7 +164,6 @@ export class DashboardReportService {
       purchaseTrades,
       bankAccounts,
       expensePending,
-      inventorySummary,
       approvalPending,
       budgets,
     ] = await Promise.all([
@@ -188,13 +187,6 @@ export class DashboardReportService {
         where: { tenantId, status: { in: ["PENDING_APPROVAL", "APPROVED"] } },
         select: { totalAmount: true },
       }),
-      // 재고 부족 품목 수
-      this.prisma.product.count({
-        where: {
-          tenantId,
-          currentStock: { lte: this.prisma.product.fields?.safetyStock as never },
-        },
-      }).catch(() => 0),
       // 결재 대기 건수
       this.prisma.approvalRequest.count({
         where: { tenantId, status: "PENDING" },

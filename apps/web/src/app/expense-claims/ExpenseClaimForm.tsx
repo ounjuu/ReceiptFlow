@@ -1,7 +1,7 @@
 "use client";
 
 import styles from "./ExpenseClaims.module.css";
-import { Employee, ExpenseItem, CATEGORIES, fmt, today } from "./types";
+import { Employee, ExpenseItem, CATEGORIES, fmt } from "./types";
 
 export interface ExpenseClaimFormProps {
   employees: Employee[];
