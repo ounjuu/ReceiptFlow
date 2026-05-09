@@ -5,7 +5,8 @@ import { JournalService } from "../journal/journal.service";
 import { UploadDocumentDto } from "./dto/upload-document.dto";
 import { CreateDocumentDto } from "./dto/create-document.dto";
 import { UpdateDocumentDto } from "./dto/update-document.dto";
-import { throwNotFound } from "../common/errors";
+import { throwNotFound, getErrorMessage } from "../common/errors";
+import { Prisma } from "@prisma/client";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
@@ -53,7 +54,7 @@ export class DocumentService {
         vendorName: ocr.vendor_name,
         totalAmount: ocr.total_amount,
         transactionAt: txDate,
-        ocrRaw: ocr as any,
+        ocrRaw: ocr as Prisma.InputJsonValue,
         status: "OCR_DONE",
       },
       include: {
@@ -79,7 +80,7 @@ export class DocumentService {
             vendorName: ocr.vendor_name,
             totalAmount: ocr.total_amount,
             transactionAt: txDate,
-            ocrRaw: ocr as any,
+            ocrRaw: ocr as Prisma.InputJsonValue,
             status: "OCR_DONE",
           },
           include: {
@@ -94,12 +95,12 @@ export class DocumentService {
           document,
           ocr,
         };
-      } catch (err: any) {
+      } catch (err) {
         return {
           index,
           filename: file.originalname,
           status: "error" as const,
-          error: err?.message || "처리 실패",
+          error: getErrorMessage(err) || "처리 실패",
         };
       }
     });
@@ -140,8 +141,8 @@ export class DocumentService {
       if (res.ok) {
         return await res.json();
       }
-    } catch (err: any) {
-      this.logger.warn(`OCR 서비스 연결 실패: ${err?.message || err}`);
+    } catch (err) {
+      this.logger.warn(`OCR 서비스 연결 실패: ${getErrorMessage(err)}`);
     }
 
     return {

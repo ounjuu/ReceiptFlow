@@ -2,6 +2,7 @@ import { Injectable, ConflictException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateVendorDto } from "./dto/create-vendor.dto";
 import { UpdateVendorDto } from "./dto/update-vendor.dto";
+import { getErrorMessage } from "../common/errors";
 
 @Injectable()
 export class VendorService {
@@ -169,7 +170,7 @@ export class VendorService {
 
   // 일괄 등록
   async batchCreate(tenantId: string, items: { name: string; bizNo?: string }[]) {
-    const results: { index: number; status: string; error?: string; data?: any }[] = [];
+    const results: { index: number; status: string; error?: string; data?: unknown }[] = [];
 
     for (let i = 0; i < items.length; i++) {
       try {
@@ -191,8 +192,8 @@ export class VendorService {
           data: { tenantId, name: item.name, bizNo: item.bizNo || null },
         });
         results.push({ index: i, status: "success", data: vendor });
-      } catch (err: any) {
-        results.push({ index: i, status: "error", error: `${i + 1}행: ${err?.message || "등록 실패"}` });
+      } catch (err) {
+        results.push({ index: i, status: "error", error: `${i + 1}행: ${getErrorMessage(err) || "등록 실패"}` });
       }
     }
 

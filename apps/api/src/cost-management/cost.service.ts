@@ -2,6 +2,7 @@ import { Injectable, ConflictException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
+import { getErrorMessage } from "../common/errors";
 
 @Injectable()
 export class CostService {
@@ -45,7 +46,7 @@ export class CostService {
     tenantId: string,
     items: { code: string; name: string; category?: string; unit?: string; standardCost?: number; safetyStock?: number }[],
   ) {
-    const results: { index: number; status: string; error?: string; data?: any }[] = [];
+    const results: { index: number; status: string; error?: string; data?: unknown }[] = [];
 
     for (let i = 0; i < items.length; i++) {
       try {
@@ -73,8 +74,8 @@ export class CostService {
           },
         });
         results.push({ index: i, status: "success", data: product });
-      } catch (err: any) {
-        results.push({ index: i, status: "error", error: `${i + 1}행: ${err?.message || "등록 실패"}` });
+      } catch (err) {
+        results.push({ index: i, status: "error", error: `${i + 1}행: ${getErrorMessage(err) || "등록 실패"}` });
       }
     }
 

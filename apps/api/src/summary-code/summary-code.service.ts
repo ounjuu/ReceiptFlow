@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { throwNotFound } from "../common/errors";
+import { throwNotFound, getErrorMessage } from "../common/errors";
 
 @Injectable()
 export class SummaryCodeService {
@@ -82,8 +82,8 @@ export class SummaryCodeService {
       try {
         await this.create(tenantId, item);
         results.push({ code: item.code, status: "success" });
-      } catch (err: any) {
-        results.push({ code: item.code, status: "error", error: err.message });
+      } catch (err) {
+        results.push({ code: item.code, status: "error", error: getErrorMessage(err) });
       }
     }
 

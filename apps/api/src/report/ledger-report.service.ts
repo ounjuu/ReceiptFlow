@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { TrialBalanceRow } from "./report.types";
+import { Prisma } from "@prisma/client";
 
 @Injectable()
 export class LedgerReportService {
@@ -220,7 +221,12 @@ export class LedgerReportService {
     const accountIds = accounts.map((a) => a.id);
 
     // 기초잔액용 라인 일괄 조회 (N+1 방지)
-    type BalanceLine = { accountId: string; debit: any; credit: any; journalEntry: { exchangeRate: any } };
+    type BalanceLine = {
+      accountId: string;
+      debit: Prisma.Decimal;
+      credit: Prisma.Decimal;
+      journalEntry: { exchangeRate: Prisma.Decimal };
+    };
     const beforeLinesByAccount = new Map<string, BalanceLine[]>();
     let beforeLines: BalanceLine[] = [];
     if (startDate) {

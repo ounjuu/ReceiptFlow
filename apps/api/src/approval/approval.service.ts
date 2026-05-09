@@ -3,6 +3,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { MailService } from "../mail/mail.service";
 import { NotificationService } from "../notification/notification.service";
 import { SetApprovalLinesDto } from "./dto/set-approval-lines.dto";
+import { getErrorMessage } from "../common/errors";
 
 @Injectable()
 export class ApprovalService {
@@ -155,8 +156,8 @@ export class ApprovalService {
         submitterName: submitter?.name || "요청자",
         approverName: approver?.name || "결재자",
       }).catch((err) => this.logger.warn(`결재 요청 알림 전송 실패: ${err?.message}`));
-    } catch (err: any) {
-      this.logger.warn(`결재 요청 메일 발송 실패: ${err?.message || err}`);
+    } catch (err) {
+      this.logger.warn(`결재 요청 메일 발송 실패: ${getErrorMessage(err)}`);
     }
 
     return approvalRequest;
@@ -334,8 +335,8 @@ export class ApprovalService {
             );
           }
         }
-      } catch (err: any) {
-        this.logger.warn(`다음 결재자 메일 발송 실패: ${err?.message || err}`);
+      } catch (err) {
+        this.logger.warn(`다음 결재자 메일 발송 실패: ${getErrorMessage(err)}`);
       }
 
       return {

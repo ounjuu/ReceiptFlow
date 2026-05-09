@@ -6,7 +6,8 @@ import { CreateJournalDto, JournalLineDto } from "./dto/create-journal.dto";
 import { UpdateJournalDto } from "./dto/update-journal.dto";
 import { nextSequenceNumber, formatDateYYYYMMDD } from "../common/sequence.util";
 import { STATUS_TRANSITIONS, JOURNAL_TYPE_LABEL } from "./journal.constants";
-import { throwNotFound } from "../common/errors";
+import { throwNotFound, getErrorMessage } from "../common/errors";
+import { Prisma } from "@prisma/client";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -31,7 +32,7 @@ export class JournalService {
     tenantId: string,
     journalType: string,
     date: Date,
-    tx?: any,
+    tx?: Prisma.TransactionClient,
   ): Promise<string> {
     const db = tx || this.prisma;
     const prefix = JOURNAL_TYPE_LABEL[journalType] || "일반";
@@ -73,7 +74,7 @@ export class JournalService {
   }
 
   // 전표 조회 (없으면 예외)
-  private async findEntryOrFail(id: string, include?: any) {
+  private async findEntryOrFail(id: string, include?: Prisma.JournalEntryInclude) {
     const entry = await this.prisma.journalEntry.findUnique({
       where: { id },
       include: include || ENTRY_INCLUDE,
@@ -130,7 +131,7 @@ export class JournalService {
     status?: string;
     journalType?: string;
     lines: { accountId: string; debit: number; credit: number; vendorId?: string; projectId?: string; departmentId?: string }[];
-    tx?: any; // Prisma 트랜잭션 클라이언트
+    tx?: Prisma.TransactionClient;
     skipClosedPeriodCheck?: boolean; // 결산 이월 등 관리자 작업 시 마감 체크 건너뜀
   }) {
     const { tenantId, date, description, status = "POSTED", journalType = "GENERAL", lines, tx, skipClosedPeriodCheck = false } = params;
@@ -254,7 +255,7 @@ export class JournalService {
     }[],
     userId?: string,
   ) {
-    const results: { index: number; status: string; error?: string; data?: any }[] = [];
+    const results: { index: number; status: string; error?: string; data?: unknown }[] = [];
 
     // 모든 전표에서 사용하는 계정코드를 일괄 조회 (N+1 방지)
     const allAccountCodes = new Set<string>();
@@ -300,8 +301,8 @@ export class JournalService {
           userId,
         );
         results.push({ index: i, status: "success", data: { id: entry.id, date: entry.date, description: entry.description } });
-      } catch (err: any) {
-        results.push({ index: i, status: "error", error: `${i + 1}번 전표: ${err?.message || "등록 실패"}` });
+      } catch (err) {
+        results.push({ index: i, status: "error", error: `${i + 1}번 전표: ${getErrorMessage(err) || "등록 실패"}` });
       }
     }
 
