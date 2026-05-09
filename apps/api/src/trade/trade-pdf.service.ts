@@ -1,9 +1,32 @@
 import { Injectable } from "@nestjs/common";
 import { generatePdfBuffer } from "../common/pdf-generator";
 
+type Numeric = number | string | { toString(): string } | null;
+
+// PDF 출력에 필요한 거래명세서 필드 (Prisma 모델의 subset)
+export interface TradeForPdf {
+  tradeNo?: string | null;
+  tradeType?: string | null;
+  tradeDate?: Date | string | null;
+  description?: string | null;
+  note?: string | null;
+  supplyAmount?: Numeric;
+  taxAmount?: Numeric;
+  totalAmount?: Numeric;
+  vendor?: { name?: string | null; bizNo?: string | null } | null;
+  items?: Array<{
+    itemName?: string | null;
+    specification?: string | null;
+    quantity?: Numeric;
+    unitPrice?: Numeric;
+    amount?: Numeric;
+    note?: string | null;
+  }>;
+}
+
 @Injectable()
 export class TradePdfService {
-  generatePdf(trade: any): Promise<Buffer> {
+  generatePdf(trade: TradeForPdf): Promise<Buffer> {
     return generatePdfBuffer((doc, { pageWidth, margin, contentWidth }) => {
       // 제목
       doc.font("NanumGothic-Bold").fontSize(22).text("거 래 명 세 서", 0, 40, {

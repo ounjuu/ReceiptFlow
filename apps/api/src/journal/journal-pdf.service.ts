@@ -6,9 +6,30 @@ import {
 } from "./journal.constants";
 import { generatePdfBuffer } from "../common/pdf-generator";
 
+// PDF 출력에 필요한 전표 필드 (Prisma 모델의 subset).
+// Decimal/Date를 직접 import하지 않고 호환되는 lenient 타입으로 받는다.
+type Numeric = number | string | { toString(): string } | null;
+
+export interface JournalForPdf {
+  journalNumber?: string | null;
+  journalType?: string | null;
+  date?: Date | string | null;
+  description?: string | null;
+  status?: string | null;
+  evidenceType?: string | null;
+  supplyAmount?: Numeric;
+  vatAmount?: Numeric;
+  lines?: Array<{
+    debit?: Numeric;
+    credit?: Numeric;
+    account?: { code?: string | null; name?: string | null } | null;
+    vendor?: { name?: string | null } | null;
+  }>;
+}
+
 @Injectable()
 export class JournalPdfService {
-  generatePdf(journal: any): Promise<Buffer> {
+  generatePdf(journal: JournalForPdf): Promise<Buffer> {
     return generatePdfBuffer((doc, { pageWidth, margin, contentWidth }) => {
       // 제목
       doc.font("NanumGothic-Bold").fontSize(24).text("전    표", 0, 40, {
@@ -22,8 +43,8 @@ export class JournalPdfService {
       const headerHeight = 70;
       doc.rect(margin, y, contentWidth, headerHeight).stroke();
 
-      const journalTypeLabel = JOURNAL_TYPE_LABEL[journal.journalType] || journal.journalType || "-";
-      const statusText = STATUS_LABEL[journal.status] || journal.status || "-";
+      const journalTypeLabel = JOURNAL_TYPE_LABEL[journal.journalType ?? ""] || journal.journalType || "-";
+      const statusText = STATUS_LABEL[journal.status ?? ""] || journal.status || "-";
       const journalDate = journal.date
         ? new Date(journal.date).toLocaleDateString("ko-KR")
         : "-";

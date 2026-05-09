@@ -1,9 +1,35 @@
 import { Injectable } from "@nestjs/common";
 import { generatePdfBuffer } from "../common/pdf-generator";
 
+type Numeric = number | string | { toString(): string } | null;
+
+// PDF 출력에 필요한 세금계산서 필드 (Prisma 모델의 subset)
+export interface TaxInvoiceForPdf {
+  invoiceType?: string | null;
+  invoiceDate?: Date | string | null;
+  approvalNo?: string | null;
+  issuerBizNo?: string | null;
+  issuerName?: string | null;
+  recipientBizNo?: string | null;
+  recipientName?: string | null;
+  supplyAmount?: Numeric;
+  taxAmount?: Numeric;
+  totalAmount?: Numeric;
+  items?: Array<{
+    itemDate?: Date | string | null;
+    itemName?: string | null;
+    specification?: string | null;
+    quantity?: Numeric;
+    unitPrice?: Numeric;
+    supplyAmount?: Numeric;
+    taxAmount?: Numeric;
+    remark?: string | null;
+  }>;
+}
+
 @Injectable()
 export class TaxInvoicePdfService {
-  generatePdf(invoice: any): Promise<Buffer> {
+  generatePdf(invoice: TaxInvoiceForPdf): Promise<Buffer> {
     return generatePdfBuffer((doc, { pageWidth, margin, contentWidth }) => {
       // 제목
       doc.font("NanumGothic-Bold").fontSize(20).text("세 금 계 산 서 (공급자 보관용)", 0, 40, {

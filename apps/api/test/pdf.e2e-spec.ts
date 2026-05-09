@@ -34,7 +34,7 @@ describe("PDF 생성 회귀 검증", () => {
       recipientName: "수신",
       items: [],
       supplyAmount: 1000,
-      vatAmount: 100,
+      taxAmount: 100,
       totalAmount: 1100,
     });
     expectValidPdf(buf);
@@ -46,11 +46,10 @@ describe("PDF 생성 회귀 검증", () => {
       tradeType: "SALES",
       tradeDate: new Date(),
       vendor: { name: "거래처", bizNo: "1234567890" },
-      lines: [],
+      items: [],
       totalAmount: 1000,
       supplyAmount: 1000,
-      vatAmount: 100,
-      status: "PAID",
+      taxAmount: 100,
     });
     expectValidPdf(buf);
   });
