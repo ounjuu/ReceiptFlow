@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
+import { Injectable, BadRequestException, NotFoundException, ConflictException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
@@ -36,7 +36,7 @@ export class BomService {
       where: { parentId_childId: { parentId, childId: data.childId } },
     });
     if (existing) {
-      throw new BadRequestException("이미 등록된 부품입니다");
+      throw new ConflictException("이미 등록된 부품입니다");
     }
 
     return this.prisma.bomItem.create({

@@ -1,6 +1,7 @@
 import {
   Injectable,
   BadRequestException,
+  ConflictException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { JournalService } from "../journal/journal.service";
@@ -332,7 +333,7 @@ export class TradeService {
     const trade = await this.prisma.trade.findUnique({ where: { id } });
     if (!trade) throwNotFound("거래를 찾을 수 없습니다");
     if (trade.status === "CANCELLED") {
-      throw new BadRequestException("이미 취소된 거래입니다");
+      throw new ConflictException("이미 취소된 거래입니다");
     }
     if (trade.status === "PAID") {
       throw new BadRequestException(
