@@ -243,7 +243,7 @@ export class TradeService {
     // 누락된 계정 체크
     for (const code of neededCodes) {
       if (!acctMap.has(code)) {
-        throw new BadRequestException(`계정과목(${code})이 존재하지 않습니다`);
+        throwNotFound(`계정과목(${code})이 존재하지 않습니다`);
       }
     }
 

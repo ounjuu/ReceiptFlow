@@ -285,7 +285,7 @@ export class JournalService {
         for (const line of j.lines) {
           const account = accountCodeMap.get(line.accountCode);
           if (!account) {
-            throw new BadRequestException(`계정코드 ${line.accountCode}을 찾을 수 없습니다`);
+            throwNotFound(`계정코드 ${line.accountCode}을 찾을 수 없습니다`);
           }
           resolvedLines.push({
             accountId: account.id,
@@ -600,7 +600,7 @@ export class JournalService {
     });
 
     if (entries.length !== ids.length) {
-      throw new BadRequestException("일부 전표를 찾을 수 없습니다");
+      throwNotFound("일부 전표를 찾을 수 없습니다");
     }
 
     for (const entry of entries) {
@@ -649,7 +649,7 @@ export class JournalService {
     });
 
     if (entries.length !== ids.length) {
-      throw new BadRequestException("일부 전표를 찾을 수 없습니다");
+      throwNotFound("일부 전표를 찾을 수 없습니다");
     }
 
     // POSTED 상태는 수정 불가, 마감 기간 체크
@@ -724,7 +724,7 @@ export class JournalService {
     });
 
     if (!account) {
-      throw new BadRequestException("현금 계정(1010)이 존재하지 않습니다");
+      throwNotFound("현금 계정(1010)이 존재하지 않습니다");
     }
 
     return account.id;
