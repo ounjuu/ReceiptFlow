@@ -42,9 +42,9 @@ export class ClosingController {
   async close(
     @CurrentTenant() tenantId: string,
     @Body() body: { year: number; month: number },
-    @Req() req: { user: { sub: string } },
+    @Req() req: { user: { userId: string } },
   ) {
-    return this.closingService.close(tenantId, body.year, body.month, req.user.sub);
+    return this.closingService.close(tenantId, body.year, body.month, req.user.userId);
   }
 
   // 전기이월 실행
@@ -53,15 +53,15 @@ export class ClosingController {
   async carryForward(
     @CurrentTenant() tenantId: string,
     @Body() body: { year: number },
-    @Req() req: { user: { sub: string } },
+    @Req() req: { user: { userId: string } },
   ) {
-    return this.closingService.carryForward(tenantId, body.year, req.user.sub);
+    return this.closingService.carryForward(tenantId, body.year, req.user.userId);
   }
 
   // 마감 취소
   @Patch(":id/reopen")
   @Roles("ADMIN")
-  async reopen(@Param("id") id: string, @Req() req: { user: { sub: string } }) {
-    return this.closingService.reopen(id, req.user.sub);
+  async reopen(@Param("id") id: string, @Req() req: { user: { userId: string } }) {
+    return this.closingService.reopen(id, req.user.userId);
   }
 }

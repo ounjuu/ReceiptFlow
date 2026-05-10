@@ -78,12 +78,12 @@ export class VendorController {
   async addMemo(
     @Param("id") id: string,
     @Body() body: { content: string; memoType?: string },
-    @Req() req: { user: { sub: string; name?: string } },
+    @Req() req: { user: { userId: string; name?: string } },
   ) {
     return this.vendorService.addMemo(id, {
       content: body.content,
       memoType: body.memoType,
-      userId: req.user.sub,
+      userId: req.user.userId,
       userName: req.user.name,
     });
   }

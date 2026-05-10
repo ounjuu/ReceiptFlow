@@ -36,9 +36,9 @@ export class JournalController {
 
   @Post()
   @Roles("ADMIN", "ACCOUNTANT")
-  async create(@CurrentTenant() tenantId: string, @Body() dto: CreateJournalDto, @Req() req: { user: { sub: string } }) {
+  async create(@CurrentTenant() tenantId: string, @Body() dto: CreateJournalDto, @Req() req: { user: { userId: string } }) {
     dto.tenantId = tenantId;
-    return this.journalService.create(dto, req.user.sub);
+    return this.journalService.create(dto, req.user.userId);
   }
 
   @Post("from-document/:documentId")
@@ -46,9 +46,9 @@ export class JournalController {
   async createFromDocument(
     @Param("documentId") documentId: string,
     @Query("accountId") accountId: string,
-    @Req() req: { user: { sub: string } },
+    @Req() req: { user: { userId: string } },
   ) {
-    return this.journalService.createFromDocument(documentId, accountId, req.user.sub);
+    return this.journalService.createFromDocument(documentId, accountId, req.user.userId);
   }
 
   @Post("batch")
@@ -63,9 +63,9 @@ export class JournalController {
         lines: { accountCode: string; vendorBizNo?: string; vendorName?: string; debit: number; credit: number }[];
       }[];
     },
-    @Req() req: { user: { sub: string } },
+    @Req() req: { user: { userId: string } },
   ) {
-    return this.journalService.batchCreate(tenantId, body.journals, req.user.sub);
+    return this.journalService.batchCreate(tenantId, body.journals, req.user.userId);
   }
 
   // 전표 복사
@@ -85,8 +85,8 @@ export class JournalController {
   // 일괄 상태 변경 (`:id` 라우트보다 먼저 선언)
   @Patch("batch/status")
   @Roles("ADMIN", "ACCOUNTANT")
-  async batchUpdateStatus(@Body() body: { ids: string[]; status: string }, @Req() req: { user: { sub: string } }) {
-    return this.journalService.batchUpdateStatus(body.ids, body.status, req.user.sub);
+  async batchUpdateStatus(@Body() body: { ids: string[]; status: string }, @Req() req: { user: { userId: string } }) {
+    return this.journalService.batchUpdateStatus(body.ids, body.status, req.user.userId);
   }
 
   // 일괄 수정 (적요/날짜)
@@ -94,9 +94,9 @@ export class JournalController {
   @Roles("ADMIN", "ACCOUNTANT")
   async batchUpdate(
     @Body() body: { ids: string[]; description?: string; date?: string },
-    @Req() req: { user: { sub: string } },
+    @Req() req: { user: { userId: string } },
   ) {
-    return this.journalService.batchUpdate(body.ids, { description: body.description, date: body.date }, req.user.sub);
+    return this.journalService.batchUpdate(body.ids, { description: body.description, date: body.date }, req.user.userId);
   }
 
   @Get()
@@ -142,14 +142,14 @@ export class JournalController {
 
   @Patch(":id")
   @Roles("ADMIN", "ACCOUNTANT")
-  async update(@Param("id") id: string, @Body() dto: UpdateJournalDto, @Req() req: { user: { sub: string } }) {
-    return this.journalService.update(id, dto, req.user.sub);
+  async update(@Param("id") id: string, @Body() dto: UpdateJournalDto, @Req() req: { user: { userId: string } }) {
+    return this.journalService.update(id, dto, req.user.userId);
   }
 
   @Delete(":id")
   @Roles("ADMIN")
-  async remove(@Param("id") id: string, @Req() req: { user: { sub: string } }) {
-    return this.journalService.remove(id, req.user.sub);
+  async remove(@Param("id") id: string, @Req() req: { user: { userId: string } }) {
+    return this.journalService.remove(id, req.user.userId);
   }
 
   @Post(":id/attachments")
