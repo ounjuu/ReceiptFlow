@@ -1,4 +1,6 @@
 import { Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
+import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { PrismaModule } from "./prisma/prisma.module";
 import { AuthModule } from "./auth/auth.module";
 import { DocumentModule } from "./document/document.module";
@@ -33,8 +35,12 @@ import { NotificationModule } from "./notification/notification.module";
 import { BackupModule } from "./backup/backup.module";
 
 @Module({
-  imports: [PrismaModule, AuthModule, NotificationModule, DocumentModule, JournalModule, ReportModule, AccountModule, VendorModule, ClosingModule, AuditLogModule, JournalTemplateModule, ExchangeRateModule, TaxInvoiceModule, FixedAssetModule, ApprovalModule, PayrollModule, BudgetModule, ProjectModule, TradeModule, DepartmentModule, CostModule, ExpenseClaimModule, InventoryModule, BankAccountModule, SearchModule, JournalRuleModule, YearEndSettlementModule, TaxFilingModule, MailModule, SummaryCodeModule, BomModule, BackupModule],
+  imports: [
+    // 분당 100요청 제한 (전역 rate limit). 필요 시 @SkipThrottle/@Throttle로 개별 조정
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
+    PrismaModule, AuthModule, NotificationModule, DocumentModule, JournalModule, ReportModule, AccountModule, VendorModule, ClosingModule, AuditLogModule, JournalTemplateModule, ExchangeRateModule, TaxInvoiceModule, FixedAssetModule, ApprovalModule, PayrollModule, BudgetModule, ProjectModule, TradeModule, DepartmentModule, CostModule, ExpenseClaimModule, InventoryModule, BankAccountModule, SearchModule, JournalRuleModule, YearEndSettlementModule, TaxFilingModule, MailModule, SummaryCodeModule, BomModule, BackupModule,
+  ],
   controllers: [],
-  providers: [],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

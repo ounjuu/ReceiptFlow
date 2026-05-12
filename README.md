@@ -7,7 +7,7 @@ AI 기반 영수증 자동 처리 및 전표 자동 생성 웹 ERP 시스템
 | 영역 | 기술 |
 |------|------|
 | Frontend | Next.js 15 (App Router), React Query, Recharts, CSS Modules, Pretendard |
-| Backend | NestJS, Prisma ORM, PDFKit |
+| Backend | NestJS, Prisma ORM, PDFKit, helmet, @nestjs/throttler |
 | AI | FastAPI (Python), Tesseract OCR, 키워드 기반 계정 분류 |
 | DB | PostgreSQL |
 | 알림 | 이메일 (Nodemailer), 슬랙 웹훅, 카카오 웹훅 |
@@ -223,6 +223,15 @@ cd apps/ai && source venv/bin/activate && python -m pytest tests/ -v  # 48개
 | API 시작 시 `EADDRINUSE :3001` | `lsof -i :3001` 로 점유 프로세스 확인 후 종료, 또는 `PORT=3011 npm run start:dev` |
 | `JWT_SECRET is not defined` | `.env`에 `JWT_SECRET` 추가 후 API 재기동 |
 | `prisma migrate` 시 DB 접속 실패 | `DATABASE_URL` 의 user/host/port 확인, `createdb ledgerflow` 선행 |
+| `429 Too Many Requests` | rate limit 도달 (기본 분당 100 req/IP). 잠시 후 재시도 또는 `app.module.ts`의 ThrottlerModule 설정 조정 |
+
+## 보안
+
+API에 다음이 기본 적용됨 (`apps/api/src/main.ts`, `app.module.ts`):
+
+- **helmet** — X-Frame-Options, X-Content-Type-Options 등 보안 HTTP 헤더 자동 추가
+- **rate limiting** — `@nestjs/throttler` 글로벌 가드로 IP당 분당 100 요청 제한 (필요 시 컨트롤러 단위 `@Throttle`/`@SkipThrottle` 데코레이터로 조정)
+- **JWT 인증** — `JwtAuthGuard` + `RolesGuard` 조합으로 엔드포인트별 권한 분리
 
 ## 주요 API
 
