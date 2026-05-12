@@ -7,7 +7,7 @@ AI 기반 영수증 자동 처리 및 전표 자동 생성 웹 ERP 시스템
 | 영역 | 기술 |
 |------|------|
 | Frontend | Next.js 15 (App Router), React Query, Recharts, CSS Modules, Pretendard |
-| Backend | NestJS, Prisma ORM, PDFKit, helmet, @nestjs/throttler |
+| Backend | NestJS, Prisma ORM, PDFKit, helmet, @nestjs/throttler, @nestjs/swagger |
 | AI | FastAPI (Python), Tesseract OCR, 키워드 기반 계정 분류 |
 | DB | PostgreSQL |
 | 알림 | 이메일 (Nodemailer), 슬랙 웹훅, 카카오 웹훅 |
@@ -232,6 +232,16 @@ API에 다음이 기본 적용됨 (`apps/api/src/main.ts`, `app.module.ts`):
 - **helmet** — X-Frame-Options, X-Content-Type-Options 등 보안 HTTP 헤더 자동 추가
 - **rate limiting** — `@nestjs/throttler` 글로벌 가드로 IP당 분당 100 요청 제한 (필요 시 컨트롤러 단위 `@Throttle`/`@SkipThrottle` 데코레이터로 조정)
 - **JWT 인증** — `JwtAuthGuard` + `RolesGuard` 조합으로 엔드포인트별 권한 분리
+
+## API 문서
+
+API 서버 실행 후 브라우저로:
+
+- **Swagger UI**: http://localhost:3001/api-docs
+- **OpenAPI JSON**: http://localhost:3001/api-docs-json
+
+NestJS 컨트롤러/DTO를 자동 스캔해 생성 (168 endpoint). `@ApiTags`,
+`@ApiOperation` 등의 데코레이터를 추가하면 그룹/설명이 더 정돈된다.
 
 ## 주요 API
 

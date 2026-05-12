@@ -1,5 +1,6 @@
 import { NestFactory } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { join } from "path";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const helmet = require("helmet");
@@ -15,6 +16,17 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   // 업로드 파일 정적 서빙
   app.useStaticAssets(join(__dirname, "..", "uploads"), { prefix: "/uploads" });
+
+  // Swagger 자동 문서 (http://localhost:3001/api-docs)
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle("LedgerFlow API")
+    .setDescription("AI 기반 영수증 자동 처리 및 전표 자동 생성 ERP API")
+    .setVersion("0.1.0")
+    .addBearerAuth()
+    .build();
+  const swaggerDoc = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup("api-docs", app, swaggerDoc);
+
   await app.listen(process.env.PORT ?? 3001);
 }
 bootstrap();
