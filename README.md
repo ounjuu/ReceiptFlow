@@ -23,6 +23,8 @@ apps/
     scripts/              # postinstall 폰트 다운로드 스크립트
     assets/fonts/         # NanumGothic ttf (npm install 시 자동 설치)
   ai/                     # FastAPI AI 서비스 (:8000)
+packages/
+  shared/                 # Frontend/Backend 공유 타입 (PaginationParams 등)
 prisma/
   schema.prisma           # DB 스키마
   seed.ts                 # 초기 데이터

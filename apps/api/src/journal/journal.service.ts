@@ -8,6 +8,7 @@ import { nextSequenceNumber, formatDateYYYYMMDD } from "../common/sequence.util"
 import { STATUS_TRANSITIONS, JOURNAL_TYPE_LABEL } from "./journal.constants";
 import { throwNotFound, getErrorMessage } from "../common/errors";
 import { Prisma } from "@prisma/client";
+import type { PaginationParams } from "@ledgerflow/shared";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -313,12 +314,11 @@ export class JournalService {
   // 테넌트별 전표 목록 조회 (복합 검색 + 페이지네이션)
   async findAll(
     tenantId: string,
-    opts?: {
+    opts?: PaginationParams & {
       startDate?: string; endDate?: string; journalType?: string;
       accountId?: string; vendorId?: string;
       minAmount?: number; maxAmount?: number;
       keyword?: string; status?: string;
-      page?: number; limit?: number;
     },
   ) {
     const { startDate, endDate, journalType, accountId, vendorId, minAmount, maxAmount, keyword, status, page = 1, limit = 20 } = opts || {};

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import type { PaginationResponse } from "@ledgerflow/shared";
 import styles from "./Journals.module.css";
 import {
   Account,
@@ -61,7 +62,7 @@ export default function JournalsPage() {
 
   const { data: journalResult } = useQuery({
     queryKey: ["journals", filterStart, filterEnd, activeTab, searchAccountId, searchKeyword, searchMinAmount, searchMaxAmount, searchStatus, page],
-    queryFn: () => apiGet<{ data: JournalEntry[]; total: number; page: number; totalPages: number }>(
+    queryFn: () => apiGet<PaginationResponse<JournalEntry>>(
       `/journals?tenantId=${tenantId}&${queryParams}`,
     ),
   });
