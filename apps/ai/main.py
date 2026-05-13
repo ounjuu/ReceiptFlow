@@ -1,13 +1,19 @@
 import os
 import re
 import tempfile
-from typing import Optional
+from typing import List, Optional, TypedDict
 
 import pytesseract
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 from pydantic import BaseModel
+
+
+class ClassificationRule(TypedDict):
+    keywords: List[str]
+    account_code: str
+    account_name: str
 
 app = FastAPI(title="LedgerFlow AI Service")
 
@@ -19,7 +25,7 @@ app.add_middleware(
 )
 
 # 키워드 → 계정과목 매핑 규칙
-CLASSIFICATION_RULES = [
+CLASSIFICATION_RULES: List[ClassificationRule] = [
     {
         "keywords": ["식당", "배달", "치킨", "피자", "김밥", "떡볶이", "국밥", "냉면", "삼겹살", "초밥", "한식", "중식", "일식", "양식", "분식", "도시락", "맥도날드", "버거킹", "롯데리아", "배민", "요기요", "쿠팡이츠"],
         "account_code": "50400",
@@ -59,7 +65,7 @@ DEFAULT_ACCOUNT = {
 
 
 # OCR 전체 텍스트에서 업종을 추정하는 키워드
-RECEIPT_CONTEXT_RULES = [
+RECEIPT_CONTEXT_RULES: List[ClassificationRule] = [
     {
         "keywords": ["단가", "수량", "금액", "메뉴", "주문", "테이블", "식사", "반찬", "음료", "사이드", "세트", "인분"],
         "account_code": "50400",
@@ -95,42 +101,42 @@ def health_check():
     return {"status": "ok"}
 
 
+def _match_rule(
+    text: str,
+    rules: List[ClassificationRule],
+    confidence: float,
+) -> Optional[ClassifyResponse]:
+    """text에서 rules의 키워드 매칭이 있으면 ClassifyResponse 반환."""
+    for rule in rules:
+        for keyword in rule["keywords"]:
+            if keyword.lower() in text:
+                return ClassifyResponse(
+                    account_code=rule["account_code"],
+                    account_name=rule["account_name"],
+                    confidence=confidence,
+                )
+    return None
+
+
 @app.post("/classify", response_model=ClassifyResponse)
 def classify_vendor(req: ClassifyRequest):
     """거래처명 + OCR 전체 텍스트 기반 계정과목 분류 추천"""
     vendor = req.vendor_name.lower().replace(" ", "")
 
-    # 1차: 거래처명으로 매칭
-    for rule in CLASSIFICATION_RULES:
-        for keyword in rule["keywords"]:
-            if keyword.lower() in vendor:
-                return ClassifyResponse(
-                    account_code=rule["account_code"],
-                    account_name=rule["account_name"],
-                    confidence=0.85,
-                )
+    # 1차: 거래처명으로 매칭 (가장 신뢰도 높음)
+    result = _match_rule(vendor, CLASSIFICATION_RULES, 0.85)
+    if result:
+        return result
 
     # 2차: OCR 전체 텍스트로 업종 추정
     if req.raw_text:
         full_text = req.raw_text.lower().replace(" ", "")
-        # 기존 규칙으로 전체 텍스트 검색
-        for rule in CLASSIFICATION_RULES:
-            for keyword in rule["keywords"]:
-                if keyword.lower() in full_text:
-                    return ClassifyResponse(
-                        account_code=rule["account_code"],
-                        account_name=rule["account_name"],
-                        confidence=0.7,
-                    )
-        # 영수증 컨텍스트 규칙으로 검색
-        for rule in RECEIPT_CONTEXT_RULES:
-            for keyword in rule["keywords"]:
-                if keyword.lower() in full_text:
-                    return ClassifyResponse(
-                        account_code=rule["account_code"],
-                        account_name=rule["account_name"],
-                        confidence=0.6,
-                    )
+        result = _match_rule(full_text, CLASSIFICATION_RULES, 0.7)
+        if result:
+            return result
+        result = _match_rule(full_text, RECEIPT_CONTEXT_RULES, 0.6)
+        if result:
+            return result
 
     return ClassifyResponse(
         account_code=DEFAULT_ACCOUNT["account_code"],
