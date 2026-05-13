@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import type { PeriodSummary, AccountingPeriod, CarryForwardResult } from "./types";
 import ClosingsTable from "./ClosingsTable";
 import { fmtMoney, fmtDate } from "@/lib/formatters";
+import { PageTitle } from "@/lib/PageTitle";
 import styles from "./Closings.module.css";
 
 const now = new Date();
@@ -88,7 +89,7 @@ export default function ClosingsPage() {
 
   return (
     <div>
-      <h1 className={styles.title}>결산 관리</h1>
+      <PageTitle>결산 관리</PageTitle>
 
       {/* 기간 선택 */}
       <div className={styles.controls}>
