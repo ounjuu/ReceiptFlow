@@ -9,6 +9,7 @@ import {
   Body,
   UseGuards,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { BankAccountService } from "./bank-account.service";
 import { CreateBankAccountDto } from "./dto/create-bank-account.dto";
 import { UpdateBankAccountDto } from "./dto/update-bank-account.dto";
@@ -18,6 +19,7 @@ import { RolesGuard } from "../auth/roles.guard";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("은행계좌")
 @Controller("bank-accounts")
 export class BankAccountController {
   constructor(private readonly service: BankAccountService) {}

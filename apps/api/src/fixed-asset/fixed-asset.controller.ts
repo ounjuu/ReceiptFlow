@@ -7,6 +7,7 @@ import {
   Body,
   UseGuards,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { FixedAssetService } from "./fixed-asset.service";
 import { CreateFixedAssetDto } from "./dto/create-fixed-asset.dto";
 import { UpdateFixedAssetDto } from "./dto/update-fixed-asset.dto";
@@ -16,6 +17,7 @@ import { Roles } from "../auth/roles.decorator";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("고정자산")
 @Controller("fixed-assets")
 export class FixedAssetController {
   constructor(private readonly service: FixedAssetService) {}

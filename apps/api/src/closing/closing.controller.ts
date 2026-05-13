@@ -9,6 +9,7 @@ import {
   UseGuards,
   Req,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { ClosingService } from "./closing.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
@@ -16,6 +17,7 @@ import { Roles } from "../auth/roles.decorator";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("결산")
 @Controller("closings")
 export class ClosingController {
   constructor(private readonly closingService: ClosingService) {}

@@ -1,10 +1,12 @@
 import { Controller, Get, Query, UseGuards } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { ReportService } from "./report.service";
 import { AnomalyService } from "./anomaly.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard)
+@ApiTags("보고서")
 @Controller("reports")
 export class ReportController {
   constructor(

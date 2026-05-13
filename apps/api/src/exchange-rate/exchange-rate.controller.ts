@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Delete, Param, Query, Body, UseGuards } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { ExchangeRateService } from "./exchange-rate.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
@@ -6,6 +7,7 @@ import { Roles } from "../auth/roles.decorator";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("환율")
 @Controller("exchange-rates")
 export class ExchangeRateController {
   constructor(private readonly exchangeRateService: ExchangeRateService) {}

@@ -10,6 +10,7 @@ import {
   Res,
   UseGuards,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { Response } from "express";
 import { TradeService } from "./trade.service";
 import { TradePdfService } from "./trade-pdf.service";
@@ -22,6 +23,7 @@ import { Roles } from "../auth/roles.decorator";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("거래명세서")
 @Controller("trades")
 export class TradeController {
   constructor(

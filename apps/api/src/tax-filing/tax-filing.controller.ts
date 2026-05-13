@@ -2,6 +2,7 @@ import {
   Controller, Get, Post, Patch, Delete,
   Param, Query, Body, UseGuards, Res, BadRequestException,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { Response } from "express";
 import { TaxFilingService } from "./tax-filing.service";
 import { VatFilingService } from "./vat-filing.service";
@@ -15,6 +16,7 @@ import { Roles } from "../auth/roles.decorator";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("세무신고")
 @Controller("tax-filing")
 export class TaxFilingController {
   constructor(

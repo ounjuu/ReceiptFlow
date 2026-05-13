@@ -1,8 +1,10 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { JournalRuleService } from "./journal-rule.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
+@ApiTags("자동전표규칙")
 @Controller("journal-rules")
 @UseGuards(JwtAuthGuard)
 export class JournalRuleController {

@@ -9,6 +9,7 @@ import {
   Res,
   UseGuards,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { Response } from "express";
 import { PayrollService } from "./payroll.service";
 import { PayrollPdfService } from "./payroll-pdf.service";
@@ -20,6 +21,7 @@ import { Roles } from "../auth/roles.decorator";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("급여")
 @Controller("payroll")
 export class PayrollController {
   constructor(

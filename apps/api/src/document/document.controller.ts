@@ -12,6 +12,7 @@ import {
   UseGuards,
   Body,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
@@ -25,6 +26,7 @@ import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("영수증")
 @Controller("documents")
 export class DocumentController {
   constructor(private readonly documentService: DocumentService) {}

@@ -13,6 +13,7 @@ import {
   UseInterceptors,
   UploadedFile,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { Response } from "express";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 import { FileInterceptor } from "@nestjs/platform-express";
@@ -27,6 +28,7 @@ import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("전표")
 @Controller("journals")
 export class JournalController {
   constructor(

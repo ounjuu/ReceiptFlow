@@ -8,6 +8,7 @@ import {
   Body,
   UseGuards,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { YearEndSettlementService } from "./year-end-settlement.service";
 import { CreateYearEndSettlementDto } from "./dto/create-year-end-settlement.dto";
 import { UpdateYearEndSettlementDto } from "./dto/update-year-end-settlement.dto";
@@ -17,6 +18,7 @@ import { Roles } from "../auth/roles.decorator";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("연말정산")
 @Controller("year-end-settlement")
 export class YearEndSettlementController {
   constructor(private readonly service: YearEndSettlementService) {}

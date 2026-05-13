@@ -9,6 +9,7 @@ import {
   Body,
   UseGuards,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { ExpenseClaimService } from "./expense-claim.service";
 import { CreateExpenseClaimDto } from "./dto/create-expense-claim.dto";
 import { UpdateExpenseClaimDto } from "./dto/update-expense-claim.dto";
@@ -18,6 +19,7 @@ import { Roles } from "../auth/roles.decorator";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("경비정산")
 @Controller("expense-claims")
 export class ExpenseClaimController {
   constructor(private readonly service: ExpenseClaimService) {}

@@ -2,6 +2,7 @@ import {
   Controller, Post, Get, Patch, Delete,
   Param, Query, Body, UseGuards,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { BomService } from "./bom.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
@@ -9,6 +10,7 @@ import { Roles } from "../auth/roles.decorator";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("BOM")
 @Controller("bom")
 export class BomController {
   constructor(private readonly bomService: BomService) {}

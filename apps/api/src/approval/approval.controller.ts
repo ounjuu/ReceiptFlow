@@ -9,6 +9,7 @@ import {
   Req,
   UseGuards,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { ApprovalService } from "./approval.service";
 import { SetApprovalLinesDto } from "./dto/set-approval-lines.dto";
 import { SubmitApprovalDto } from "./dto/submit-approval.dto";
@@ -19,6 +20,7 @@ import { Roles } from "../auth/roles.decorator";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("결재")
 @Controller("approvals")
 export class ApprovalController {
   constructor(private readonly service: ApprovalService) {}

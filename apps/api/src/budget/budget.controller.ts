@@ -8,6 +8,7 @@ import {
   Body,
   UseGuards,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { BudgetService } from "./budget.service";
 import { CreateBudgetDto } from "./dto/create-budget.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -16,6 +17,7 @@ import { Roles } from "../auth/roles.decorator";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("예산")
 @Controller("budgets")
 export class BudgetController {
   constructor(private readonly service: BudgetService) {}

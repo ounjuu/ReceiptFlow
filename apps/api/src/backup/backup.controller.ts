@@ -1,6 +1,7 @@
 import {
   Controller, Get, Post, Body, Res, UseGuards,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { Response } from "express";
 import { BackupService } from "./backup.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -9,6 +10,7 @@ import { Roles } from "../auth/roles.decorator";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("백업")
 @Controller("backup")
 export class BackupController {
   constructor(private readonly backupService: BackupService) {}

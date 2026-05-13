@@ -9,6 +9,7 @@ import {
   Req,
   UseGuards,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { JournalTemplateService } from "./journal-template.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
@@ -39,6 +40,7 @@ interface UpdateTemplateBody {
   lines?: TemplateLineInput[];
 }
 
+@ApiTags("전표템플릿")
 @Controller("journal-templates")
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class JournalTemplateController {

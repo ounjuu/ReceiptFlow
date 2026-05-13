@@ -1,10 +1,12 @@
 import { Controller, Post, Get, Patch, Put, Delete, Body, Param, UseGuards, Request } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { AuthService } from "./auth.service";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { RolesGuard } from "./roles.guard";
 import { Roles } from "./roles.decorator";
 import { CurrentTenant } from "./current-tenant.decorator";
 
+@ApiTags("인증")
 @Controller("auth")
 export class AuthController {
   constructor(private authService: AuthService) {}

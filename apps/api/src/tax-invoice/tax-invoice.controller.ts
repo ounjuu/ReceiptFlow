@@ -3,6 +3,7 @@ import {
   Param, Query, Body, UseGuards, UseInterceptors,
   UploadedFile, UploadedFiles, Res, BadRequestException,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
 import { extname } from "path";
@@ -29,6 +30,7 @@ const xmlStorageOptions = {
 };
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("세금계산서")
 @Controller("tax-invoices")
 export class TaxInvoiceController {
   constructor(

@@ -8,6 +8,7 @@ import {
   Body,
   UseGuards,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { InventoryService } from "./inventory.service";
 import { CreateInventoryTxDto } from "./dto/create-inventory-tx.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -15,6 +16,7 @@ import { RolesGuard } from "../auth/roles.guard";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("재고")
 @Controller("inventory")
 export class InventoryController {
   constructor(private readonly service: InventoryService) {}

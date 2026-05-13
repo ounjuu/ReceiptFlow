@@ -9,6 +9,7 @@ import {
   Body,
   UseGuards,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 import { SummaryCodeService } from "./summary-code.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -16,6 +17,7 @@ import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags("적요코드")
 @Controller("summary-codes")
 export class SummaryCodeController {
   constructor(private readonly service: SummaryCodeService) {}
