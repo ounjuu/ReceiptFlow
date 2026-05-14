@@ -5,6 +5,8 @@ import { JwtAuthGuard } from "./jwt-auth.guard";
 import { RolesGuard } from "./roles.guard";
 import { Roles } from "./roles.decorator";
 import { CurrentTenant } from "./current-tenant.decorator";
+import { SignupDto } from "./dto/signup.dto";
+import { LoginDto } from "./dto/login.dto";
 
 @ApiTags("인증")
 @Controller("auth")
@@ -12,14 +14,12 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post("signup")
-  async signup(
-    @Body() body: { email: string; password: string; name: string },
-  ) {
+  async signup(@Body() body: SignupDto) {
     return this.authService.signup(body.email, body.password, body.name);
   }
 
   @Post("login")
-  async login(@Body() body: { email: string; password: string }) {
+  async login(@Body() body: LoginDto) {
     return this.authService.login(body.email, body.password);
   }
 

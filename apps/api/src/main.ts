@@ -1,4 +1,5 @@
 import { NestFactory } from "@nestjs/core";
+import { ValidationPipe } from "@nestjs/common";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { join } from "path";
@@ -14,6 +15,15 @@ async function bootstrap() {
   app.use(helmet({ contentSecurityPolicy: false }));
   app.enableCors();
   app.useGlobalFilters(new HttpExceptionFilter());
+  // DTO 입력 검증 (class-validator). transform: true → @Body 인자 클래스 인스턴스로 변환
+  // whitelist: 정의되지 않은 필드 제거. 일단 비활성 (기존 DTO에 모든 필드 데코레이터 안 붙은 상태라 안전 회피)
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      forbidNonWhitelisted: false,
+      whitelist: false,
+    }),
+  );
   // 업로드 파일 정적 서빙
   app.useStaticAssets(join(__dirname, "..", "uploads"), { prefix: "/uploads" });
 
