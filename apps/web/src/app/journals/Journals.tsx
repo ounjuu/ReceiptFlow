@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useAccounts, useProjects, useDepartments } from "@/lib/hooks/use-masters";
 import type { PaginationResponse } from "@ledgerflow/shared";
 import styles from "./Journals.module.css";
 import {
@@ -39,12 +40,8 @@ export default function JournalsPage() {
   const vendorAC = useVendorAutocomplete(tenantId, form.lines, form.setLines, form.updateLine);
   const summaryAC = useSummaryAutocomplete(tenantId, form.journalType, form.setDescription);
 
-  // 검색용 마스터 데이터
-  const { data: searchAccounts = [] } = useQuery({
-    queryKey: ["accounts-search"],
-    queryFn: () => apiGet<Account[]>(`/accounts?tenantId=${tenantId}`),
-    enabled: !!tenantId,
-  });
+  // 검색용 마스터 데이터 (전체 계정과목)
+  const { data: searchAccounts = [] } = useAccounts<Account>(tenantId);
 
   // 전표 목록 조회 (복합 검색 + 페이지네이션)
   const queryParams = [
@@ -71,22 +68,11 @@ export default function JournalsPage() {
   const totalPages = journalResult?.totalPages ?? 1;
   const totalCount = journalResult?.total ?? 0;
 
-  // 폼용 마스터 데이터
-  const { data: accounts = [] } = useQuery({
-    queryKey: ["accounts"],
-    queryFn: () => apiGet<Account[]>(`/accounts?tenantId=${tenantId}`),
-    enabled: form.formMode !== "none",
-  });
-  const { data: projects = [] } = useQuery({
-    queryKey: ["projects"],
-    queryFn: () => apiGet<ProjectOption[]>(`/projects?tenantId=${tenantId}`),
-    enabled: form.formMode !== "none",
-  });
-  const { data: departments = [] } = useQuery({
-    queryKey: ["departments"],
-    queryFn: () => apiGet<DepartmentOption[]>(`/departments?tenantId=${tenantId}`),
-    enabled: form.formMode !== "none",
-  });
+  // 폼용 마스터 데이터 (form이 열려 있을 때만 fetch)
+  const formActive = form.formMode !== "none";
+  const { data: accounts = [] } = useAccounts<Account>(tenantId, { enabled: formActive });
+  const { data: projects = [] } = useProjects<ProjectOption>(tenantId, { enabled: formActive });
+  const { data: departments = [] } = useDepartments<DepartmentOption>(tenantId, { enabled: formActive });
 
   // 선택된 전표 분석
   const selectedJournals = journals.filter((j) => actions.selectedIds.has(j.id));
